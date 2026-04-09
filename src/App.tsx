@@ -3,7 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth, UserRole } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Login from "./pages/Login";
@@ -19,9 +19,25 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+const ROUTE_ROLES: Record<string, UserRole[]> = {
+  "/": ["admin", "vendedor", "socio"],
+  "/comercial": ["admin", "vendedor"],
+  "/acervo": ["admin", "vendedor"],
+  "/logistica": ["admin", "vendedor"],
+  "/financeiro": ["admin"],
+  "/equipe": ["admin"],
+  "/socios": ["admin", "socio"],
+  "/configuracoes": ["admin"],
+};
+
+const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
+
+  if (path && ROUTE_ROLES[path] && !ROUTE_ROLES[path].includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <AppLayout>
       <ErrorBoundary fallbackTitle="Erro nesta página">
@@ -37,14 +53,14 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/comercial" element={<ProtectedRoute><Comercial /></ProtectedRoute>} />
-      <Route path="/acervo" element={<ProtectedRoute><Acervo /></ProtectedRoute>} />
-      <Route path="/logistica" element={<ProtectedRoute><Logistica /></ProtectedRoute>} />
-      <Route path="/financeiro" element={<ProtectedRoute><Financeiro /></ProtectedRoute>} />
-      <Route path="/equipe" element={<ProtectedRoute><Equipe /></ProtectedRoute>} />
-      <Route path="/socios" element={<ProtectedRoute><Socios /></ProtectedRoute>} />
-      <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute path="/"><Dashboard /></ProtectedRoute>} />
+      <Route path="/comercial" element={<ProtectedRoute path="/comercial"><Comercial /></ProtectedRoute>} />
+      <Route path="/acervo" element={<ProtectedRoute path="/acervo"><Acervo /></ProtectedRoute>} />
+      <Route path="/logistica" element={<ProtectedRoute path="/logistica"><Logistica /></ProtectedRoute>} />
+      <Route path="/financeiro" element={<ProtectedRoute path="/financeiro"><Financeiro /></ProtectedRoute>} />
+      <Route path="/equipe" element={<ProtectedRoute path="/equipe"><Equipe /></ProtectedRoute>} />
+      <Route path="/socios" element={<ProtectedRoute path="/socios"><Socios /></ProtectedRoute>} />
+      <Route path="/configuracoes" element={<ProtectedRoute path="/configuracoes"><Configuracoes /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

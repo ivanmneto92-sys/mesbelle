@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus, FileText } from "lucide-react";
 import { useLeads } from "@/hooks/useLeads";
-import { Lead } from "@/types/comercial";
+import { FunnelStatus, Lead } from "@/types/comercial";
 import { KanbanBoard } from "@/components/comercial/KanbanBoard";
 import { LeadDetailPanel } from "@/components/comercial/LeadDetailPanel";
 import { NewLeadModal } from "@/components/comercial/NewLeadModal";
@@ -21,12 +21,22 @@ const Comercial = () => {
 
   const [activeTab, setActiveTab] = useState("kanban");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  // Derive selectedLead from current leads array to avoid stale data
+  const selectedLead = useMemo(() => {
+    if (!selectedLeadId) return null;
+    return leads.find((l) => l.id === selectedLeadId) || null;
+  }, [selectedLeadId, leads]);
+
   const handleLeadClick = (lead: Lead) => {
-    setSelectedLead(lead);
+    setSelectedLeadId(lead.id);
     setDetailOpen(true);
+  };
+
+  const handleStatusChange = (leadId: string, newStatus: FunnelStatus, extra?: Partial<Lead>) => {
+    updateLeadStatus(leadId, newStatus, extra);
   };
 
   const handleSuggestContract = (lead: Lead) => {
@@ -66,7 +76,7 @@ const Comercial = () => {
         <TabsContent value="kanban" className="mt-4">
           <KanbanBoard
             leads={leads}
-            onStatusChange={updateLeadStatus}
+            onStatusChange={handleStatusChange}
             onLeadClick={handleLeadClick}
             onSuggestContract={handleSuggestContract}
           />

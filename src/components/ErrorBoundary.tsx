@@ -1,4 +1,5 @@
 import React from "react";
+import { clearAppStorage } from "@/hooks/useLeads";
 
 interface Props {
   children: React.ReactNode;
@@ -29,7 +30,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   handleClearAndReload = () => {
-    localStorage.clear();
+    clearAppStorage();
     window.location.href = "/login";
   };
 

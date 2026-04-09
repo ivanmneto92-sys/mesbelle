@@ -66,7 +66,7 @@ export function LeadDetailPanel({ lead, medidas, open, onClose, onUpdateLead, on
 
         <div className="flex gap-2 mb-4">
           <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+            <Button size="sm" className="<Button size="sm" className="bg-success hover:bg-success/90 text-primary-foreground">">
               <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
             </Button>
           </a>

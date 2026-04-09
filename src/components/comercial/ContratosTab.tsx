@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Search, FileSignature, Eye } from "lucide-react";
+import { Plus, Search, FileSignature, Eye, Printer } from "lucide-react";
 import { Contrato, ContratoStatus, Negocio } from "@/types/comercial";
+import { SignaturePad } from "./SignaturePad";
 import { toast } from "sonner";
 
 interface ContratosTabProps {
@@ -18,9 +19,10 @@ interface ContratosTabProps {
   negociosAprovados: Negocio[];
   onGerarContratoFromNegocio: (negocio: Negocio) => Contrato | undefined;
   onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
+  onAssinar: (contratoId: string, assinaturaBase64: string) => void;
 }
 
-export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus }: ContratosTabProps) {
+export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus, onAssinar }: ContratosTabProps) {
   const [busca, setBusca] = useState("");
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
   const [selectedNegocioId, setSelectedNegocioId] = useState("");
@@ -44,7 +46,6 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
     cancelado: "Cancelado",
   };
 
-  // Filter negócios that don't already have a non-cancelled contract
   const negociosSemContrato = negociosAprovados.filter(
     (n) => !contratos.some((c) => c.negocioId === n.id && c.statusAssinatura !== "cancelado")
   );
@@ -59,6 +60,41 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
     setNovoContratoOpen(false);
     setSelectedNegocioId("");
     toast.success("Contrato gerado com sucesso!");
+  };
+
+  const handleAssinar = (base64: string) => {
+    if (!previewContrato) return;
+    onAssinar(previewContrato.id, base64);
+    setPreviewContrato({ ...previewContrato, statusAssinatura: "assinado", assinaturaBase64: base64, dataAssinatura: new Date().toISOString() });
+    toast.success("Contrato assinado com sucesso!");
+  };
+
+  const handlePrint = (contrato: Contrato) => {
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><title>Contrato #${contrato.numero}</title>
+      <style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:20px;color:#333}
+      h1{text-align:center;color:#5A0019;font-size:20px}
+      .info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+      .info div{font-size:14px}.label{color:#888;font-size:12px}
+      .terms{background:#f9f9f9;padding:20px;border-radius:8px;white-space:pre-wrap;font-size:14px;line-height:1.6;margin:20px 0}
+      .sig{text-align:center;margin-top:30px;padding:20px;border-top:1px solid #ddd}
+      .sig img{max-width:300px;max-height:150px}
+      .sig-date{font-size:12px;color:#888;margin-top:8px}
+      @media print{body{margin:20px}}</style></head><body>
+      <h1>CONTRATO #${contrato.numero}</h1>
+      <h2 style="text-align:center;font-size:14px;color:#5A0019">Més Belle Ateliê</h2>
+      <div class="info">
+        <div><span class="label">Cliente</span><br><strong>${contrato.nomeCliente}</strong></div>
+        <div><span class="label">CPF</span><br><strong>${contrato.cpfCliente}</strong></div>
+        <div><span class="label">Data do Evento</span><br><strong>${new Date(contrato.dataEvento + "T00:00:00").toLocaleDateString("pt-BR")}</strong></div>
+        <div><span class="label">Valor Total</span><br><strong>R$ ${contrato.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+      </div>
+      <div class="terms">${contrato.termosTexto}</div>
+      ${contrato.assinaturaBase64 ? `<div class="sig"><p style="font-size:14px;font-weight:bold">Assinatura da Cliente</p><img src="${contrato.assinaturaBase64}" alt="Assinatura"/><p class="sig-date">Assinado em: ${contrato.dataAssinatura ? new Date(contrato.dataAssinatura).toLocaleString("pt-BR") : "—"}</p></div>` : '<div class="sig"><p>Pendente de assinatura</p></div>'}
+      </body></html>`);
+    win.document.close();
+    win.print();
   };
 
   return (
@@ -110,8 +146,11 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                         <Button variant="ghost" size="sm" onClick={() => setPreviewContrato(c)}>
                           <Eye className="h-4 w-4" />
                         </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handlePrint(c)}>
+                          <Printer className="h-4 w-4" />
+                        </Button>
                         {c.statusAssinatura === "pendente" && (
-                          <Button size="sm" variant="outline" onClick={() => onUpdateStatus(c.id, "assinado")}>
+                          <Button size="sm" variant="outline" onClick={() => setPreviewContrato(c)}>
                             <FileSignature className="h-4 w-4 mr-1" /> Assinar
                           </Button>
                         )}
@@ -186,29 +225,34 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                   <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{previewContrato.termosTexto}</pre>
                 </div>
                 <Separator />
+
                 {previewContrato.statusAssinatura === "pendente" && (
-                  <div className="space-y-3">
-                    <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-8 text-center">
-                      <FileSignature className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                      <p className="text-sm text-muted-foreground">Área de assinatura digital</p>
-                      <p className="text-xs text-muted-foreground/60">Preparado para uso com iPad</p>
-                    </div>
-                    <Button
-                      className="w-full"
-                      onClick={() => {
-                        onUpdateStatus(previewContrato.id, "assinado");
-                        setPreviewContrato({ ...previewContrato, statusAssinatura: "assinado" });
-                        toast.success("Contrato assinado!");
-                      }}
-                    >
-                      <FileSignature className="h-4 w-4 mr-1" /> Confirmar Assinatura
-                    </Button>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Assinatura da Cliente</p>
+                    <SignaturePad onConfirm={handleAssinar} />
                   </div>
                 )}
+
                 {previewContrato.statusAssinatura === "assinado" && (
-                  <Badge className="bg-success/20 text-success border-success/30 border text-sm py-1 px-3">
-                    ✓ Contrato Assinado
-                  </Badge>
+                  <div className="space-y-3">
+                    <Badge className="bg-success/20 text-success border-success/30 border text-sm py-1 px-3">
+                      ✓ Contrato Assinado
+                    </Badge>
+                    {previewContrato.assinaturaBase64 && (
+                      <div className="border rounded-xl p-4 bg-white">
+                        <p className="text-xs text-muted-foreground mb-2">Assinatura</p>
+                        <img src={previewContrato.assinaturaBase64} alt="Assinatura da cliente" className="max-h-[120px] mx-auto" />
+                        {previewContrato.dataAssinatura && (
+                          <p className="text-xs text-muted-foreground text-center mt-2">
+                            Assinado em: {new Date(previewContrato.dataAssinatura).toLocaleString("pt-BR")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => handlePrint(previewContrato)}>
+                      <Printer className="h-4 w-4 mr-1" /> Imprimir / Baixar
+                    </Button>
+                  </div>
                 )}
               </div>
             </>

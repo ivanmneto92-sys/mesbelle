@@ -11,7 +11,7 @@ const ComercialVendas = () => {
   const {
     leads, negocios, contratos,
     updateNegocio, aprovarFechamento,
-    addContratoFromNegocio, updateContratoStatus,
+    addContratoFromNegocio, updateContratoStatus, assinarContrato,
   } = useLeads();
 
   const [activeTab, setActiveTab] = useState("negociacoes");
@@ -54,6 +54,7 @@ const ComercialVendas = () => {
             negociosAprovados={negociosAprovados}
             onGerarContratoFromNegocio={addContratoFromNegocio}
             onUpdateStatus={updateContratoStatus}
+            onAssinar={assinarContrato}
           />
         </TabsContent>
 

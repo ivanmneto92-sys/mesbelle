@@ -9,6 +9,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
+import { usePermissoes, routePermissionMap } from "@/hooks/usePermissoes";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "vendedor", "socio"] as UserRole[] },

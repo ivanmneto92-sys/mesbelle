@@ -2,35 +2,37 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { GripVertical, Phone, Calendar } from "lucide-react";
-import { Lead, FunnelStatus, KANBAN_COLUMNS } from "@/types/comercial";
+import { GripVertical, Phone, Calendar, ArrowRight } from "lucide-react";
+import { Lead, CrmFunnelStatus, CRM_KANBAN_COLUMNS } from "@/types/comercial";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { toast } from "sonner";
 
-interface KanbanBoardProps {
+interface CrmKanbanBoardProps {
   leads: Lead[];
-  onStatusChange: (leadId: string, newStatus: FunnelStatus, extra?: Partial<Lead>) => void;
+  onStatusChange: (leadId: string, newStatus: CrmFunnelStatus, extra?: Partial<Lead>) => void;
   onLeadClick: (lead: Lead) => void;
-  onSuggestContract: (lead: Lead) => void;
+  onEnviarComercial: (leadId: string) => void;
 }
 
-export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContract }: KanbanBoardProps) {
+export function CrmKanbanBoard({ leads, onStatusChange, onLeadClick, onEnviarComercial }: CrmKanbanBoardProps) {
   const [provaDialog, setProvaDialog] = useState<{ open: boolean; leadId: string }>({ open: false, leadId: "" });
   const [provaData, setProvaData] = useState("");
   const [provaHora, setProvaHora] = useState("");
 
-  const getLeadsByStatus = (status: FunnelStatus) => leads.filter((l) => l.statusFunil === status);
+  const getLeadsByStatus = (status: CrmFunnelStatus) =>
+    leads.filter((l) => l.statusFunil === status && !l.enviadoComercial);
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    const newStatus = result.destination.droppableId as FunnelStatus;
+    const newStatus = result.destination.droppableId as CrmFunnelStatus;
     const leadId = result.draggableId;
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.statusFunil === newStatus) return;
 
-    if (newStatus === "prova") {
+    if (newStatus === "prova_agendada") {
       setProvaDialog({ open: true, leadId });
       setProvaData("");
       setProvaHora("");
@@ -38,28 +40,37 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
     }
 
     onStatusChange(leadId, newStatus);
-
-    if (newStatus === "fechamento") {
-      setTimeout(() => onSuggestContract(lead), 300);
-    }
   };
 
   const confirmProva = () => {
-    onStatusChange(provaDialog.leadId, "prova", {
+    onStatusChange(provaDialog.leadId, "prova_agendada", {
       provaData: provaData || undefined,
       provaHora: provaHora || undefined,
     });
     setProvaDialog({ open: false, leadId: "" });
   };
 
+  const handleEnviar = (e: React.MouseEvent, lead: Lead) => {
+    e.stopPropagation();
+    onEnviarComercial(lead.id);
+    toast.success(`${lead.nome} enviada para o Comercial!`);
+  };
+
+  const getBorderColor = (colorClass: string) => {
+    if (colorClass.includes("info")) return "border-l-info";
+    if (colorClass.includes("primary")) return "border-l-primary";
+    if (colorClass.includes("destructive")) return "border-l-destructive";
+    return "border-l-accent-foreground";
+  };
+
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-3 overflow-x-auto pb-4 min-h-[60vh]">
-          {KANBAN_COLUMNS.map((col) => {
+          {CRM_KANBAN_COLUMNS.map((col) => {
             const items = getLeadsByStatus(col.id);
             return (
-              <div key={col.id} className="min-w-[240px] w-[240px] shrink-0 flex flex-col">
+              <div key={col.id} className="min-w-[260px] w-[260px] shrink-0 flex flex-col">
                 <div className="flex items-center gap-2 mb-3 px-1">
                   <Badge className={`${col.colorClass} border font-medium text-xs`}>{col.title}</Badge>
                   <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
@@ -81,17 +92,10 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`${snapshot.isDragging ? "rotate-2 scale-105" : ""}`}
+                              className={snapshot.isDragging ? "rotate-2 scale-105" : ""}
                             >
                               <Card
-                                className={`shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 ${
-                                  col.colorClass.includes("info") ? "border-l-info" :
-                                  col.colorClass.includes("accent") ? "border-l-accent-foreground" :
-                                  col.colorClass.includes("primary") ? "border-l-primary" :
-                                  col.colorClass.includes("warning") ? "border-l-warning" :
-                                  col.colorClass.includes("success") ? "border-l-success" :
-                                  "border-l-destructive"
-                                }`}
+                                className={`shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 ${getBorderColor(col.colorClass)}`}
                                 onClick={() => onLeadClick(item)}
                               >
                                 <CardContent className="p-3">
@@ -111,9 +115,20 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
                                         </Badge>
                                         <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                                           <Calendar className="h-2.5 w-2.5" />
-                                          {item.dataEvento ? new Date(item.dataEvento).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}
+                                          {item.dataEvento ? new Date(item.dataEvento + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—"}
                                         </span>
                                       </div>
+                                      {(col.id === "em_atendimento" || col.id === "prova_agendada") && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="mt-2 w-full text-xs h-7 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                                          onClick={(e) => handleEnviar(e, item)}
+                                        >
+                                          <ArrowRight className="h-3 w-3 mr-1" />
+                                          Enviar para Comercial
+                                        </Button>
+                                      )}
                                     </div>
                                   </div>
                                 </CardContent>
@@ -124,9 +139,7 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
                       ))}
                       {provided.placeholder}
                       {items.length === 0 && !snapshot.isDraggingOver && (
-                        <p className="text-xs text-muted-foreground/50 text-center py-6">
-                          Arraste leads aqui
-                        </p>
+                        <p className="text-xs text-muted-foreground/50 text-center py-6">Arraste leads aqui</p>
                       )}
                     </div>
                   )}
@@ -141,7 +154,7 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-serif">Agendar Prova</DialogTitle>
-            <DialogDescription>Defina a data e horário da prova para esta cliente.</DialogDescription>
+            <DialogDescription>Defina a data e horário da prova.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 mt-2">
             <div>

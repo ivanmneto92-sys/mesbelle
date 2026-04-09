@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, ShoppingBag, Truck, DollarSign,
-  UserCog, Briefcase, Settings, LogOut, ChevronLeft
+  UserCog, Briefcase, Settings, LogOut, ChevronLeft, Handshake
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -10,10 +10,10 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 
-
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "vendedor", "socio"] as UserRole[] },
-  { title: "Comercial & CRM", url: "/comercial", icon: Users, roles: ["admin", "vendedor"] as UserRole[] },
+  { title: "CRM", url: "/crm", icon: Users, roles: ["admin", "vendedor"] as UserRole[] },
+  { title: "Comercial", url: "/comercial", icon: Handshake, roles: ["admin", "vendedor"] as UserRole[] },
   { title: "Acervo & Produção", url: "/acervo", icon: ShoppingBag, roles: ["admin", "vendedor"] as UserRole[] },
   { title: "Logística", url: "/logistica", icon: Truck, roles: ["admin", "vendedor"] as UserRole[] },
   { title: "Financeiro", url: "/financeiro", icon: DollarSign, roles: ["admin"] as UserRole[] },

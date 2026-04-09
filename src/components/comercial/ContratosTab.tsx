@@ -10,21 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Search, FileSignature, Eye } from "lucide-react";
-import { Contrato, ContratoStatus, Lead } from "@/types/comercial";
+import { Contrato, ContratoStatus, Negocio } from "@/types/comercial";
 import { toast } from "sonner";
 
 interface ContratosTabProps {
   contratos: Contrato[];
-  leadsParaContrato: Lead[];
-  onGerarContrato: (lead: Lead, valor: number) => void;
+  negociosAprovados: Negocio[];
+  onGerarContratoFromNegocio: (negocio: Negocio) => Contrato | undefined;
   onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
 }
 
-export function ContratosTab({ contratos, leadsParaContrato, onGerarContrato, onUpdateStatus }: ContratosTabProps) {
+export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus }: ContratosTabProps) {
   const [busca, setBusca] = useState("");
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState("");
-  const [valor, setValor] = useState("");
+  const [selectedNegocioId, setSelectedNegocioId] = useState("");
   const [previewContrato, setPreviewContrato] = useState<Contrato | null>(null);
 
   const filtered = contratos.filter((c) =>
@@ -45,16 +44,20 @@ export function ContratosTab({ contratos, leadsParaContrato, onGerarContrato, on
     cancelado: "Cancelado",
   };
 
+  // Filter negócios that don't already have a non-cancelled contract
+  const negociosSemContrato = negociosAprovados.filter(
+    (n) => !contratos.some((c) => c.negocioId === n.id && c.statusAssinatura !== "cancelado")
+  );
+
   const handleGerar = () => {
-    const lead = leadsParaContrato.find((l) => l.id === selectedLeadId);
-    if (!lead || !valor) {
-      toast.error("Selecione um lead e informe o valor.");
+    const negocio = negociosSemContrato.find((n) => n.id === selectedNegocioId);
+    if (!negocio) {
+      toast.error("Selecione uma negociação aprovada.");
       return;
     }
-    onGerarContrato(lead, parseFloat(valor));
+    onGerarContratoFromNegocio(negocio);
     setNovoContratoOpen(false);
-    setSelectedLeadId("");
-    setValor("");
+    setSelectedNegocioId("");
     toast.success("Contrato gerado com sucesso!");
   };
 
@@ -67,12 +70,7 @@ export function ContratosTab({ contratos, leadsParaContrato, onGerarContrato, on
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-                <Input
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Buscar por nome, CPF ou nº"
-                  className="pl-8 w-[250px]"
-                />
+                <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF ou nº" className="pl-8 w-[250px]" />
               </div>
               <Button size="sm" onClick={() => setNovoContratoOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Gerar Contrato
@@ -100,7 +98,7 @@ export function ContratosTab({ contratos, leadsParaContrato, onGerarContrato, on
                   <TableRow key={c.id}>
                     <TableCell className="font-mono text-xs">#{c.numero}</TableCell>
                     <TableCell className="font-medium">{c.nomeCliente}</TableCell>
-                    <TableCell>{new Date(c.dataEvento).toLocaleDateString("pt-BR")}</TableCell>
+                    <TableCell>{new Date(c.dataEvento + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell>R$ {c.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                     <TableCell>
                       <Badge className={`${statusColors[c.statusAssinatura]} border text-xs`}>
@@ -127,35 +125,36 @@ export function ContratosTab({ contratos, leadsParaContrato, onGerarContrato, on
         </CardContent>
       </Card>
 
-      {/* Gerar contrato dialog */}
       <Dialog open={novoContratoOpen} onOpenChange={setNovoContratoOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-serif">Gerar Novo Contrato</DialogTitle>
-            <DialogDescription>Selecione a cliente e informe o valor do contrato.</DialogDescription>
+            <DialogDescription>Selecione uma negociação aprovada para gerar o contrato.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 mt-2">
             <div>
-              <Label>Cliente (Leads em Fechamento)</Label>
-              <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
-                <SelectTrigger><SelectValue placeholder="Selecione a cliente" /></SelectTrigger>
+              <Label>Negociação Aprovada</Label>
+              <Select value={selectedNegocioId} onValueChange={setSelectedNegocioId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a negociação" /></SelectTrigger>
                 <SelectContent>
-                  {leadsParaContrato.map((l) => (
-                    <SelectItem key={l.id} value={l.id}>{l.nome} — {l.tipoEvento}</SelectItem>
+                  {negociosSemContrato.map((n) => (
+                    <SelectItem key={n.id} value={n.id}>
+                      {n.clienteNome} — R$ {(n.valorNegociado - n.desconto).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {negociosSemContrato.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Nenhuma negociação aprovada sem contrato.</p>
+              )}
             </div>
-            <div>
-              <Label>Valor Total (R$)</Label>
-              <Input type="number" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
-            </div>
-            <Button onClick={handleGerar} className="w-full">Gerar Contrato</Button>
+            <Button onClick={handleGerar} className="w-full" disabled={negociosSemContrato.length === 0}>
+              Gerar Contrato
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Preview contrato */}
       <Sheet open={!!previewContrato} onOpenChange={() => setPreviewContrato(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           {previewContrato && (
@@ -175,7 +174,7 @@ export function ContratosTab({ contratos, leadsParaContrato, onGerarContrato, on
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Data do Evento</p>
-                    <p className="font-medium">{new Date(previewContrato.dataEvento).toLocaleDateString("pt-BR")}</p>
+                    <p className="font-medium">{new Date(previewContrato.dataEvento + "T00:00:00").toLocaleDateString("pt-BR")}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Valor Total</p>

@@ -30,7 +30,7 @@ export function VestidoCard({ vestido: v, onClick, onAgenda }: Props) {
         </div>
         {v.isConsignado && (
           <div className="absolute top-2 right-2">
-            <Badge className="bg-amber-500/90 text-white text-[10px] px-2 py-0.5 border-0 backdrop-blur-sm">
+            <Badge className="bg-accent text-accent-foreground text-[10px] px-2 py-0.5 border-0 backdrop-blur-sm">
               <Tag className="h-2.5 w-2.5 mr-0.5" />
               Consignado
             </Badge>

@@ -30,7 +30,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   handleClearAndReload = () => {
-    localStorage.clear();
+    clearAppStorage();
     window.location.href = "/login";
   };
 

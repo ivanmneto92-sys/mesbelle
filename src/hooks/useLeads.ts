@@ -5,17 +5,61 @@ const STORAGE_KEY_LEADS = "mesbelle_leads";
 const STORAGE_KEY_MEDIDAS = "mesbelle_medidas";
 const STORAGE_KEY_CONTRATOS = "mesbelle_contratos";
 
-function loadFromStorage<T>(key: string, fallback: T): T {
+const APP_STORAGE_KEYS = [STORAGE_KEY_LEADS, STORAGE_KEY_MEDIDAS, STORAGE_KEY_CONTRATOS, "mesbelle_user"];
+
+export function clearAppStorage() {
+  APP_STORAGE_KEYS.forEach((key) => {
+    try { localStorage.removeItem(key); } catch {}
+  });
+}
+
+function isValidLead(obj: unknown): obj is Lead {
+  if (!obj || typeof obj !== "object") return false;
+  const o = obj as Record<string, unknown>;
+  return typeof o.id === "string" && typeof o.nome === "string" && typeof o.statusFunil === "string";
+}
+
+function isValidMedida(obj: unknown): obj is MedidasCliente {
+  if (!obj || typeof obj !== "object") return false;
+  const o = obj as Record<string, unknown>;
+  return typeof o.leadId === "string";
+}
+
+function isValidContrato(obj: unknown): obj is Contrato {
+  if (!obj || typeof obj !== "object") return false;
+  const o = obj as Record<string, unknown>;
+  return typeof o.id === "string" && typeof o.leadId === "string" && typeof o.valorTotal === "number";
+}
+
+function loadValidated<T>(key: string, fallback: T[], validator: (item: unknown) => item is T): T[] {
   try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : fallback;
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      console.warn(`Invalid storage format for ${key}, resetting`);
+      localStorage.removeItem(key);
+      return fallback;
+    }
+    const valid = parsed.filter(validator);
+    if (valid.length !== parsed.length) {
+      console.warn(`Filtered ${parsed.length - valid.length} invalid items from ${key}`);
+      localStorage.setItem(key, JSON.stringify(valid));
+    }
+    return valid.length > 0 ? valid : fallback;
   } catch {
+    console.warn(`Failed to parse ${key}, resetting`);
+    localStorage.removeItem(key);
     return fallback;
   }
 }
 
 function saveToStorage(key: string, data: unknown) {
-  localStorage.setItem(key, JSON.stringify(data));
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error(`Failed to save ${key}:`, e);
+  }
 }
 
 const initialLeads: Lead[] = [
@@ -37,9 +81,9 @@ const initialContratos: Contrato[] = [
 ];
 
 export function useLeads() {
-  const [leads, setLeads] = useState<Lead[]>(() => loadFromStorage(STORAGE_KEY_LEADS, initialLeads));
-  const [medidas, setMedidas] = useState<MedidasCliente[]>(() => loadFromStorage(STORAGE_KEY_MEDIDAS, initialMedidas));
-  const [contratos, setContratos] = useState<Contrato[]>(() => loadFromStorage(STORAGE_KEY_CONTRATOS, initialContratos));
+  const [leads, setLeads] = useState<Lead[]>(() => loadValidated(STORAGE_KEY_LEADS, initialLeads, isValidLead));
+  const [medidas, setMedidas] = useState<MedidasCliente[]>(() => loadValidated(STORAGE_KEY_MEDIDAS, initialMedidas, isValidMedida));
+  const [contratos, setContratos] = useState<Contrato[]>(() => loadValidated(STORAGE_KEY_CONTRATOS, initialContratos, isValidContrato));
 
   const persistLeads = useCallback((updated: Lead[]) => {
     setLeads(updated);
@@ -63,8 +107,8 @@ export function useLeads() {
     return newLead;
   }, [leads, persistLeads]);
 
-  const updateLeadStatus = useCallback((leadId: string, newStatus: FunnelStatus) => {
-    const updated = leads.map((l) => l.id === leadId ? { ...l, statusFunil: newStatus } : l);
+  const updateLeadStatus = useCallback((leadId: string, newStatus: FunnelStatus, extra?: Partial<Lead>) => {
+    const updated = leads.map((l) => l.id === leadId ? { ...l, statusFunil: newStatus, ...extra } : l);
     persistLeads(updated);
   }, [leads, persistLeads]);
 
@@ -94,7 +138,14 @@ export function useLeads() {
   }, [leads]);
 
   const addContrato = useCallback((lead: Lead, valorTotal: number) => {
-    const numero = String(contratos.length + 130).padStart(4, "0");
+    // Block duplicate contracts for same lead
+    const existing = contratos.find((c) => c.leadId === lead.id && c.statusAssinatura !== "cancelado");
+    if (existing) {
+      return existing;
+    }
+
+    // Robust numbering using timestamp
+    const numero = String(Date.now()).slice(-6);
     const newContrato: Contrato = {
       id: crypto.randomUUID(),
       numero,

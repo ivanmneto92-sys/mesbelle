@@ -2,7 +2,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { GripVertical, Plus, Phone, Calendar } from "lucide-react";
+import { GripVertical, Phone, Calendar } from "lucide-react";
 import { Lead, FunnelStatus, KANBAN_COLUMNS } from "@/types/comercial";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { useState } from "react";
 
 interface KanbanBoardProps {
   leads: Lead[];
-  onStatusChange: (leadId: string, newStatus: FunnelStatus) => void;
+  onStatusChange: (leadId: string, newStatus: FunnelStatus, extra?: Partial<Lead>) => void;
   onLeadClick: (lead: Lead) => void;
   onSuggestContract: (lead: Lead) => void;
 }
@@ -45,11 +45,12 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
   };
 
   const confirmProva = () => {
-    onStatusChange(provaDialog.leadId, "prova");
+    onStatusChange(provaDialog.leadId, "prova", {
+      provaData: provaData || undefined,
+      provaHora: provaHora || undefined,
+    });
     setProvaDialog({ open: false, leadId: "" });
   };
-
-  const formatPhone = (phone: string) => phone;
 
   return (
     <>
@@ -102,7 +103,7 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
                                       <p className="text-sm font-semibold truncate">{item.nome}</p>
                                       <div className="flex items-center gap-1 mt-1 text-muted-foreground">
                                         <Phone className="h-3 w-3" />
-                                        <span className="text-xs">{formatPhone(item.telefone)}</span>
+                                        <span className="text-xs">{item.telefone}</span>
                                       </div>
                                       <div className="flex items-center gap-2 mt-2 flex-wrap">
                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">

@@ -1,26 +1,43 @@
 
-## Problema identificado
 
-A logo está carregando corretamente em ambos os locais (Login e Sidebar). O problema é exclusivamente visual no sidebar: a classe CSS `brightness-0 invert` transforma a imagem, tornando-a quase invisível contra o fundo escuro.
+## Diagnóstico: Páginas em branco após publicação
 
-## Correção
+### Causa raiz identificada
 
-**Arquivo**: `src/components/layout/AppSidebar.tsx`, linha 43
+O sistema **não possui um Error Boundary** (componente React que captura erros de renderização). Quando qualquer erro de JavaScript ocorre em produção -- por exemplo, um dado corrompido no `localStorage`, uma propriedade `undefined` acessada, ou um problema com bibliotecas como `recharts` ou `@hello-pangea/dnd` -- o React derruba toda a árvore de componentes e a página fica em branco, sem nenhuma mensagem ao usuário.
 
-Remover `brightness-0 invert` da classe da imagem no sidebar. Essas classes foram pensadas para logos SVG transparentes, mas com um JPG com fundo sólido elas distorcem as cores.
+Além disso, o `AuthContext` lê do `localStorage` no carregamento inicial. Se o JSON armazenado estiver corrompido ou incompleto, a aplicação pode falhar silenciosamente.
 
-**De:**
+### Plano de correção
+
+**1. Criar um Error Boundary global**
+- Novo arquivo `src/components/ErrorBoundary.tsx` com um componente de classe que implementa `componentDidCatch`
+- Exibe uma tela amigável com botão "Recarregar" e opção de limpar localStorage (para resolver sessões corrompidas)
+- Envolver o `<AppRoutes />` dentro do Error Boundary no `App.tsx`
+
+**2. Fortalecer o AuthContext**
+- Adicionar validação ao `JSON.parse` do localStorage: verificar que o objeto retornado contém `id`, `name`, `email` e `role` antes de usá-lo
+- Se a validação falhar, limpar o localStorage e retornar `null` (redireciona para login)
+
+**3. Adicionar Error Boundary por rota**
+- Envolver cada página dentro do `ProtectedRoute` com um Error Boundary individual, para que um erro em uma página (ex: Comercial) não derrube o sidebar e a navegação inteira
+
+### Detalhes técnicos
+
+```text
+App.tsx
+  └─ AuthProvider
+       └─ BrowserRouter
+            └─ ErrorBoundary (global - captura erros fatais)
+                 └─ AppRoutes
+                      └─ ProtectedRoute
+                           └─ AppLayout
+                                └─ ErrorBoundary (por página)
+                                     └─ <Comercial /> etc.
 ```
-className="h-10 object-contain brightness-0 invert"
-```
 
-**Para:**
-```
-className="h-10 object-contain"
-```
+**Arquivos modificados:**
+- `src/components/ErrorBoundary.tsx` (novo)
+- `src/App.tsx` (envolver rotas com ErrorBoundary)
+- `src/contexts/AuthContext.tsx` (validação do localStorage)
 
-Isso vai mostrar a logo com suas cores originais (bordô/vinho com texto claro), que já combina com o tema do sidebar.
-
-## Resultado esperado
-
-A logo "Més Belle" aparecerá visível e com cores corretas tanto na tela de login quanto no sidebar.

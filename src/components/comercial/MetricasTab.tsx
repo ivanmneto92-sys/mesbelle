@@ -41,7 +41,7 @@ export function MetricasTab({ leads, contratos }: MetricasTabProps) {
     { label: "Leads no Mês", value: leadsDoMes.length, icon: Users, color: "text-info" },
     { label: "Taxa de Conversão", value: `${taxaConversao}%`, icon: TrendingUp, color: "text-success" },
     { label: "Taxa de No-Show", value: `${taxaNoShow}%`, icon: UserX, color: "text-destructive" },
-    { label: "Ticket Médio", value: `R$ ${ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-gold" },
+    { label: "Ticket Médio", value: `R$ ${ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-primary" },
   ];
 
   return (

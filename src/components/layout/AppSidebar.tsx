@@ -40,7 +40,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!collapsed && (
-          <img src="/15a1017d-c439-4bf4-9c76-30b6f1edca2f.jpg" alt="Més Belle" className="h-10 object-contain" />
+          <img src="/logo-mesbelle.svg" alt="Més Belle" className="h-10 object-contain brightness-0 invert" />
         )}
         <button onClick={toggleSidebar} className="text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors">
           <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? "rotate-180" : ""}`} />

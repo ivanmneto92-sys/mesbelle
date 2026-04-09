@@ -54,6 +54,7 @@ const ComercialVendas = () => {
             negociosAprovados={negociosAprovados}
             onGerarContratoFromNegocio={addContratoFromNegocio}
             onUpdateStatus={updateContratoStatus}
+            onAssinar={assinarContrato}
           />
         </TabsContent>
 

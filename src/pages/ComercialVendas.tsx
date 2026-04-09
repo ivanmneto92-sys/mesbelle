@@ -11,7 +11,7 @@ const ComercialVendas = () => {
   const {
     leads, negocios, contratos,
     updateNegocio, aprovarFechamento,
-    addContratoFromNegocio, updateContratoStatus,
+    addContratoFromNegocio, updateContratoStatus, assinarContrato,
   } = useLeads();
 
   const [activeTab, setActiveTab] = useState("negociacoes");

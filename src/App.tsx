@@ -22,7 +22,13 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return <AppLayout>{children}</AppLayout>;
+  return (
+    <AppLayout>
+      <ErrorBoundary fallbackTitle="Erro nesta página">
+        {children}
+      </ErrorBoundary>
+    </AppLayout>
+  );
 };
 
 const AppRoutes = () => {

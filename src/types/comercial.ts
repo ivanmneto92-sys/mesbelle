@@ -75,6 +75,8 @@ export interface Contrato {
   valorTotal: number;
   statusAssinatura: ContratoStatus;
   termosTexto: string;
+  assinaturaBase64?: string;
+  dataAssinatura?: string;
 }
 
 // Legacy compat — kept for old kanban (removed)

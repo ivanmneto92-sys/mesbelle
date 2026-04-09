@@ -208,10 +208,19 @@ export function useLeads() {
     persistContratos(updated);
   }, [contratos, persistContratos]);
 
+  const assinarContrato = useCallback((contratoId: string, assinaturaBase64: string) => {
+    const updated = contratos.map((c) =>
+      c.id === contratoId
+        ? { ...c, statusAssinatura: "assinado" as ContratoStatus, assinaturaBase64, dataAssinatura: new Date().toISOString() }
+        : c
+    );
+    persistContratos(updated);
+  }, [contratos, persistContratos]);
+
   return {
     leads, addLead, updateLeadStatus, updateLead,
     medidas, updateMedidas, getMedidas,
-    contratos, addContrato, addContratoFromNegocio, updateContratoStatus,
+    contratos, addContrato, addContratoFromNegocio, updateContratoStatus, assinarContrato,
     negocios, enviarParaComercial, updateNegocio, aprovarFechamento,
     getLeadsByStatus,
   };

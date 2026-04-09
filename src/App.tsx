@@ -45,7 +45,7 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+    <TooltipProvider delayDuration={0}>
       <Toaster />
       <Sonner />
       <AuthProvider>

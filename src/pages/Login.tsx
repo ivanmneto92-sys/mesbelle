@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import logo from "@/assets/logo.png";
+const logo = "/ee838669-4bf8-4be5-a3ee-bad43c058d52.jpg";
 
 const Login = () => {
   const { login } = useAuth();

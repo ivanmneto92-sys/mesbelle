@@ -30,7 +30,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem("mesbelle_user");
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.id && parsed.name && parsed.email && parsed.role) {
+        return parsed;
+      }
+      localStorage.removeItem("mesbelle_user");
+      return null;
     } catch {
       localStorage.removeItem("mesbelle_user");
       return null;

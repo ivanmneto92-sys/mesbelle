@@ -1,92 +1,59 @@
 
 
-## Módulo Acervo & Produção — Implementação Completa
+## Módulo Logística — Implementação Completa
 
 ### Situação atual
-A página `Acervo.tsx` é um placeholder estático com dados hardcoded, checkboxes desabilitados e nenhuma interatividade real (sem CRUD, sem agenda, sem persistência).
+Página estática com dados hardcoded, sem persistência, sem modais, sem mudança de status.
 
 ### Arquitetura
 
 ```text
 src/
-├── types/acervo.ts              (tipos e interfaces)
-├── hooks/useAcervo.ts           (estado + localStorage com validação)
-├── pages/Acervo.tsx             (página principal, abas)
-├── components/acervo/
-│   ├── CatalogoTab.tsx          (grid de cards + busca/filtro)
-│   ├── VestidoCard.tsx          (card individual)
-│   ├── VestidoDetailModal.tsx   (edição de vestido)
-│   ├── NovoVestidoSheet.tsx     (formulário slide-over)
-│   ├── AgendaModal.tsx          (calendário com dias bloqueados)
-│   ├── ProducaoTab.tsx          (lista de produções)
-│   ├── ProducaoCard.tsx         (card com checklist interativo)
-│   └── DetalhesTecnicosSheet.tsx(painel lateral com notas)
+├── types/logistica.ts              (tipos)
+├── hooks/useLogistica.ts           (estado + localStorage + auto-atraso)
+├── pages/Logistica.tsx             (reescrito)
+├── components/logistica/
+│   ├── LogisticaDetalhesSheet.tsx   (slide-over com dados operacionais)
+│   └── TermoRetiradaModal.tsx      (seleção de cliente + geração do termo)
 ```
 
 ### O que será construído
 
-**1. Hook `useAcervo.ts`** — Persistência em localStorage com validação de schema (mesmo padrão do `useLeads.ts`)
-- CRUD de vestidos, reservas de agenda, produções e etapas
-- Validação ao carregar dados do storage
-- Funções: `addVestido`, `updateVestido`, `deleteVestido`, `toggleEtapa`, `addProducao`, `addReserva`
+**1. Tipos `types/logistica.ts`**
+- `StatusLogistica`: "para_enviar" | "em_transito" | "com_cliente" | "atrasado" | "devolvido"
+- `AluguelLogistica`: id, vestidoNome, clienteNome, clienteTelefone, enderecoEntrega, dataSaida, dataRetorno, statusLogistica, codigoRastreio
 
-**2. Tipos em `types/acervo.ts`**
-- `Vestido`: id, nome, cor, tamanho, comprimento, precoAluguel, precoVenda, status (disponivel/alugado/ajuste/manutencao), isConsignado, imagemUrl
-- `ReservaAgenda`: id, vestidoId, dataInicio, dataFim, statusReserva (aluguel/lavanderia/ajuste)
-- `Producao`: id, tituloVestido, clienteNome, dataPrazo, dataProva, statusGeral, refImagensUrls, notasTecnicas
-- `EtapaProducao`: id, producaoId, nomeEtapa, isConcluido
+**2. Hook `useLogistica.ts`**
+- localStorage com key `mesbelle_logistica`, validação no load (padrão useLeads)
+- Dados seed: 6 itens distribuídos pelos 4 status ativos
+- `updateStatus(id, novoStatus)` — move item entre blocos
+- `updateRastreio(id, codigo)` — salva código de rastreio
+- **Automação de atraso**: ao carregar, percorre itens "com_cliente" e compara `dataRetorno < hoje` → muda para "atrasado" automaticamente
+- Itens "devolvido" ficam ocultos do painel (filtrados)
 
-**3. Aba Catálogo** — `CatalogoTab.tsx` + `VestidoCard.tsx`
-- Busca em tempo real por nome/cor
-- Filtro por status (dropdown com "Todos", "Disponível", "Alugado", "Em Ajuste", "Em Manutenção")
-- Grid responsivo (2 cols mobile, 3 tablet, 4 desktop)
-- Cards com: imagem, badges de status (cores distintas por status), badge "Consignado" no canto direito, nome, atributos, precos, botão "Ver Agenda"
-- Clique no card abre modal de detalhes/edição
-- Clique em "Ver Agenda" abre modal de calendário
+**3. Página `Logistica.tsx` (reescrita)**
+- Grid 2x2 com os 4 blocos (Para Enviar, Em Trânsito, Com Cliente, Atrasado)
+- Cards com ícones coloridos (Send/azul, Truck/amarelo, User/verde, AlertTriangle/vermelho)
+- Badge contador dinâmico por bloco
+- Mini-cards com nome do vestido, cliente + data, botão "Detalhes"
+- Botão "Gerar Termo de Retirada" no cabeçalho
 
-**4. Modal "Novo Vestido"** — `NovoVestidoSheet.tsx`
-- Sheet (slide-over lateral) com formulário completo
-- Campos: Nome, Categoria (select), Cor, Tamanho (select P/M/G/GG), Comprimento (select Curto/Midi/Longo), Preço Aluguel, Preço Venda, Upload de foto, Toggle "Consignado"
-- Validação e salvamento via hook
+**4. `LogisticaDetalhesSheet.tsx` (slide-over)**
+- Exibe: endereço, telefone (com link WhatsApp), datas saída/retorno
+- Dropdown para mudar status — ao salvar, card se move para o bloco correto
+- Campo de rastreio editável
+- Ao mudar para "devolvido", item sai do painel
 
-**5. Modal de Detalhes** — `VestidoDetailModal.tsx`
-- Exibe foto grande, todos os dados editáveis
-- Permite alterar status, adicionar/trocar foto
-- Botão de excluir vestido
+**5. `TermoRetiradaModal.tsx`**
+- Dialog listando clientes com status "para_enviar" ou "com_cliente"
+- Ao selecionar, gera termo com dados (nome, vestido, datas, termos de responsabilidade)
+- Exibe pré-visualização do termo em tela para impressão/assinatura
 
-**6. Modal Agenda** — `AgendaModal.tsx`
-- Calendário mensal usando `Calendar` do shadcn
-- Dias com reserva marcados em vermelho/cinza (disabled)
-- Possibilidade de adicionar nova reserva (tipo: Aluguel, Lavanderia, Ajuste) com data início/fim
-
-**7. Aba Produção** — `ProducaoTab.tsx` + `ProducaoCard.tsx`
-- Cabeçalho "Produção — Primeiro Aluguel" + botão "+ Nova Produção"
-- Cards largos com: título, cliente, datas, badge de status
-- Checklist interativo com 7 etapas — ao clicar, marca como concluído com strikethrough e salvamento otimista
-- Barra de progresso visual baseada nas etapas concluídas
-- Botão "Upload Referência" abre file input (salva URL em base64 ou placeholder)
-- Botão "Detalhes Técnicos" abre Sheet lateral com textarea para anotações do ateliê
-
-**8. Formulário Nova Produção** — Dialog com campos: título do vestido, nome da cliente, data prazo, data prova
-
-### Detalhes técnicos
-- Persistência: localStorage com keys `mesbelle_vestidos`, `mesbelle_reservas`, `mesbelle_producoes`, `mesbelle_etapas`
-- As keys serão adicionadas ao `APP_STORAGE_KEYS` em `useLeads.ts` para limpeza seletiva do ErrorBoundary
-- Dados iniciais de demonstração (6 vestidos, 1 produção com etapas) carregados na primeira vez
-- Salvamento otimista nos checkboxes (atualiza UI imediatamente)
-- Tipografia: Playfair Display nos títulos, Inter nos textos
-
-### Arquivos modificados/criados
-- `src/types/acervo.ts` (novo)
-- `src/hooks/useAcervo.ts` (novo)
-- `src/pages/Acervo.tsx` (reescrito)
-- `src/components/acervo/CatalogoTab.tsx` (novo)
-- `src/components/acervo/VestidoCard.tsx` (novo)
-- `src/components/acervo/VestidoDetailModal.tsx` (novo)
-- `src/components/acervo/NovoVestidoSheet.tsx` (novo)
-- `src/components/acervo/AgendaModal.tsx` (novo)
-- `src/components/acervo/ProducaoTab.tsx` (novo)
-- `src/components/acervo/ProducaoCard.tsx` (novo)
-- `src/components/acervo/DetalhesTecnicosSheet.tsx` (novo)
-- `src/hooks/useLeads.ts` (adicionar novas keys ao array de limpeza)
+### Arquivos criados/modificados
+- `src/types/logistica.ts` (novo)
+- `src/hooks/useLogistica.ts` (novo)
+- `src/pages/Logistica.tsx` (reescrito)
+- `src/components/logistica/LogisticaDetalhesSheet.tsx` (novo)
+- `src/components/logistica/TermoRetiradaModal.tsx` (novo)
+- `src/hooks/useLeads.ts` (adicionar key ao APP_STORAGE_KEYS)
 

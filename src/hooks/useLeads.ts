@@ -5,7 +5,7 @@ const STORAGE_KEY_LEADS = "mesbelle_leads";
 const STORAGE_KEY_MEDIDAS = "mesbelle_medidas";
 const STORAGE_KEY_CONTRATOS = "mesbelle_contratos";
 
-const APP_STORAGE_KEYS = [STORAGE_KEY_LEADS, STORAGE_KEY_MEDIDAS, STORAGE_KEY_CONTRATOS, "mesbelle_user", "mesbelle_vestidos", "mesbelle_reservas", "mesbelle_producoes", "mesbelle_etapas"];
+const APP_STORAGE_KEYS = [STORAGE_KEY_LEADS, STORAGE_KEY_MEDIDAS, STORAGE_KEY_CONTRATOS, "mesbelle_user", "mesbelle_vestidos", "mesbelle_reservas", "mesbelle_producoes", "mesbelle_etapas", "mesbelle_logistica"];
 
 export function clearAppStorage() {
   APP_STORAGE_KEYS.forEach((key) => {

@@ -29,8 +29,16 @@ export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { temPermissao } = usePermissoes();
 
-  const filteredItems = navItems.filter((item) => user && item.roles.includes(user.role));
+  const filteredItems = navItems.filter((item) => {
+    if (!user) return false;
+    if (!item.roles.includes(user.role)) return false;
+    // Admin always sees everything; for others, check dynamic permissions
+    const permKey = routePermissionMap[item.url];
+    if (permKey && !temPermissao(user.role, permKey)) return false;
+    return true;
+  });
 
   const handleLogout = () => {
     logout();

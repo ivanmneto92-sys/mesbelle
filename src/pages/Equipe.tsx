@@ -51,7 +51,7 @@ const Equipe = () => (
                 <TableCell><Badge variant="outline">{e.contrato}</Badge></TableCell>
                 <TableCell>{e.vendas}</TableCell>
                 <TableCell className="text-success font-medium">{e.comissao}</TableCell>
-                <TableCell><div className="flex items-center gap-1"><Star className="h-3 w-3 text-gold fill-gold" />{e.score}</div></TableCell>
+                <TableCell><div className="flex items-center gap-1"><Star className="h-3 w-3 text-warning fill-warning" />{e.score}</div></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -70,7 +70,7 @@ const Equipe = () => (
             <Tooltip />
             <Legend />
             <Bar dataKey="Juliana" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Mariana" fill="hsl(var(--gold))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Mariana" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
             <Bar dataKey="Renata" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

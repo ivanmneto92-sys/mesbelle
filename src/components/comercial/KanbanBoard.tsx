@@ -86,7 +86,7 @@ export function KanbanBoard({ leads, onStatusChange, onLeadClick, onSuggestContr
                               <Card
                                 className={`shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 ${
                                   col.colorClass.includes("info") ? "border-l-info" :
-                                  col.colorClass.includes("gold") ? "border-l-gold" :
+                                  col.colorClass.includes("accent") ? "border-l-accent-foreground" :
                                   col.colorClass.includes("primary") ? "border-l-primary" :
                                   col.colorClass.includes("warning") ? "border-l-warning" :
                                   col.colorClass.includes("success") ? "border-l-success" :

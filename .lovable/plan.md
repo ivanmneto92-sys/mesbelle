@@ -1,76 +1,74 @@
 
 
-## Sistema de Permissões por Role (Admin controla visibilidade)
+## Migrar para Supabase Auth + Cadastro de Vendedor pelo Admin
 
-### Resumo
-Criar um painel em Configuracoes onde o Admin define quais modulos e informacoes ficam visiveis para cada role (vendedor e socio). Essas permissoes sao salvas no localStorage e aplicadas dinamicamente no sidebar e nas paginas.
+Esta e uma migracao significativa: o sistema atual usa autenticacao simulada (mock) com localStorage. Precisamos conectar um backend real (Lovable Cloud/Supabase) para ter autenticacao real com envio de e-mail.
 
-### O que o Admin controla
+### Pre-requisito
 
-**Para o Vendedor**, o admin pode ligar/desligar:
-- Dashboard (metricas gerais vs so as dele)
-- CRM (ver todos os leads ou so os dele)
-- Comercial (contratos, metricas de vendas)
-- Acervo (catalogo, producao)
-- Logistica (entregas)
-- Ver comissoes proprias
-- Ver ranking da equipe
+O projeto ainda nao tem Supabase configurado. O primeiro passo e habilitar o Lovable Cloud (backend integrado) que provisiona automaticamente um projeto Supabase.
 
-**Para o Socio**, o admin pode ligar/desligar:
-- Dashboard
-- Portal de Socios (valuation, EBITDA, patrimonio)
-- Financeiro (fluxo de caixa, DRE)
-- Ver distribuicao de lucros
-- Ver equipe/performance
+### O que sera feito
 
-### Arquitetura
+**1. Habilitar Lovable Cloud**
+- Voce precisara ativar o Lovable Cloud nas configuracoes do projeto (Settings > Backend). Isso cria automaticamente o banco de dados e a autenticacao.
+
+**2. Criar tabela `profiles` e `user_roles`**
+- `profiles`: id (FK auth.users), nome, cargo, tipo_contrato, percentual_comissao, telefone, ativo
+- `user_roles`: user_id (FK auth.users), role (admin/vendedor/socio) — separada para seguranca
+- RLS policies para cada tabela
+- Trigger para criar profile automaticamente no signup
+
+**3. Reescrever `AuthContext.tsx`**
+- Trocar mock por Supabase Auth real (`supabase.auth.signInWithPassword`, `onAuthStateChange`)
+- Buscar role do usuario da tabela `user_roles`
+- Manter a interface `useAuth()` igual para nao quebrar o resto do app
+
+**4. Criar `src/integrations/supabase/client.ts`**
+- Cliente Supabase configurado com as env vars do Lovable Cloud
+
+**5. Atualizar `Login.tsx`**
+- Remover credenciais de teste
+- Usar `supabase.auth.signInWithPassword()`
+- Adicionar fluxo de "esqueceu a senha" real
+
+**6. Criar pagina `/redefinir-senha`**
+- Formulario para definir nova senha apos clicar no link do e-mail
+- Usa `supabase.auth.updateUser({ password })`
+
+**7. Funcionalidade "Admin cadastra vendedor"**
+- Novo modal na pagina Equipe: formulario com nome, email, cargo, contrato, comissao
+- Ao salvar, cria o usuario via Edge Function (usando `supabase.auth.admin.createUser`) com `email_confirm: false`
+- Envia e-mail automatico do Supabase para o vendedor definir sua senha
+- Cria o profile e a role automaticamente
+
+**8. Edge Function `create-team-member`**
+- Recebe dados do formulario (nome, email, role, cargo, etc.)
+- Valida que quem chama e admin
+- Cria usuario no Supabase Auth
+- Insere profile e role
+- Dispara convite por e-mail (password reset link)
+
+### Fluxo do vendedor
 
 ```text
-localStorage: mesbelle_permissoes
-{
-  vendedor: {
-    dashboard: true,
-    crm: true,
-    comercial: true,
-    acervo: true,
-    logistica: true,
-    comissoes: true,
-    rankingEquipe: false,
-    financeiro: false
-  },
-  socio: {
-    dashboard: true,
-    socios: true,
-    financeiro: true,
-    equipe: false,
-    acervo: false
-  }
-}
+Admin preenche formulario → Edge Function cria usuario
+→ Vendedor recebe e-mail → Clica no link → Define senha
+→ Faz login normalmente
 ```
 
-### Implementacao
-
-**1. Hook `usePermissoes.ts`**
-- Le/salva permissoes no localStorage
-- Funcao `temPermissao(role, modulo)` para checar acesso
-- Valores default definidos no codigo
-
-**2. Configuracoes.tsx — novo card "Controle de Acesso"**
-- Grid de toggles (Switch) organizado por role
-- Cada toggle liga/desliga um modulo ou informacao para aquela role
-- Visivel apenas para Admin
-
-**3. AppSidebar.tsx — filtro dinamico**
-- Alem do filtro por `roles[]` fixo, cruzar com as permissoes do hook
-- Se o admin desligou "financeiro" para socio, o item some do menu
-
-**4. Paginas individuais — blocos condicionais**
-- Dentro de cada pagina, esconder secoes especificas baseado nas permissoes (ex: vendedor nao ve ranking se desligado)
-
 ### Arquivos criados
-- `src/hooks/usePermissoes.ts`
+- `src/integrations/supabase/client.ts`
+- `src/pages/RedefinirSenha.tsx`
+- `supabase/functions/create-team-member/index.ts`
+- Migracoes SQL (profiles, user_roles, RLS, triggers)
 
 ### Arquivos modificados
-- `src/pages/Configuracoes.tsx` (card de controle de acesso com toggles)
-- `src/components/layout/AppSidebar.tsx` (filtro dinamico por permissoes)
+- `src/contexts/AuthContext.tsx` (Supabase Auth real)
+- `src/pages/Login.tsx` (remover mock, usar Supabase)
+- `src/pages/Equipe.tsx` (modal de cadastro de vendedor)
+- `src/App.tsx` (adicionar rota /redefinir-senha)
+
+### Proximo passo
+Para iniciar, voce precisa habilitar o Lovable Cloud. Va em **Settings** (engrenagem no canto inferior esquerdo) > **Backend** e ative o Lovable Cloud. Depois disso, posso implementar tudo.
 

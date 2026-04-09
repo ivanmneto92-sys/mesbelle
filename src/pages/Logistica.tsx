@@ -16,6 +16,13 @@ const groups: { status: StatusLogistica; title: string; icon: React.ElementType;
   { status: "atrasado", title: "Atrasado", icon: AlertTriangle, color: "text-destructive", badge: "bg-destructive/20 text-destructive" },
 ];
 
+function getDiasAtraso(dataRetorno: string): number {
+  const today = new Date();
+  const retorno = new Date(dataRetorno);
+  const diff = Math.floor((today.getTime() - retorno.getTime()) / 86400000);
+  return Math.max(0, diff);
+}
+
 const Logistica = () => {
   const { items, updateStatus, updateRastreio, getByStatus } = useLogistica();
   const [detailItem, setDetailItem] = useState<AluguelLogistica | null>(null);
@@ -47,6 +54,7 @@ const Logistica = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {groups.map((g) => {
           const groupItems = getByStatus(g.status);
+          const isAtrasado = g.status === "atrasado";
           return (
             <Card key={g.status} className="shadow-sm">
               <CardHeader className="pb-2">
@@ -61,15 +69,27 @@ const Logistica = () => {
                   {groupItems.length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-4">Nenhum item</p>
                   )}
-                  {groupItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div>
-                        <p className="text-sm font-medium">{item.vestidoNome}</p>
-                        <p className="text-xs text-muted-foreground">{item.clienteNome} • {formatDate(item.dataSaida)}</p>
+                  {groupItems.map((item) => {
+                    const diasAtraso = isAtrasado ? getDiasAtraso(item.dataRetorno) : 0;
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div>
+                          <p className={`text-sm font-medium ${isAtrasado ? "text-destructive" : ""}`}>
+                            {item.vestidoNome}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.clienteNome} • {formatDate(item.dataSaida)}
+                          </p>
+                          {isAtrasado && diasAtraso > 0 && (
+                            <p className="text-xs text-destructive font-medium mt-0.5">
+                              ⚠ {diasAtraso} dia{diasAtraso > 1 ? "s" : ""} de atraso
+                            </p>
+                          )}
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => openDetails(item)}>Detalhes</Button>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => openDetails(item)}>Detalhes</Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

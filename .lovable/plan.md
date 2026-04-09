@@ -1,33 +1,76 @@
 
 
-## Melhorias no Módulo Logística e Cabeçalho Global
+## Sistema de Permissões por Role (Admin controla visibilidade)
 
-O módulo Logística já está funcional com grid 2x2, detalhes em slide-over, termo de retirada e auto-atraso. As melhorias focam em dois pontos: **cabeçalho global interativo** e **refinamentos visuais**.
+### Resumo
+Criar um painel em Configuracoes onde o Admin define quais modulos e informacoes ficam visiveis para cada role (vendedor e socio). Essas permissoes sao salvas no localStorage e aplicadas dinamicamente no sidebar e nas paginas.
 
-### O que será feito
+### O que o Admin controla
 
-**1. Dropdown de Notificações (`AppLayout.tsx`)**
-- Ao clicar no sino, abre um Popover com lista de alertas
-- Alertas dinâmicos gerados a partir do localStorage: vestidos atrasados e entregas do dia
-- Badge do sino mostra contagem real (atrasados + entregas pendentes)
-- Cada alerta com ícone, texto descritivo e timestamp
+**Para o Vendedor**, o admin pode ligar/desligar:
+- Dashboard (metricas gerais vs so as dele)
+- CRM (ver todos os leads ou so os dele)
+- Comercial (contratos, metricas de vendas)
+- Acervo (catalogo, producao)
+- Logistica (entregas)
+- Ver comissoes proprias
+- Ver ranking da equipe
 
-**2. Menu do Usuário (`AppLayout.tsx`)**
-- Ao clicar no nome/avatar, abre um DropdownMenu com "Minha Conta" e "Sair"
-- "Sair" chama `logout()` e redireciona para `/login`
+**Para o Socio**, o admin pode ligar/desligar:
+- Dashboard
+- Portal de Socios (valuation, EBITDA, patrimonio)
+- Financeiro (fluxo de caixa, DRE)
+- Ver distribuicao de lucros
+- Ver equipe/performance
 
-**3. Estilo visual nos itens atrasados (`Logistica.tsx`)**
-- Nome do vestido no bloco "Atrasado" renderizado em `text-destructive` (vermelho)
-- Data de retorno ultrapassada com indicador visual (ex: "2 dias de atraso")
+### Arquitetura
 
-**4. Contagem dinâmica no badge do sino**
-- Hook utilitário que lê `mesbelle_logistica` do localStorage e conta itens atrasados + para_enviar do dia
-- Badge atualiza em tempo real conforme mudanças na logística
+```text
+localStorage: mesbelle_permissoes
+{
+  vendedor: {
+    dashboard: true,
+    crm: true,
+    comercial: true,
+    acervo: true,
+    logistica: true,
+    comissoes: true,
+    rankingEquipe: false,
+    financeiro: false
+  },
+  socio: {
+    dashboard: true,
+    socios: true,
+    financeiro: true,
+    equipe: false,
+    acervo: false
+  }
+}
+```
 
-### Arquivos modificados
-- `src/components/layout/AppLayout.tsx` (notificações dropdown, menu do usuário)
-- `src/pages/Logistica.tsx` (estilo vermelho para itens atrasados, indicador de dias de atraso)
+### Implementacao
+
+**1. Hook `usePermissoes.ts`**
+- Le/salva permissoes no localStorage
+- Funcao `temPermissao(role, modulo)` para checar acesso
+- Valores default definidos no codigo
+
+**2. Configuracoes.tsx — novo card "Controle de Acesso"**
+- Grid de toggles (Switch) organizado por role
+- Cada toggle liga/desliga um modulo ou informacao para aquela role
+- Visivel apenas para Admin
+
+**3. AppSidebar.tsx — filtro dinamico**
+- Alem do filtro por `roles[]` fixo, cruzar com as permissoes do hook
+- Se o admin desligou "financeiro" para socio, o item some do menu
+
+**4. Paginas individuais — blocos condicionais**
+- Dentro de cada pagina, esconder secoes especificas baseado nas permissoes (ex: vendedor nao ve ranking se desligado)
 
 ### Arquivos criados
-- Nenhum arquivo novo necessario; toda a logica fica nos arquivos existentes
+- `src/hooks/usePermissoes.ts`
+
+### Arquivos modificados
+- `src/pages/Configuracoes.tsx` (card de controle de acesso com toggles)
+- `src/components/layout/AppSidebar.tsx` (filtro dinamico por permissoes)
 

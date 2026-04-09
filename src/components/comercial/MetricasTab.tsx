@@ -1,47 +1,63 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lead, KANBAN_COLUMNS } from "@/types/comercial";
-import { Contrato } from "@/types/comercial";
-import { Users, TrendingUp, UserX, DollarSign } from "lucide-react";
+import { Lead, Contrato, Negocio, CRM_KANBAN_COLUMNS } from "@/types/comercial";
+import { Users, TrendingUp, UserX, DollarSign, Award } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface MetricasTabProps {
   leads: Lead[];
   contratos: Contrato[];
+  negocios: Negocio[];
 }
 
-export function MetricasTab({ leads, contratos }: MetricasTabProps) {
+export function MetricasTab({ leads, contratos, negocios }: MetricasTabProps) {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const leadsDoMes = leads.filter((l) => {
-    const d = new Date(l.criadoEm);
+  // Faturamento = soma dos contratos assinados no mês
+  const contratosAssinados = contratos.filter((c) => {
+    if (c.statusAssinatura !== "assinado") return false;
+    const d = new Date(c.dataCriacao);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
+  const faturamento = contratosAssinados.reduce((sum, c) => sum + c.valorTotal, 0);
 
+  // Conversão = contratos fechados / total leads
   const totalLeads = leads.length;
-  const fechados = leads.filter((l) => l.statusFunil === "fechamento").length;
-  const taxaConversao = totalLeads > 0 ? ((fechados / totalLeads) * 100).toFixed(1) : "0";
+  const totalContratos = contratos.filter((c) => c.statusAssinatura === "assinado").length;
+  const taxaConversao = totalLeads > 0 ? ((totalContratos / totalLeads) * 100).toFixed(1) : "0";
 
-  const provasAgendadas = leads.filter((l) => ["prova", "negociacao", "fechamento"].includes(l.statusFunil)).length;
-  const perdidos = leads.filter((l) => l.statusFunil === "perdido").length;
-  const taxaNoShow = provasAgendadas + perdidos > 0 ? ((perdidos / (provasAgendadas + perdidos)) * 100).toFixed(1) : "0";
+  // Ticket médio
+  const allAssinados = contratos.filter((c) => c.statusAssinatura === "assinado");
+  const ticketMedio = allAssinados.length > 0 ? allAssinados.reduce((s, c) => s + c.valorTotal, 0) / allAssinados.length : 0;
 
-  const totalValor = contratos.reduce((sum, c) => sum + c.valorTotal, 0);
-  const ticketMedio = contratos.length > 0 ? totalValor / contratos.length : 0;
+  // No-show
+  const noShows = leads.filter((l) => l.statusFunil === "no_show").length;
+  const taxaNoShow = totalLeads > 0 ? ((noShows / totalLeads) * 100).toFixed(1) : "0";
 
-  const funnelData = KANBAN_COLUMNS.map((col) => ({
+  // Ranking vendedoras
+  const vendedoraMap = new Map<string, number>();
+  contratos.filter((c) => c.statusAssinatura === "assinado").forEach((c) => {
+    const lead = leads.find((l) => l.id === c.leadId);
+    const vendedora = lead?.vendedorResponsavel || "Não atribuído";
+    vendedoraMap.set(vendedora, (vendedoraMap.get(vendedora) || 0) + c.valorTotal);
+  });
+  const ranking = [...vendedoraMap.entries()]
+    .map(([nome, valor]) => ({ nome, valor }))
+    .sort((a, b) => b.valor - a.valor);
+
+  // Funnel data
+  const funnelData = CRM_KANBAN_COLUMNS.map((col) => ({
     name: col.title,
     value: leads.filter((l) => l.statusFunil === col.id).length,
   }));
-
-  const barColors = ["hsl(210,80%,55%)", "hsl(40,55%,50%)", "hsl(350,57%,27%)", "hsl(38,92%,50%)", "hsl(142,71%,45%)", "hsl(0,84%,60%)"];
+  const barColors = ["hsl(210,80%,55%)", "hsl(40,55%,50%)", "hsl(350,57%,27%)", "hsl(0,84%,60%)"];
 
   const kpis = [
-    { label: "Leads no Mês", value: leadsDoMes.length, icon: Users, color: "text-info" },
-    { label: "Taxa de Conversão", value: `${taxaConversao}%`, icon: TrendingUp, color: "text-success" },
+    { label: "Faturamento do Mês", value: `R$ ${faturamento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-success" },
+    { label: "Taxa de Conversão", value: `${taxaConversao}%`, icon: TrendingUp, color: "text-info" },
+    { label: "Ticket Médio", value: `R$ ${ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: Users, color: "text-primary" },
     { label: "Taxa de No-Show", value: `${taxaNoShow}%`, icon: UserX, color: "text-destructive" },
-    { label: "Ticket Médio", value: `R$ ${ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-primary" },
   ];
 
   return (
@@ -62,27 +78,64 @@ export function MetricasTab({ leads, contratos }: MetricasTabProps) {
         ))}
       </div>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-serif text-lg">Funil de Vendas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={funnelData} layout="vertical" margin={{ left: 20, right: 30 }}>
-                <XAxis type="number" allowDecimals={false} />
-                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => [`${value} leads`, "Quantidade"]} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
-                  {funnelData.map((_, i) => (
-                    <Cell key={i} fill={barColors[i % barColors.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-serif text-lg">Funil CRM</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={funnelData} layout="vertical" margin={{ left: 20, right: 30 }}>
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(value: number) => [`${value} leads`, "Quantidade"]} />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
+                    {funnelData.map((_, i) => (
+                      <Cell key={i} fill={barColors[i % barColors.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-serif text-lg flex items-center gap-2">
+              <Award className="h-5 w-5 text-warning" /> Ranking de Vendedoras
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ranking.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhuma venda registrada</p>
+            ) : (
+              <div className="space-y-3">
+                {ranking.map((r, i) => (
+                  <div key={r.nome} className="flex items-center gap-3">
+                    <span className={`text-lg font-bold w-8 text-center ${i === 0 ? "text-warning" : "text-muted-foreground"}`}>
+                      {i + 1}º
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{r.nome}</p>
+                      <div className="w-full bg-muted rounded-full h-2 mt-1">
+                        <div
+                          className="bg-primary rounded-full h-2 transition-all"
+                          style={{ width: `${(r.valor / (ranking[0]?.valor || 1)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold whitespace-nowrap">
+                      R$ {r.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

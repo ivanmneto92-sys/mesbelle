@@ -8,7 +8,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
-import Comercial from "./pages/Comercial";
+import CRM from "./pages/CRM";
+import ComercialVendas from "./pages/ComercialVendas";
 import Acervo from "./pages/Acervo";
 import Logistica from "./pages/Logistica";
 import Financeiro from "./pages/Financeiro";
@@ -21,6 +22,7 @@ const queryClient = new QueryClient();
 
 const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/": ["admin", "vendedor", "socio"],
+  "/crm": ["admin", "vendedor"],
   "/comercial": ["admin", "vendedor"],
   "/acervo": ["admin", "vendedor"],
   "/logistica": ["admin", "vendedor"],
@@ -54,7 +56,8 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/" element={<ProtectedRoute path="/"><Dashboard /></ProtectedRoute>} />
-      <Route path="/comercial" element={<ProtectedRoute path="/comercial"><Comercial /></ProtectedRoute>} />
+      <Route path="/crm" element={<ProtectedRoute path="/crm"><CRM /></ProtectedRoute>} />
+      <Route path="/comercial" element={<ProtectedRoute path="/comercial"><ComercialVendas /></ProtectedRoute>} />
       <Route path="/acervo" element={<ProtectedRoute path="/acervo"><Acervo /></ProtectedRoute>} />
       <Route path="/logistica" element={<ProtectedRoute path="/logistica"><Logistica /></ProtectedRoute>} />
       <Route path="/financeiro" element={<ProtectedRoute path="/financeiro"><Financeiro /></ProtectedRoute>} />

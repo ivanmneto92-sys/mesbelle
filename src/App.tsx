@@ -7,6 +7,7 @@ import { AuthProvider, useAuth, UserRole } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Login from "./pages/Login";
+import RedefinirSenha from "./pages/RedefinirSenha";
 import Dashboard from "./pages/Dashboard";
 import CRM from "./pages/CRM";
 import ComercialVendas from "./pages/ComercialVendas";
@@ -33,7 +34,16 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
 };
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(340, 83%, 6%)" }}>
+        <div className="h-8 w-8 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
 
   if (path && ROUTE_ROLES[path] && !ROUTE_ROLES[path].includes(user.role)) {
@@ -50,11 +60,12 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: 
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login" element={loading ? null : (isAuthenticated ? <Navigate to="/" replace /> : <Login />)} />
+      <Route path="/redefinir-senha" element={<RedefinirSenha />} />
       <Route path="/" element={<ProtectedRoute path="/"><Dashboard /></ProtectedRoute>} />
       <Route path="/crm" element={<ProtectedRoute path="/crm"><CRM /></ProtectedRoute>} />
       <Route path="/comercial" element={<ProtectedRoute path="/comercial"><ComercialVendas /></ProtectedRoute>} />

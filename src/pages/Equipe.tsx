@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart,
 } from "recharts";
-import { QrCode, Star, Phone, Mail, Percent } from "lucide-react";
+import { QrCode, Star, Phone, Mail, Percent, UserPlus } from "lucide-react";
 import { useEquipe } from "@/hooks/useEquipe";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 function formatBRL(v: number) {
@@ -27,11 +29,20 @@ const vendedorColors: Record<string, string> = {
 
 const Equipe = () => {
   const { funcionarios, updateFuncionario, chartData, vendedores, historicoVendas } = useEquipe();
+  const { user } = useAuth();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [editComissao, setEditComissao] = useState("");
+
+  // New member modal
+  const [newMemberOpen, setNewMemberOpen] = useState(false);
+  const [newMember, setNewMember] = useState({
+    nome: "", email: "", role: "vendedor" as "vendedor" | "socio",
+    cargo: "", tipo_contrato: "CLT", percentual_comissao: "", telefone: "",
+  });
+  const [creatingMember, setCreatingMember] = useState(false);
 
   const selected = funcionarios.find(f => f.id === selectedId);
 
@@ -53,6 +64,39 @@ const Equipe = () => {
     toast.success("Comissão atualizada");
   };
 
+  const handleCreateMember = async () => {
+    if (!newMember.nome || !newMember.email) {
+      toast.error("Nome e e-mail são obrigatórios");
+      return;
+    }
+    setCreatingMember(true);
+    try {
+      const comissao = parseFloat(newMember.percentual_comissao.replace(",", ".")) || 0;
+      const { data, error } = await supabase.functions.invoke("create-team-member", {
+        body: {
+          nome: newMember.nome,
+          email: newMember.email,
+          role: newMember.role,
+          cargo: newMember.cargo,
+          tipo_contrato: newMember.tipo_contrato,
+          percentual_comissao: comissao / 100,
+          telefone: newMember.telefone,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`${newMember.nome} cadastrado(a) com sucesso! Um e-mail foi enviado para ${newMember.email} com instruções para definir a senha.`);
+      setNewMemberOpen(false);
+      setNewMember({ nome: "", email: "", role: "vendedor", cargo: "", tipo_contrato: "CLT", percentual_comissao: "", telefone: "" });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao cadastrar membro");
+    } finally {
+      setCreatingMember(false);
+    }
+  };
+
   const historico = selectedId ? historicoVendas(selectedId) : [];
   const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -64,9 +108,16 @@ const Equipe = () => {
           <h1 className="text-2xl font-bold font-serif">Time & Performance</h1>
           <p className="text-muted-foreground text-sm">Gestão de equipe e desempenho</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
-          <QrCode className="h-4 w-4 mr-1" /> QR Code Avaliação
-        </Button>
+        <div className="flex gap-2">
+          {user?.role === "admin" && (
+            <Button size="sm" onClick={() => setNewMemberOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-1" /> Cadastrar Membro
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
+            <QrCode className="h-4 w-4 mr-1" /> QR Code Avaliação
+          </Button>
+        </div>
       </div>
 
       {/* Tabela Equipe */}
@@ -150,24 +201,12 @@ const Equipe = () => {
                   />
                   <Legend />
                   {vendedores.map((v) => (
-                    <Bar
-                      key={v.id}
-                      yAxisId="left"
-                      dataKey={v.nome}
-                      name={v.nome}
-                      fill={vendedorColors[v.nome] || "hsl(var(--primary))"}
-                      radius={[4, 4, 0, 0]}
-                    />
+                    <Bar key={v.id} yAxisId="left" dataKey={v.nome} name={v.nome}
+                      fill={vendedorColors[v.nome] || "hsl(var(--primary))"} radius={[4, 4, 0, 0]} />
                   ))}
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="scoreGlobal"
-                    name="Score Geral"
-                    stroke="hsl(var(--warning))"
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: "hsl(var(--warning))" }}
-                  />
+                  <Line yAxisId="right" type="monotone" dataKey="scoreGlobal" name="Score Geral"
+                    stroke="hsl(var(--warning))" strokeWidth={2.5}
+                    dot={{ r: 4, fill: "hsl(var(--warning))" }} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -185,7 +224,6 @@ const Equipe = () => {
                 <SheetDescription>{selected.cargo} • {selected.tipoContrato}</SheetDescription>
               </SheetHeader>
               <div className="space-y-6 mt-6">
-                {/* Contato */}
                 <div className="space-y-2 p-4 rounded-lg border">
                   <h4 className="text-sm font-semibold">Contato</h4>
                   {selected.telefone && (
@@ -199,8 +237,6 @@ const Equipe = () => {
                     </div>
                   )}
                 </div>
-
-                {/* Resumo Mês */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="text-center p-3 rounded-lg border">
                     <p className="text-xs text-muted-foreground">Vendas</p>
@@ -218,8 +254,6 @@ const Equipe = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Editar Comissão */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Percent className="h-3.5 w-3.5" /> Percentual de Comissão</Label>
                   <div className="flex gap-2">
@@ -228,8 +262,6 @@ const Equipe = () => {
                     <Button size="sm" onClick={saveComissao}>Salvar</Button>
                   </div>
                 </div>
-
-                {/* Histórico */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Histórico de Vendas</h4>
                   <div className="space-y-1.5">
@@ -248,6 +280,71 @@ const Equipe = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Modal Cadastrar Membro */}
+      <Dialog open={newMemberOpen} onOpenChange={setNewMemberOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Cadastrar Novo Membro</DialogTitle>
+            <DialogDescription>
+              O membro receberá um e-mail para definir sua senha de acesso.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Nome completo *</Label>
+              <Input value={newMember.nome} onChange={e => setNewMember(p => ({ ...p, nome: e.target.value }))} placeholder="Nome do membro" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>E-mail *</Label>
+              <Input type="email" value={newMember.email} onChange={e => setNewMember(p => ({ ...p, email: e.target.value }))} placeholder="email@exemplo.com" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Perfil</Label>
+                <Select value={newMember.role} onValueChange={v => setNewMember(p => ({ ...p, role: v as "vendedor" | "socio" }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vendedor">Vendedor</SelectItem>
+                    <SelectItem value="socio">Sócio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Contrato</Label>
+                <Select value={newMember.tipo_contrato} onValueChange={v => setNewMember(p => ({ ...p, tipo_contrato: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CLT">CLT</SelectItem>
+                    <SelectItem value="PJ">PJ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Cargo</Label>
+              <Input value={newMember.cargo} onChange={e => setNewMember(p => ({ ...p, cargo: e.target.value }))} placeholder="Ex: Consultora de Vendas" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Comissão (%)</Label>
+                <Input value={newMember.percentual_comissao} onChange={e => setNewMember(p => ({ ...p, percentual_comissao: e.target.value }))} placeholder="5" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Telefone</Label>
+                <Input value={newMember.telefone} onChange={e => setNewMember(p => ({ ...p, telefone: e.target.value }))} placeholder="(11) 99999-0000" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewMemberOpen(false)}>Cancelar</Button>
+            <Button onClick={handleCreateMember} disabled={creatingMember}>
+              {creatingMember ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-1" />}
+              Cadastrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal QR Code */}
       <Dialog open={qrOpen} onOpenChange={setQrOpen}>

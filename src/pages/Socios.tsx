@@ -36,7 +36,7 @@ const Socios = () => {
           <p className="text-xl font-bold mt-1">R$ {ebitdaAnual.toLocaleString("pt-BR")}</p>
         </CardContent></Card>
         <Card className="shadow-sm"><CardContent className="pt-5">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Briefcase className="h-4 w-4 text-gold" />Patrimônio</div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Briefcase className="h-4 w-4 text-warning" />Patrimônio</div>
           <p className="text-xl font-bold mt-1">R$ {totalAtivos.toLocaleString("pt-BR")}</p>
         </CardContent></Card>
         <Card className="shadow-sm"><CardContent className="pt-5">

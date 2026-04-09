@@ -49,7 +49,7 @@ export interface KanbanColumn {
 
 export const KANBAN_COLUMNS: KanbanColumn[] = [
   { id: "lead", title: "Leads", colorClass: "bg-info/20 text-info border-info/30" },
-  { id: "contato", title: "Contato", colorClass: "bg-gold/20 text-gold border-gold/30" },
+  { id: "contato", title: "Contato", colorClass: "bg-accent/20 text-accent-foreground border-accent-foreground/30" },
   { id: "prova", title: "Prova Agendada", colorClass: "bg-primary/20 text-primary border-primary/30" },
   { id: "negociacao", title: "Negociação", colorClass: "bg-warning/20 text-warning border-warning/30" },
   { id: "fechamento", title: "Fechamento", colorClass: "bg-success/20 text-success border-success/30" },

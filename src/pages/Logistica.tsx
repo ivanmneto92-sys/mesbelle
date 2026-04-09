@@ -10,7 +10,7 @@ const groups: { title: string; icon: React.ElementType; color: string; badge: st
     { id: "1", vestido: "Sereia Bordado Pedraria", cliente: "Ana Beatriz", data: "08/04/2026" },
     { id: "2", vestido: "Midi Crepe Dourado", cliente: "Fernanda Lima", data: "08/04/2026" },
   ]},
-  { title: "Em Trânsito", icon: Truck, color: "text-gold", badge: "bg-gold/20 text-gold", items: [
+  { title: "Em Trânsito", icon: Truck, color: "text-warning", badge: "bg-warning/20 text-warning", items: [
     { id: "3", vestido: "Princesa Tule Rosa", cliente: "Camila Rocha", data: "07/04/2026" },
   ]},
   { title: "Com Cliente", icon: User, color: "text-success", badge: "bg-success/20 text-success", items: [

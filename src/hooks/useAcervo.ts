@@ -36,7 +36,7 @@ function loadJson<T>(key: string, fallback: T): T {
     const raw = localStorage.getItem(key);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : fallback;
+    return Array.isArray(parsed) ? (parsed as T) : fallback;
   } catch { return fallback; }
 }
 

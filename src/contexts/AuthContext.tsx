@@ -28,8 +28,13 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem("mesbelle_user");
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem("mesbelle_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      localStorage.removeItem("mesbelle_user");
+      return null;
+    }
   });
 
   const login = useCallback((email: string, password: string) => {

@@ -101,7 +101,7 @@ const Acervo = () => {
             {filtered.map((v) => (
               <Card key={v.id} className="overflow-hidden shadow-sm group cursor-pointer hover:shadow-md transition-shadow">
                 <div className="relative aspect-[3/4] overflow-hidden">
-                  <img src={v.image} alt={v.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <img src={v.image} alt={v.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
                   <div className="absolute top-2 left-2 flex gap-1">
                     <Badge variant={statusMap[v.status].variant} className="text-[10px]">{statusMap[v.status].label}</Badge>
                     {v.consigned && <Badge className="bg-gold text-white text-[10px] border-0"><Tag className="h-2.5 w-2.5 mr-0.5" />Consignado</Badge>}

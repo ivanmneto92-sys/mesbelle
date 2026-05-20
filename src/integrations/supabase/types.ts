@@ -169,14 +169,19 @@ export type Database = {
           data_assinatura: string | null
           data_criacao: string
           data_evento: string
+          email_cliente: string
           id: string
+          ip_assinatura: string | null
           lead_id: string
           negocio_id: string | null
           nome_cliente: string
           numero: string
+          signing_token: string | null
           status_assinatura: string
           termos_texto: string
+          token_expires_at: string | null
           updated_at: string
+          user_agent_assinatura: string | null
           valor_total: number
         }
         Insert: {
@@ -186,14 +191,19 @@ export type Database = {
           data_assinatura?: string | null
           data_criacao?: string
           data_evento?: string
+          email_cliente?: string
           id?: string
+          ip_assinatura?: string | null
           lead_id: string
           negocio_id?: string | null
           nome_cliente: string
           numero: string
+          signing_token?: string | null
           status_assinatura?: string
           termos_texto?: string
+          token_expires_at?: string | null
           updated_at?: string
+          user_agent_assinatura?: string | null
           valor_total?: number
         }
         Update: {
@@ -203,14 +213,19 @@ export type Database = {
           data_assinatura?: string | null
           data_criacao?: string
           data_evento?: string
+          email_cliente?: string
           id?: string
+          ip_assinatura?: string | null
           lead_id?: string
           negocio_id?: string | null
           nome_cliente?: string
           numero?: string
+          signing_token?: string | null
           status_assinatura?: string
           termos_texto?: string
+          token_expires_at?: string | null
           updated_at?: string
+          user_agent_assinatura?: string | null
           valor_total?: number
         }
         Relationships: [
@@ -712,9 +727,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assinar_contrato_publico: {
+        Args: {
+          _assinatura: string
+          _ip: string
+          _token: string
+          _user_agent: string
+        }
+        Returns: Json
+      }
       can_read_crm: { Args: { _user_id: string }; Returns: boolean }
       can_read_socios: { Args: { _user_id: string }; Returns: boolean }
       can_write_crm: { Args: { _user_id: string }; Returns: boolean }
+      get_contrato_by_token: {
+        Args: { _token: string }
+        Returns: {
+          assinatura_base64: string
+          cpf_cliente: string
+          data_assinatura: string
+          data_evento: string
+          id: string
+          nome_cliente: string
+          numero: string
+          status_assinatura: string
+          termos_texto: string
+          token_expires_at: string
+          valor_total: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -712,12 +712,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_read_crm: { Args: { _user_id: string }; Returns: boolean }
+      can_read_socios: { Args: { _user_id: string }; Returns: boolean }
       can_write_crm: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_own_funcionario: {
+        Args: { _funcionario_email: string; _user_id: string }
         Returns: boolean
       }
     }

@@ -263,7 +263,14 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                   </div>
                 )}
               </div>
-            </>
+
+      <LinkAssinaturaDialog
+        open={!!linkContrato}
+        onOpenChange={(o) => !o && setLinkContrato(null)}
+        contrato={linkContrato}
+        onGerar={onGerarLink}
+      />
+    </>
           )}
         </SheetContent>
       </Sheet>

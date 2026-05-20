@@ -192,7 +192,7 @@ export function useLeads() {
     if (data.statusNegociacao !== undefined) patch.status_negociacao = data.statusNegociacao;
     if (data.dataEvento !== undefined) patch.data_evento = data.dataEvento;
     setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, ...data } : n));
-    await supabase.from("negocios").update(patch).eq("id", negocioId);
+    await supabase.from("negocios").update(patch as never).eq("id", negocioId);
   }, []);
 
   const aprovarFechamento = useCallback(async (negocioId: string) => {

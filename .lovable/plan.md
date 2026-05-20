@@ -1,53 +1,88 @@
-# Análise de Segurança — Vazamento de Dados
+# Análise de Vazamento de Dados no Front-End
 
-Fiz uma varredura completa no backend (Lovable Cloud) e nas integrações. Encontrei **6 problemas**, sendo **1 crítico** relacionado a vazamento direto de dados sensíveis.
+## TL;DR
 
-## Resumo dos achados
+**Risco ALTO**. Hoje, todos os dados de clientes, vendas, financeiro, vestidos, sócios e comissões estão em `localStorage` no navegador, em texto puro, sem criptografia e sem vínculo com o usuário autenticado. Qualquer pessoa com acesso físico ao computador/tablet — ou com uma extensão maliciosa — lê tudo em segundos. Não é um problema de RLS no backend; é arquitetural: os dados nunca chegam ao backend.
 
-| # | Severidade | Problema | Risco |
-|---|------------|----------|-------|
-| 1 | **CRÍTICO** | Tabela `profiles` legível por qualquer usuário autenticado | Qualquer vendedor pode ver **comissão, contrato e telefone** de TODOS os colegas |
-| 2 | Médio | Tabela `user_roles` legível por todos autenticados | Qualquer usuário pode enumerar quem é admin/sócio/vendedor |
-| 3 | Baixo | Função `has_role` (SECURITY DEFINER) executável por `anon` e `authenticated` | Exposição da API interna a anônimos |
-| 4 | Baixo | Função `handle_new_user` (SECURITY DEFINER) executável por `anon` e `authenticated` | Trigger interno não deveria ser chamável via API |
+## O que está exposto no `localStorage` do navegador
 
-Sem achados em conectores externos. Sem segredos vazados no código. Edge function `create-team-member` valida JWT e checa role admin — OK.
+| Chave | Conteúdo sensível |
+|-------|-------------------|
+| `mesbelle_leads` | Nome, telefone, e-mail, evento, orçamento de **toda cliente** |
+| `mesbelle_medidas` | Medidas corporais das clientes |
+| `mesbelle_contratos` | Contratos assinados (PDF base64 / assinatura digital) |
+| `mesbelle_negocios` | Valores fechados, descontos, vendedora responsável |
+| `mesbelle_financeiro` | DRE, fluxo de caixa, impostos da empresa |
+| `mesbelle_vestidos` / `mesbelle_reservas` / `mesbelle_producoes` / `mesbelle_etapas` | Acervo completo, custos, fornecedores |
+| `mesbelle_logistica` | Endereços de entrega de clientes |
+| `mesbelle_permissoes` | Matriz de permissões editável pelo cliente |
+| (Sócios) Multiplicador de valuation, distribuição de lucros | Dados estratégicos da empresa |
 
-## Correções propostas
+## Cenários reais de vazamento
 
-### 1. `profiles` — restringir SELECT (CRÍTICO)
-Remover a policy "Authenticated users can view all profiles" e substituir por duas:
-- Usuário lê o **próprio** profile (`auth.uid() = user_id`)
-- **Admins** leem todos (via `has_role(auth.uid(), 'admin')`)
-
-Impacto na UI: telas que listam equipe (`Equipe.tsx`, `Socios.tsx`) já são restritas a admin/sócio nas rotas — continuam funcionando. Componentes que mostram nome de vendedor em leads/vendas precisarão buscar via join controlado ou via uma **view pública** com apenas `id, user_id, nome` (sem comissão/telefone/contrato).
-
-### 2. `user_roles` — restringir SELECT
-Substituir "Authenticated users can view roles" por:
-- Usuário lê a **própria** role
-- Admins leem todas
-
-Impacto: `AuthContext.fetchUserRole` já busca apenas o próprio user_id — continua funcionando.
-
-### 3 e 4. Revogar EXECUTE público das funções SECURITY DEFINER
-```sql
-REVOKE EXECUTE ON FUNCTION public.has_role(uuid, app_role) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM anon, authenticated;
-```
-`has_role` continua funcionando dentro das policies RLS (executa como definer). `handle_new_user` só roda via trigger.
-
-### 5. View pública para nomes de vendedores (se necessário)
-Criar `public.profiles_public` (view com `security_invoker=on`) expondo apenas `user_id, nome, ativo` — para telas que precisam mostrar "Vendedor responsável: Maria" sem vazar comissão.
-
-## Arquivos afetados
-
-- **Migração SQL nova** — policies + revokes + view
-- **Nenhuma mudança no frontend** se a view for criada (os componentes que hoje fazem `select * from profiles` passam a usar `profiles_public`)
-- Possíveis ajustes em `useEquipe.ts` se ele depender de leitura ampla para usuários não-admin (a verificar)
+1. **Computador compartilhado no ateliê** — vendedora sai, próxima pessoa abre DevTools → Application → Local Storage e copia tudo.
+2. **iPad esquecido** — quem pegar o aparelho desbloqueado vê toda a base.
+3. **Extensão de navegador maliciosa** — lê `localStorage` de qualquer aba.
+4. **XSS** (script injetado via campo de texto sem sanitização) — exfiltra `localStorage` inteiro para servidor externo. Já existe risco hoje em campos como observações de lead.
+5. **Login com outra conta** — `localStorage` é por **navegador, não por usuário**. Quem logar depois enxerga os dados da pessoa anterior.
+6. **Bypass de permissão** — `usePermissoes` valida no cliente. Basta editar `mesbelle_permissoes` no DevTools para virar admin visual.
 
 ## O que NÃO está em risco
 
-- Senhas: gerenciadas pelo Auth do Lovable Cloud, nunca expostas
-- Service role key: usada apenas em edge functions
-- Dados operacionais (leads, vendas, vestidos): hoje em `localStorage` por cliente, sem vazamento cross-user
-- Edge function `create-team-member`: validação de JWT + checagem de role admin OK
+- Credenciais e senhas (Lovable Cloud Auth, nunca no front).
+- Tabelas `profiles` e `user_roles` (já corrigidas — RLS restrita).
+- Service role key (só em edge functions).
+- Conexões externas (não há APIs bancárias por design).
+
+## Vetores adicionais identificados
+
+- **Sem sanitização de HTML** em campos livres (observações, descrições) → janela aberta para XSS.
+- **Sem Content Security Policy (CSP)** no `index.html` → qualquer script de terceiros pode rodar.
+- **Mock de dados iniciais hardcoded** em `useLeads.ts` e similares ficam no bundle JS público — clientes fictícias, mas o padrão de exposição é o mesmo.
+- **`localStorage` não é limpo no logout** — só ao chamar `clearAppStorage()` em casos de erro.
+
+## Recomendação estratégica
+
+A correção real exige **migrar os dados operacionais do `localStorage` para o Lovable Cloud** com RLS por papel (admin / vendedor / sócio). Isso resolve simultaneamente:
+
+- Multi-dispositivo (hoje cada navegador tem sua base própria, não sincroniza).
+- Vazamento físico (dados não ficam no aparelho).
+- Bypass de permissão (validação server-side).
+- Auditoria (quem viu/editou o quê).
+
+## Plano de mitigação em camadas
+
+### Imediato (1 sessão de trabalho) — reduz risco sem refazer arquitetura
+1. **Limpar `localStorage` no logout** — chamar `clearAppStorage()` dentro de `AuthContext.logout()`.
+2. **Limpar `localStorage` ao trocar de usuário** — detectar mudança de `user.id` no `AuthContext` e limpar antes de carregar.
+3. **Adicionar CSP** em `index.html` (`default-src 'self'`, bloqueando inline scripts externos).
+4. **Sanitizar entradas livres** (observações, descrições) com DOMPurify antes de renderizar.
+5. **Mover `usePermissoes` para read-only no cliente** e validar permissões via `has_role` no backend nas operações sensíveis (já estamos prontos — `user_roles` existe).
+6. **Avisar visualmente** quando o usuário não for admin e tentar acessar dados financeiros — hoje a rota bloqueia, mas os dados ainda existem no `localStorage`.
+
+### Curto prazo (próximas iterações) — migração progressiva
+Migrar do `localStorage` para o Lovable Cloud, em ordem de criticidade:
+1. **Clientes / Leads / Medidas / Contratos** (CRM) — dados pessoais LGPD.
+2. **Financeiro / Sócios** — dados estratégicos.
+3. **Vendas / Negociações** — comissões e valores.
+4. **Acervo / Produção / Logística** — menos sensível, pode ficar por último.
+
+Cada migração inclui:
+- Tabela com RLS por papel
+- Hook reescrito usando `supabase.from(...).select()`
+- Remoção do `localStorage` correspondente
+
+### Médio prazo
+- Auditoria de acessos (log de quem leu/editou) via tabela `audit_log` + trigger.
+- Rate limiting nas edge functions sensíveis.
+- Exportação/importação de dados controlada por admin (LGPD: portabilidade).
+
+## Decisão necessária
+
+Quer que eu execute:
+
+- **(A) Mitigação imediata** (passos 1–6 acima) — defensável, mas dados continuam no navegador
+- **(B) Mitigação imediata + migrar CRM (clientes) para o Cloud** — corrige o vetor mais sensível (LGPD)
+- **(C) Plano completo** — migrar tudo para o Cloud, módulo por módulo
+
+Recomendo começar por **(B)**: protege o dado mais regulado (clientes) primeiro e mantém o resto operacional enquanto migramos.

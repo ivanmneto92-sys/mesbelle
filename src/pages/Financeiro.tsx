@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { SEO } from "@/components/SEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -150,6 +151,8 @@ const Financeiro = () => {
   };
 
   return (
+    <>
+    <SEO title="Financeiro — Més Belle" description="Receitas, despesas e fluxo de caixa do ateliê." path="/financeiro" />
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -516,6 +519,7 @@ const Financeiro = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,8 @@ const Configuracoes = () => {
   );
 
   return (
+    <>
+    <SEO title="Configurações — Més Belle" description="Ajustes da conta e preferências do sistema Més Belle." path="/configuracoes" />
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-serif">Configurações & Automações</h1>
@@ -159,6 +162,7 @@ const Configuracoes = () => {
         </Card>
       </div>
     </div>
+    </>
   );
 };
 

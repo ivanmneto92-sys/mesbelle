@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, PlusCircle } from "lucide-react";
@@ -19,6 +20,8 @@ const ComercialVendas = () => {
   const negociosAprovados = negocios.filter((n) => n.statusNegociacao === "aprovado");
 
   return (
+    <>
+    <SEO title="Comercial e Vendas — Més Belle" description="Acompanhe negociações, contratos e métricas comerciais." path="/comercial" />
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -63,6 +66,7 @@ const ComercialVendas = () => {
         </TabsContent>
       </Tabs>
     </div>
+    </>
   );
 };
 

@@ -153,9 +153,14 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                           <Printer className="h-4 w-4" />
                         </Button>
                         {c.statusAssinatura === "pendente" && (
-                          <Button size="sm" variant="outline" onClick={() => setPreviewContrato(c)}>
-                            <FileSignature className="h-4 w-4 mr-1" /> Assinar
-                          </Button>
+                          <>
+                            <Button size="sm" variant="outline" className="gap-1" onClick={() => setLinkContrato(c)}>
+                              <Link2 className="h-4 w-4" /> Enviar link
+                            </Button>
+                            <Button size="sm" onClick={() => setPreviewContrato(c)}>
+                              <FileSignature className="h-4 w-4 mr-1" /> Assinar no iPad
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>

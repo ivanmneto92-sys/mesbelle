@@ -77,7 +77,7 @@ export default function AssinaturaPublica() {
 
   return (
     <>
-      <SEO title="Assinatura Digital — Més Belle" description="Assine seu contrato digitalmente." path="/assinar" noindex />
+      <SEO title="Assinatura Digital — Més Belle" description="Assine seu contrato digitalmente." path="/assinar" />
       <div className="min-h-screen bg-gradient-to-br from-[#fdf6f8] to-[#f8e9ef]">
         <header className="border-b bg-white/70 backdrop-blur">
           <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">

@@ -18,6 +18,7 @@ import Equipe from "./pages/Equipe";
 import Socios from "./pages/Socios";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
+import AssinaturaPublica from "./pages/AssinaturaPublica";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={loading ? null : (isAuthenticated ? <Navigate to="/" replace /> : <Login />)} />
       <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+      <Route path="/assinar/:token" element={<AssinaturaPublica />} />
       <Route path="/" element={<ProtectedRoute path="/"><Dashboard /></ProtectedRoute>} />
       <Route path="/crm" element={<ProtectedRoute path="/crm"><CRM /></ProtectedRoute>} />
       <Route path="/comercial" element={<ProtectedRoute path="/comercial"><ComercialVendas /></ProtectedRoute>} />

@@ -256,10 +256,22 @@ export function useLeads() {
     }).eq("id", contratoId);
   }, []);
 
+  const gerarLinkAssinatura = useCallback(async (contratoId: string, validadeHoras: number): Promise<string | null> => {
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + validadeHoras * 60 * 60 * 1000).toISOString();
+    const { error } = await supabase
+      .from("contratos")
+      .update({ signing_token: token, token_expires_at: expiresAt })
+      .eq("id", contratoId);
+    if (error) return null;
+    setContratos((prev) => prev.map((c) => c.id === contratoId ? { ...c } : c));
+    return `${window.location.origin}/assinar/${token}`;
+  }, []);
+
   return {
     leads, addLead, updateLeadStatus, updateLead,
     medidas, updateMedidas, getMedidas,
-    contratos, addContrato, addContratoFromNegocio, updateContratoStatus, assinarContrato,
+    contratos, addContrato, addContratoFromNegocio, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
     negocios, enviarParaComercial, updateNegocio, aprovarFechamento,
     getLeadsByStatus,
   };

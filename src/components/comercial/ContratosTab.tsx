@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Search, FileSignature, Eye, Printer } from "lucide-react";
+import { Plus, Search, FileSignature, Eye, Printer, Link2 } from "lucide-react";
 import { Contrato, ContratoStatus, Negocio } from "@/types/comercial";
 import { SignaturePad } from "./SignaturePad";
+import { LinkAssinaturaDialog } from "./LinkAssinaturaDialog";
 import { toast } from "sonner";
 
 interface ContratosTabProps {
@@ -20,13 +21,15 @@ interface ContratosTabProps {
   onGerarContratoFromNegocio: (negocio: Negocio) => (Contrato | undefined) | Promise<Contrato | null | undefined>;
   onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
   onAssinar: (contratoId: string, assinaturaBase64: string) => void;
+  onGerarLink: (contratoId: string, validadeHoras: number) => Promise<string | null>;
 }
 
-export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus, onAssinar }: ContratosTabProps) {
+export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus, onAssinar, onGerarLink }: ContratosTabProps) {
   const [busca, setBusca] = useState("");
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
   const [selectedNegocioId, setSelectedNegocioId] = useState("");
   const [previewContrato, setPreviewContrato] = useState<Contrato | null>(null);
+  const [linkContrato, setLinkContrato] = useState<Contrato | null>(null);
 
   const filtered = contratos.filter((c) =>
     c.nomeCliente.toLowerCase().includes(busca.toLowerCase()) ||
@@ -150,9 +153,14 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                           <Printer className="h-4 w-4" />
                         </Button>
                         {c.statusAssinatura === "pendente" && (
-                          <Button size="sm" variant="outline" onClick={() => setPreviewContrato(c)}>
-                            <FileSignature className="h-4 w-4 mr-1" /> Assinar
-                          </Button>
+                          <>
+                            <Button size="sm" variant="outline" className="gap-1" onClick={() => setLinkContrato(c)}>
+                              <Link2 className="h-4 w-4" /> Enviar link
+                            </Button>
+                            <Button size="sm" onClick={() => setPreviewContrato(c)}>
+                              <FileSignature className="h-4 w-4 mr-1" /> Assinar no iPad
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -255,7 +263,14 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                   </div>
                 )}
               </div>
-            </>
+
+      <LinkAssinaturaDialog
+        open={!!linkContrato}
+        onOpenChange={(o) => !o && setLinkContrato(null)}
+        contrato={linkContrato}
+        onGerar={onGerarLink}
+      />
+    </>
           )}
         </SheetContent>
       </Sheet>

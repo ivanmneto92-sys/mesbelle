@@ -17,7 +17,7 @@ import { toast } from "sonner";
 interface ContratosTabProps {
   contratos: Contrato[];
   negociosAprovados: Negocio[];
-  onGerarContratoFromNegocio: (negocio: Negocio) => Contrato | undefined;
+  onGerarContratoFromNegocio: (negocio: Negocio) => (Contrato | undefined) | Promise<Contrato | null | undefined>;
   onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
   onAssinar: (contratoId: string, assinaturaBase64: string) => void;
 }

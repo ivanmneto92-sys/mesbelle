@@ -14,6 +14,228 @@ export type Database = {
   }
   public: {
     Tables: {
+      contratos: {
+        Row: {
+          assinatura_base64: string | null
+          cpf_cliente: string
+          created_at: string
+          data_assinatura: string | null
+          data_criacao: string
+          data_evento: string
+          id: string
+          lead_id: string
+          negocio_id: string | null
+          nome_cliente: string
+          numero: string
+          status_assinatura: string
+          termos_texto: string
+          updated_at: string
+          valor_total: number
+        }
+        Insert: {
+          assinatura_base64?: string | null
+          cpf_cliente?: string
+          created_at?: string
+          data_assinatura?: string | null
+          data_criacao?: string
+          data_evento?: string
+          id?: string
+          lead_id: string
+          negocio_id?: string | null
+          nome_cliente: string
+          numero: string
+          status_assinatura?: string
+          termos_texto?: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Update: {
+          assinatura_base64?: string | null
+          cpf_cliente?: string
+          created_at?: string
+          data_assinatura?: string | null
+          data_criacao?: string
+          data_evento?: string
+          id?: string
+          lead_id?: string
+          negocio_id?: string | null
+          nome_cliente?: string
+          numero?: string
+          status_assinatura?: string
+          termos_texto?: string
+          updated_at?: string
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          cpf: string
+          created_at: string
+          criado_em: string
+          data_evento: string
+          email: string
+          endereco: string
+          enviado_comercial: boolean
+          id: string
+          nome: string
+          notas_internas: string
+          prova_data: string | null
+          prova_hora: string | null
+          status_funil: string
+          telefone: string
+          tipo_evento: string
+          updated_at: string
+          vendedor_responsavel: string
+        }
+        Insert: {
+          cpf?: string
+          created_at?: string
+          criado_em?: string
+          data_evento?: string
+          email?: string
+          endereco?: string
+          enviado_comercial?: boolean
+          id?: string
+          nome: string
+          notas_internas?: string
+          prova_data?: string | null
+          prova_hora?: string | null
+          status_funil?: string
+          telefone?: string
+          tipo_evento?: string
+          updated_at?: string
+          vendedor_responsavel?: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          criado_em?: string
+          data_evento?: string
+          email?: string
+          endereco?: string
+          enviado_comercial?: boolean
+          id?: string
+          nome?: string
+          notas_internas?: string
+          prova_data?: string | null
+          prova_hora?: string | null
+          status_funil?: string
+          telefone?: string
+          tipo_evento?: string
+          updated_at?: string
+          vendedor_responsavel?: string
+        }
+        Relationships: []
+      }
+      medidas: {
+        Row: {
+          altura: string
+          busto: string
+          cintura: string
+          created_at: string
+          lead_id: string
+          manequim: string
+          quadril: string
+          salto: string | null
+          updated_at: string
+        }
+        Insert: {
+          altura?: string
+          busto?: string
+          cintura?: string
+          created_at?: string
+          lead_id: string
+          manequim?: string
+          quadril?: string
+          salto?: string | null
+          updated_at?: string
+        }
+        Update: {
+          altura?: string
+          busto?: string
+          cintura?: string
+          created_at?: string
+          lead_id?: string
+          manequim?: string
+          quadril?: string
+          salto?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medidas_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negocios: {
+        Row: {
+          cliente_cpf: string
+          cliente_id: string
+          cliente_nome: string
+          created_at: string
+          criado_em: string
+          data_evento: string
+          desconto: number
+          id: string
+          metodo_pagamento: string
+          status_negociacao: string
+          updated_at: string
+          valor_negociado: number
+          vestido_nome: string | null
+        }
+        Insert: {
+          cliente_cpf?: string
+          cliente_id: string
+          cliente_nome: string
+          created_at?: string
+          criado_em?: string
+          data_evento?: string
+          desconto?: number
+          id?: string
+          metodo_pagamento?: string
+          status_negociacao?: string
+          updated_at?: string
+          valor_negociado?: number
+          vestido_nome?: string | null
+        }
+        Update: {
+          cliente_cpf?: string
+          cliente_id?: string
+          cliente_nome?: string
+          created_at?: string
+          criado_em?: string
+          data_evento?: string
+          desconto?: number
+          id?: string
+          metodo_pagamento?: string
+          status_negociacao?: string
+          updated_at?: string
+          valor_negociado?: number
+          vestido_nome?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negocios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           ativo: boolean | null
@@ -76,6 +298,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_write_crm: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

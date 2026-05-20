@@ -1,221 +1,260 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negocio, StatusNegociacao } from "@/types/comercial";
 
-const STORAGE_KEY_LEADS = "mesbelle_leads";
-const STORAGE_KEY_MEDIDAS = "mesbelle_medidas";
-const STORAGE_KEY_CONTRATOS = "mesbelle_contratos";
-const STORAGE_KEY_NEGOCIOS = "mesbelle_negocios";
-
-const APP_STORAGE_KEYS = [STORAGE_KEY_LEADS, STORAGE_KEY_MEDIDAS, STORAGE_KEY_CONTRATOS, STORAGE_KEY_NEGOCIOS, "mesbelle_user", "mesbelle_vestidos", "mesbelle_reservas", "mesbelle_producoes", "mesbelle_etapas", "mesbelle_logistica"];
+// ============= Legacy storage cleanup =============
+// Kept for compatibility — clears any residual data from the old localStorage-based system.
+const LEGACY_STORAGE_KEYS = [
+  "mesbelle_leads",
+  "mesbelle_medidas",
+  "mesbelle_contratos",
+  "mesbelle_negocios",
+  "mesbelle_user",
+  "mesbelle_vestidos",
+  "mesbelle_reservas",
+  "mesbelle_producoes",
+  "mesbelle_etapas",
+  "mesbelle_logistica",
+];
 
 export function clearAppStorage() {
-  APP_STORAGE_KEYS.forEach((key) => {
-    try { localStorage.removeItem(key); } catch {}
+  LEGACY_STORAGE_KEYS.forEach((key) => {
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
   });
 }
 
-function isValidLead(obj: unknown): obj is Lead {
-  if (!obj || typeof obj !== "object") return false;
-  const o = obj as Record<string, unknown>;
-  return typeof o.id === "string" && typeof o.nome === "string" && typeof o.statusFunil === "string";
-}
+// ============= DB row → domain mappers =============
+type LeadRow = {
+  id: string; nome: string; telefone: string; email: string; cpf: string; endereco: string;
+  tipo_evento: string; data_evento: string; status_funil: string; notas_internas: string;
+  vendedor_responsavel: string; prova_data: string | null; prova_hora: string | null;
+  enviado_comercial: boolean; criado_em: string;
+};
+const rowToLead = (r: LeadRow): Lead => ({
+  id: r.id, nome: r.nome, telefone: r.telefone, email: r.email, cpf: r.cpf, endereco: r.endereco,
+  tipoEvento: r.tipo_evento, dataEvento: r.data_evento, statusFunil: r.status_funil as CrmFunnelStatus,
+  notasInternas: r.notas_internas, vendedorResponsavel: r.vendedor_responsavel,
+  criadoEm: r.criado_em, provaData: r.prova_data ?? undefined, provaHora: r.prova_hora ?? undefined,
+  enviadoComercial: r.enviado_comercial,
+});
+const leadPatchToRow = (p: Partial<Lead>): Record<string, unknown> => {
+  const out: Record<string, unknown> = {};
+  if (p.nome !== undefined) out.nome = p.nome;
+  if (p.telefone !== undefined) out.telefone = p.telefone;
+  if (p.email !== undefined) out.email = p.email;
+  if (p.cpf !== undefined) out.cpf = p.cpf;
+  if (p.endereco !== undefined) out.endereco = p.endereco;
+  if (p.tipoEvento !== undefined) out.tipo_evento = p.tipoEvento;
+  if (p.dataEvento !== undefined) out.data_evento = p.dataEvento;
+  if (p.statusFunil !== undefined) out.status_funil = p.statusFunil;
+  if (p.notasInternas !== undefined) out.notas_internas = p.notasInternas;
+  if (p.vendedorResponsavel !== undefined) out.vendedor_responsavel = p.vendedorResponsavel;
+  if (p.provaData !== undefined) out.prova_data = p.provaData;
+  if (p.provaHora !== undefined) out.prova_hora = p.provaHora;
+  if (p.enviadoComercial !== undefined) out.enviado_comercial = p.enviadoComercial;
+  return out;
+};
 
-function isValidMedida(obj: unknown): obj is MedidasCliente {
-  if (!obj || typeof obj !== "object") return false;
-  const o = obj as Record<string, unknown>;
-  return typeof o.leadId === "string";
-}
+type MedidaRow = { lead_id: string; busto: string; cintura: string; quadril: string; altura: string; salto: string | null; manequim: string };
+const rowToMedida = (r: MedidaRow): MedidasCliente => ({
+  leadId: r.lead_id, busto: r.busto, cintura: r.cintura, quadril: r.quadril,
+  altura: r.altura, salto: r.salto ?? undefined, manequim: r.manequim,
+});
 
-function isValidContrato(obj: unknown): obj is Contrato {
-  if (!obj || typeof obj !== "object") return false;
-  const o = obj as Record<string, unknown>;
-  return typeof o.id === "string" && typeof o.leadId === "string" && typeof o.valorTotal === "number";
-}
+type ContratoRow = {
+  id: string; numero: string; lead_id: string; negocio_id: string | null; nome_cliente: string;
+  cpf_cliente: string; data_evento: string; data_criacao: string; valor_total: number;
+  status_assinatura: string; termos_texto: string; assinatura_base64: string | null;
+  data_assinatura: string | null;
+};
+const rowToContrato = (r: ContratoRow): Contrato => ({
+  id: r.id, numero: r.numero, leadId: r.lead_id, negocioId: r.negocio_id ?? undefined,
+  nomeCliente: r.nome_cliente, cpfCliente: r.cpf_cliente, dataEvento: r.data_evento,
+  dataCriacao: r.data_criacao, valorTotal: Number(r.valor_total),
+  statusAssinatura: r.status_assinatura as ContratoStatus, termosTexto: r.termos_texto,
+  assinaturaBase64: r.assinatura_base64 ?? undefined, dataAssinatura: r.data_assinatura ?? undefined,
+});
 
-function isValidNegocio(obj: unknown): obj is Negocio {
-  if (!obj || typeof obj !== "object") return false;
-  const o = obj as Record<string, unknown>;
-  return typeof o.id === "string" && typeof o.clienteId === "string" && typeof o.statusNegociacao === "string";
-}
-
-function loadValidated<T>(key: string, fallback: T[], validator: (item: unknown) => item is T): T[] {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      localStorage.removeItem(key);
-      return fallback;
-    }
-    const valid = parsed.filter(validator);
-    if (valid.length !== parsed.length) {
-      localStorage.setItem(key, JSON.stringify(valid));
-    }
-    return valid.length > 0 ? valid : fallback;
-  } catch {
-    localStorage.removeItem(key);
-    return fallback;
-  }
-}
-
-function saveToStorage(key: string, data: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
-}
-
-const initialLeads: Lead[] = [
-  { id: "1", nome: "Ana Beatriz", telefone: "(11) 99876-5432", email: "ana@email.com", cpf: "123.456.789-00", endereco: "Rua das Flores, 123", tipoEvento: "Casamento", dataEvento: "2026-06-15", statusFunil: "novo_lead", notasInternas: "", vendedorResponsavel: "Juliana Costa", criadoEm: "2026-04-01" },
-  { id: "2", nome: "Fernanda Lima", telefone: "(21) 98765-4321", email: "fernanda@email.com", cpf: "987.654.321-00", endereco: "Av. Brasil, 456", tipoEvento: "Formatura", dataEvento: "2026-07-20", statusFunil: "novo_lead", notasInternas: "", vendedorResponsavel: "Juliana Costa", criadoEm: "2026-04-02" },
-  { id: "3", nome: "Mariana Souza", telefone: "(11) 91234-5678", email: "mariana@email.com", cpf: "456.789.123-00", endereco: "Rua XV, 789", tipoEvento: "Gala", dataEvento: "2026-06-10", statusFunil: "em_atendimento", notasInternas: "Cliente interessada em vestido longo dourado", vendedorResponsavel: "Juliana Costa", criadoEm: "2026-03-28" },
-  { id: "4", nome: "Camila Rocha", telefone: "(31) 99999-1234", email: "camila@email.com", cpf: "321.654.987-00", endereco: "Rua da Paz, 321", tipoEvento: "Casamento", dataEvento: "2026-06-05", statusFunil: "prova_agendada", notasInternas: "Agendou prova para sábado", vendedorResponsavel: "Juliana Costa", criadoEm: "2026-03-20", provaData: "2026-04-12", provaHora: "14:00" },
-  { id: "5", nome: "Patrícia Nunes", telefone: "(41) 98888-7777", email: "patricia@email.com", cpf: "654.321.987-00", endereco: "Rua Central, 654", tipoEvento: "Debutante", dataEvento: "2026-08-12", statusFunil: "em_atendimento", notasInternas: "Interessada em vestido rosa", vendedorResponsavel: "Juliana Costa", criadoEm: "2026-03-15", enviadoComercial: true },
-  { id: "6", nome: "Luciana Alves", telefone: "(11) 97777-6666", email: "luciana@email.com", cpf: "789.123.456-00", endereco: "Av. Paulista, 1000", tipoEvento: "Casamento", dataEvento: "2026-09-20", statusFunil: "em_atendimento", notasInternas: "Aguardando retorno sobre valor", vendedorResponsavel: "Juliana Costa", criadoEm: "2026-03-25" },
-];
-
-const initialMedidas: MedidasCliente[] = [
-  { leadId: "4", busto: "90", cintura: "68", quadril: "96", altura: "1.65", manequim: "40" },
-  { leadId: "5", busto: "88", cintura: "66", quadril: "94", altura: "1.60", manequim: "38" },
-];
-
-const initialContratos: Contrato[] = [
-  { id: "c1", numero: "0132", leadId: "5", nomeCliente: "Patrícia Nunes", cpfCliente: "654.321.987-00", dataEvento: "2026-08-12", dataCriacao: "2026-04-01", valorTotal: 4500, statusAssinatura: "assinado", termosTexto: "Contrato de aluguel de vestido de debutante..." },
-];
-
-const initialNegocios: Negocio[] = [
-  { id: "n1", clienteId: "5", clienteNome: "Patrícia Nunes", clienteCpf: "654.321.987-00", vestidoNome: "Vestido Rosa Debutante", valorNegociado: 4500, desconto: 0, metodoPagamento: "Cartão 3x", statusNegociacao: "aprovado", dataEvento: "2026-08-12", criadoEm: "2026-03-30" },
-];
+type NegocioRow = {
+  id: string; cliente_id: string; cliente_nome: string; cliente_cpf: string; vestido_nome: string | null;
+  valor_negociado: number; desconto: number; metodo_pagamento: string; status_negociacao: string;
+  data_evento: string; criado_em: string;
+};
+const rowToNegocio = (r: NegocioRow): Negocio => ({
+  id: r.id, clienteId: r.cliente_id, clienteNome: r.cliente_nome, clienteCpf: r.cliente_cpf,
+  vestidoNome: r.vestido_nome ?? undefined, valorNegociado: Number(r.valor_negociado),
+  desconto: Number(r.desconto), metodoPagamento: r.metodo_pagamento,
+  statusNegociacao: r.status_negociacao as StatusNegociacao,
+  dataEvento: r.data_evento, criadoEm: r.criado_em,
+});
 
 export function useLeads() {
-  const [leads, setLeads] = useState<Lead[]>(() => loadValidated(STORAGE_KEY_LEADS, initialLeads, isValidLead));
-  const [medidas, setMedidas] = useState<MedidasCliente[]>(() => loadValidated(STORAGE_KEY_MEDIDAS, initialMedidas, isValidMedida));
-  const [contratos, setContratos] = useState<Contrato[]>(() => loadValidated(STORAGE_KEY_CONTRATOS, initialContratos, isValidContrato));
-  const [negocios, setNegocios] = useState<Negocio[]>(() => loadValidated(STORAGE_KEY_NEGOCIOS, initialNegocios, isValidNegocio));
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [medidas, setMedidas] = useState<MedidasCliente[]>([]);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [negocios, setNegocios] = useState<Negocio[]>([]);
 
-  const persistLeads = useCallback((updated: Lead[]) => { setLeads(updated); saveToStorage(STORAGE_KEY_LEADS, updated); }, []);
-  const persistContratos = useCallback((updated: Contrato[]) => { setContratos(updated); saveToStorage(STORAGE_KEY_CONTRATOS, updated); }, []);
-  const persistNegocios = useCallback((updated: Negocio[]) => { setNegocios(updated); saveToStorage(STORAGE_KEY_NEGOCIOS, updated); }, []);
+  // Clear any old localStorage data on mount (one-shot housekeeping).
+  useEffect(() => {
+    clearAppStorage();
+  }, []);
+
+  // Initial load from Supabase.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [leadsRes, medidasRes, contratosRes, negociosRes] = await Promise.all([
+        supabase.from("leads").select("*").order("created_at", { ascending: false }),
+        supabase.from("medidas").select("*"),
+        supabase.from("contratos").select("*").order("created_at", { ascending: false }),
+        supabase.from("negocios").select("*").order("created_at", { ascending: false }),
+      ]);
+      if (!active) return;
+      if (leadsRes.data) setLeads((leadsRes.data as LeadRow[]).map(rowToLead));
+      if (medidasRes.data) setMedidas((medidasRes.data as MedidaRow[]).map(rowToMedida));
+      if (contratosRes.data) setContratos((contratosRes.data as ContratoRow[]).map(rowToContrato));
+      if (negociosRes.data) setNegocios((negociosRes.data as NegocioRow[]).map(rowToNegocio));
+    })();
+    return () => { active = false; };
+  }, []);
 
   // === LEADS / CRM ===
-  const addLead = useCallback((lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => {
-    const newLead: Lead = { ...lead, id: crypto.randomUUID(), statusFunil: "novo_lead", criadoEm: new Date().toISOString().split("T")[0] };
-    const updated = [...leads, newLead];
-    persistLeads(updated);
+  const addLead = useCallback(async (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => {
+    const insertRow = {
+      nome: lead.nome,
+      ...leadPatchToRow(lead as Partial<Lead>),
+      status_funil: "novo_lead",
+    } as { nome: string } & Record<string, unknown>;
+    const { data, error } = await supabase.from("leads").insert(insertRow as never).select().single();
+    if (error || !data) return null;
+    const newLead = rowToLead(data as LeadRow);
+    setLeads((prev) => [newLead, ...prev]);
     return newLead;
-  }, [leads, persistLeads]);
+  }, []);
 
-  const updateLeadStatus = useCallback((leadId: string, newStatus: CrmFunnelStatus, extra?: Partial<Lead>) => {
-    const updated = leads.map((l) => l.id === leadId ? { ...l, statusFunil: newStatus, ...extra } : l);
-    persistLeads(updated);
-  }, [leads, persistLeads]);
+  const updateLeadStatus = useCallback(async (leadId: string, newStatus: CrmFunnelStatus, extra?: Partial<Lead>) => {
+    const patch = { ...leadPatchToRow(extra ?? {}), status_funil: newStatus };
+    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, statusFunil: newStatus, ...(extra ?? {}) } : l));
+    await supabase.from("leads").update(patch as never).eq("id", leadId);
+  }, []);
 
-  const updateLead = useCallback((leadId: string, data: Partial<Lead>) => {
-    const updated = leads.map((l) => l.id === leadId ? { ...l, ...data } : l);
-    persistLeads(updated);
-  }, [leads, persistLeads]);
+  const updateLead = useCallback(async (leadId: string, data: Partial<Lead>) => {
+    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, ...data } : l));
+    await supabase.from("leads").update(leadPatchToRow(data) as never).eq("id", leadId);
+  }, []);
 
-  const updateMedidas = useCallback((leadId: string, data: Omit<MedidasCliente, "leadId">) => {
-    const existing = medidas.find((m) => m.leadId === leadId);
-    let updated: MedidasCliente[];
-    if (existing) {
-      updated = medidas.map((m) => m.leadId === leadId ? { ...m, ...data } : m);
-    } else {
-      updated = [...medidas, { leadId, ...data }];
-    }
-    setMedidas(updated);
-    saveToStorage(STORAGE_KEY_MEDIDAS, updated);
-  }, [medidas]);
+  const updateMedidas = useCallback(async (leadId: string, data: Omit<MedidasCliente, "leadId">) => {
+    const payload = {
+      lead_id: leadId,
+      busto: data.busto, cintura: data.cintura, quadril: data.quadril,
+      altura: data.altura, salto: data.salto ?? null, manequim: data.manequim,
+    };
+    setMedidas((prev) => {
+      const exists = prev.find((m) => m.leadId === leadId);
+      if (exists) return prev.map((m) => m.leadId === leadId ? { ...m, ...data } : m);
+      return [...prev, { leadId, ...data }];
+    });
+    await supabase.from("medidas").upsert(payload, { onConflict: "lead_id" });
+  }, []);
 
   const getMedidas = useCallback((leadId: string) => medidas.find((m) => m.leadId === leadId), [medidas]);
 
   const getLeadsByStatus = useCallback((status: CrmFunnelStatus) => leads.filter((l) => l.statusFunil === status), [leads]);
 
   // === NEGÓCIOS (Comercial) ===
-  const enviarParaComercial = useCallback((leadId: string, vestidoNome?: string) => {
+  const enviarParaComercial = useCallback(async (leadId: string, vestidoNome?: string) => {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead) return;
-    // Mark lead
-    const updatedLeads = leads.map((l) => l.id === leadId ? { ...l, enviadoComercial: true } : l);
-    persistLeads(updatedLeads);
-    // Check for existing open negocio
+    setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, enviadoComercial: true } : l));
+    await supabase.from("leads").update({ enviado_comercial: true }).eq("id", leadId);
+
     const existing = negocios.find((n) => n.clienteId === leadId && n.statusNegociacao !== "cancelado");
     if (existing) return existing;
-    // Create negocio
-    const negocio: Negocio = {
-      id: crypto.randomUUID(),
-      clienteId: lead.id,
-      clienteNome: lead.nome,
-      clienteCpf: lead.cpf,
-      vestidoNome: vestidoNome || "",
-      valorNegociado: 0,
-      desconto: 0,
-      metodoPagamento: "",
-      statusNegociacao: "aberto",
-      dataEvento: lead.dataEvento,
-      criadoEm: new Date().toISOString().split("T")[0],
+
+    const insertRow = {
+      cliente_id: lead.id, cliente_nome: lead.nome, cliente_cpf: lead.cpf,
+      vestido_nome: vestidoNome || null, valor_negociado: 0, desconto: 0,
+      metodo_pagamento: "", status_negociacao: "aberto", data_evento: lead.dataEvento,
     };
-    const updatedNegocios = [...negocios, negocio];
-    persistNegocios(updatedNegocios);
+    const { data, error } = await supabase.from("negocios").insert(insertRow).select().single();
+    if (error || !data) return;
+    const negocio = rowToNegocio(data as NegocioRow);
+    setNegocios((prev) => [negocio, ...prev]);
     return negocio;
-  }, [leads, negocios, persistLeads, persistNegocios]);
+  }, [leads, negocios]);
 
-  const updateNegocio = useCallback((negocioId: string, data: Partial<Negocio>) => {
-    const updated = negocios.map((n) => n.id === negocioId ? { ...n, ...data } : n);
-    persistNegocios(updated);
-  }, [negocios, persistNegocios]);
+  const updateNegocio = useCallback(async (negocioId: string, data: Partial<Negocio>) => {
+    const patch: Record<string, unknown> = {};
+    if (data.vestidoNome !== undefined) patch.vestido_nome = data.vestidoNome;
+    if (data.valorNegociado !== undefined) patch.valor_negociado = data.valorNegociado;
+    if (data.desconto !== undefined) patch.desconto = data.desconto;
+    if (data.metodoPagamento !== undefined) patch.metodo_pagamento = data.metodoPagamento;
+    if (data.statusNegociacao !== undefined) patch.status_negociacao = data.statusNegociacao;
+    if (data.dataEvento !== undefined) patch.data_evento = data.dataEvento;
+    setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, ...data } : n));
+    await supabase.from("negocios").update(patch as never).eq("id", negocioId);
+  }, []);
 
-  const aprovarFechamento = useCallback((negocioId: string) => {
-    const updated = negocios.map((n) => n.id === negocioId ? { ...n, statusNegociacao: "aprovado" as StatusNegociacao } : n);
-    persistNegocios(updated);
-  }, [negocios, persistNegocios]);
+  const aprovarFechamento = useCallback(async (negocioId: string) => {
+    setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, statusNegociacao: "aprovado" as StatusNegociacao } : n));
+    await supabase.from("negocios").update({ status_negociacao: "aprovado" }).eq("id", negocioId);
+  }, []);
 
   // === CONTRATOS ===
-  const addContrato = useCallback((lead: Lead, valorTotal: number) => {
+  const addContrato = useCallback(async (lead: Lead, valorTotal: number) => {
     const existing = contratos.find((c) => c.leadId === lead.id && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
     const numero = String(Date.now()).slice(-6);
-    const newContrato: Contrato = {
-      id: crypto.randomUUID(), numero, leadId: lead.id,
-      nomeCliente: lead.nome, cpfCliente: lead.cpf, dataEvento: lead.dataEvento,
-      dataCriacao: new Date().toISOString().split("T")[0], valorTotal,
-      statusAssinatura: "pendente",
-      termosTexto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${lead.nome}\nCPF: ${lead.cpf}\nEvento: ${lead.tipoEvento}\nData do Evento: ${lead.dataEvento}\nValor Total: R$ ${valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\nTermos e condições de uso do vestido...`,
+    const insertRow = {
+      numero, lead_id: lead.id, nome_cliente: lead.nome, cpf_cliente: lead.cpf,
+      data_evento: lead.dataEvento, valor_total: valorTotal, status_assinatura: "pendente",
+      termos_texto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${lead.nome}\nCPF: ${lead.cpf}\nEvento: ${lead.tipoEvento}\nData do Evento: ${lead.dataEvento}\nValor Total: R$ ${valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\nTermos e condições de uso do vestido...`,
     };
-    const updated = [...contratos, newContrato];
-    persistContratos(updated);
+    const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
+    if (error || !data) return null;
+    const newContrato = rowToContrato(data as ContratoRow);
+    setContratos((prev) => [newContrato, ...prev]);
     return newContrato;
-  }, [contratos, persistContratos]);
+  }, [contratos]);
 
-  const addContratoFromNegocio = useCallback((negocio: Negocio) => {
+  const addContratoFromNegocio = useCallback(async (negocio: Negocio) => {
     const lead = leads.find((l) => l.id === negocio.clienteId);
     if (!lead) return;
     const existing = contratos.find((c) => c.leadId === negocio.clienteId && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
     const valorFinal = negocio.valorNegociado - negocio.desconto;
     const numero = String(Date.now()).slice(-6);
-    const newContrato: Contrato = {
-      id: crypto.randomUUID(), numero, leadId: negocio.clienteId, negocioId: negocio.id,
-      nomeCliente: negocio.clienteNome, cpfCliente: negocio.clienteCpf, dataEvento: negocio.dataEvento,
-      dataCriacao: new Date().toISOString().split("T")[0], valorTotal: valorFinal,
-      statusAssinatura: "pendente",
-      termosTexto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${negocio.clienteNome}\nCPF: ${negocio.clienteCpf}\nVestido: ${negocio.vestidoNome || "—"}\nData do Evento: ${negocio.dataEvento}\nValor: R$ ${valorFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nDesconto: R$ ${negocio.desconto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nPagamento: ${negocio.metodoPagamento}\n\nTermos e condições de uso do vestido...`,
+    const insertRow = {
+      numero, lead_id: negocio.clienteId, negocio_id: negocio.id,
+      nome_cliente: negocio.clienteNome, cpf_cliente: negocio.clienteCpf,
+      data_evento: negocio.dataEvento, valor_total: valorFinal, status_assinatura: "pendente",
+      termos_texto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${negocio.clienteNome}\nCPF: ${negocio.clienteCpf}\nVestido: ${negocio.vestidoNome || "—"}\nData do Evento: ${negocio.dataEvento}\nValor: R$ ${valorFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nDesconto: R$ ${negocio.desconto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nPagamento: ${negocio.metodoPagamento}\n\nTermos e condições de uso do vestido...`,
     };
-    const updated = [...contratos, newContrato];
-    persistContratos(updated);
+    const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
+    if (error || !data) return null;
+    const newContrato = rowToContrato(data as ContratoRow);
+    setContratos((prev) => [newContrato, ...prev]);
     return newContrato;
-  }, [leads, contratos, persistContratos]);
+  }, [leads, contratos]);
 
-  const updateContratoStatus = useCallback((contratoId: string, status: ContratoStatus) => {
-    const updated = contratos.map((c) => c.id === contratoId ? { ...c, statusAssinatura: status } : c);
-    persistContratos(updated);
-  }, [contratos, persistContratos]);
+  const updateContratoStatus = useCallback(async (contratoId: string, status: ContratoStatus) => {
+    setContratos((prev) => prev.map((c) => c.id === contratoId ? { ...c, statusAssinatura: status } : c));
+    await supabase.from("contratos").update({ status_assinatura: status }).eq("id", contratoId);
+  }, []);
 
-  const assinarContrato = useCallback((contratoId: string, assinaturaBase64: string) => {
-    const updated = contratos.map((c) =>
+  const assinarContrato = useCallback(async (contratoId: string, assinaturaBase64: string) => {
+    const dataAssinatura = new Date().toISOString();
+    setContratos((prev) => prev.map((c) =>
       c.id === contratoId
-        ? { ...c, statusAssinatura: "assinado" as ContratoStatus, assinaturaBase64, dataAssinatura: new Date().toISOString() }
+        ? { ...c, statusAssinatura: "assinado" as ContratoStatus, assinaturaBase64, dataAssinatura }
         : c
-    );
-    persistContratos(updated);
-  }, [contratos, persistContratos]);
+    ));
+    await supabase.from("contratos").update({
+      status_assinatura: "assinado",
+      assinatura_base64: assinaturaBase64,
+      data_assinatura: dataAssinatura,
+    }).eq("id", contratoId);
+  }, []);
 
   return {
     leads, addLead, updateLeadStatus, updateLead,

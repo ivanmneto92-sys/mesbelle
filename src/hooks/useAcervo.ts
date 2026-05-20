@@ -1,103 +1,151 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Vestido, ReservaAgenda, Producao, EtapaProducao, DEFAULT_ETAPAS,
+  VestidoStatus, ReservaStatus, ProducaoStatus,
 } from "@/types/acervo";
 
-const SK_VESTIDOS = "mesbelle_vestidos";
-const SK_RESERVAS = "mesbelle_reservas";
-const SK_PRODUCOES = "mesbelle_producoes";
-const SK_ETAPAS = "mesbelle_etapas";
+// Legacy keys kept for cleanup in AuthContext
+export const ACERVO_STORAGE_KEYS = ["mesbelle_vestidos", "mesbelle_reservas", "mesbelle_producoes", "mesbelle_etapas"];
 
-export const ACERVO_STORAGE_KEYS = [SK_VESTIDOS, SK_RESERVAS, SK_PRODUCOES, SK_ETAPAS];
+type VestidoRow = {
+  id: string; nome: string; cor: string; tamanho: string; comprimento: string;
+  preco_aluguel: number; preco_venda: number; status: string;
+  is_consignado: boolean; imagem_url: string;
+};
+const rowToVestido = (r: VestidoRow): Vestido => ({
+  id: r.id, nome: r.nome, cor: r.cor, tamanho: r.tamanho, comprimento: r.comprimento,
+  precoAluguel: Number(r.preco_aluguel), precoVenda: Number(r.preco_venda),
+  status: r.status as VestidoStatus, isConsignado: r.is_consignado, imagemUrl: r.imagem_url,
+});
+const vestidoToRow = (v: Partial<Vestido>): Record<string, unknown> => {
+  const o: Record<string, unknown> = {};
+  if (v.nome !== undefined) o.nome = v.nome;
+  if (v.cor !== undefined) o.cor = v.cor;
+  if (v.tamanho !== undefined) o.tamanho = v.tamanho;
+  if (v.comprimento !== undefined) o.comprimento = v.comprimento;
+  if (v.precoAluguel !== undefined) o.preco_aluguel = v.precoAluguel;
+  if (v.precoVenda !== undefined) o.preco_venda = v.precoVenda;
+  if (v.status !== undefined) o.status = v.status;
+  if (v.isConsignado !== undefined) o.is_consignado = v.isConsignado;
+  if (v.imagemUrl !== undefined) o.imagem_url = v.imagemUrl;
+  return o;
+};
 
-// --- seed data ---
-const SEED_VESTIDOS: Vestido[] = [
-  { id: "v1", nome: "Sereia Bordado Pedraria", cor: "Marsala", tamanho: "M", comprimento: "Longo", precoAluguel: 1200, precoVenda: 4800, status: "disponivel", isConsignado: false, imagemUrl: "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=300&h=400&fit=crop" },
-  { id: "v2", nome: "Princesa Tule Rosa", cor: "Rosa", tamanho: "P", comprimento: "Longo", precoAluguel: 980, precoVenda: 3500, status: "alugado", isConsignado: false, imagemUrl: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&h=400&fit=crop" },
-  { id: "v3", nome: "Midi Crepe Dourado", cor: "Dourado", tamanho: "G", comprimento: "Midi", precoAluguel: 650, precoVenda: 2200, status: "disponivel", isConsignado: true, imagemUrl: "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&h=400&fit=crop" },
-  { id: "v4", nome: "Longo Renda Preto", cor: "Preto", tamanho: "M", comprimento: "Longo", precoAluguel: 890, precoVenda: 3200, status: "ajuste", isConsignado: false, imagemUrl: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=300&h=400&fit=crop" },
-  { id: "v5", nome: "Tomara que Caia Azul", cor: "Azul Royal", tamanho: "P", comprimento: "Longo", precoAluguel: 1100, precoVenda: 4200, status: "disponivel", isConsignado: false, imagemUrl: "https://images.unsplash.com/photo-1562137369-1a1a0bc66744?w=300&h=400&fit=crop" },
-  { id: "v6", nome: "A-line Verde Esmeralda", cor: "Verde", tamanho: "GG", comprimento: "Longo", precoAluguel: 780, precoVenda: 2800, status: "disponivel", isConsignado: true, imagemUrl: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=300&h=400&fit=crop" },
-];
+type ReservaRow = { id: string; vestido_id: string; data_inicio: string; data_fim: string; status_reserva: string };
+const rowToReserva = (r: ReservaRow): ReservaAgenda => ({
+  id: r.id, vestidoId: r.vestido_id, dataInicio: r.data_inicio, dataFim: r.data_fim,
+  statusReserva: r.status_reserva as ReservaStatus,
+});
 
-const SEED_PRODUCOES: Producao[] = [
-  { id: "p1", tituloVestido: "Vestido Sereia Pedraria", clienteNome: "Maria Silva", dataPrazo: "2026-07-20", dataProva: "2026-07-10", statusGeral: "em_producao", refImagensUrls: [], notasTecnicas: "Renda francesa na barra. Decote profundo nas costas. Medidas: busto 90cm, cintura 68cm, quadril 98cm." },
-];
+type ProducaoRow = {
+  id: string; titulo_vestido: string; cliente_nome: string;
+  data_prazo: string | null; data_prova: string | null;
+  status_geral: string; ref_imagens_urls: string[]; notas_tecnicas: string;
+};
+const rowToProducao = (r: ProducaoRow): Producao => ({
+  id: r.id, tituloVestido: r.titulo_vestido, clienteNome: r.cliente_nome,
+  dataPrazo: r.data_prazo ?? "", dataProva: r.data_prova ?? "",
+  statusGeral: r.status_geral as ProducaoStatus,
+  refImagensUrls: r.ref_imagens_urls ?? [], notasTecnicas: r.notas_tecnicas,
+});
+const producaoToRow = (p: Partial<Producao>): Record<string, unknown> => {
+  const o: Record<string, unknown> = {};
+  if (p.tituloVestido !== undefined) o.titulo_vestido = p.tituloVestido;
+  if (p.clienteNome !== undefined) o.cliente_nome = p.clienteNome;
+  if (p.dataPrazo !== undefined) o.data_prazo = p.dataPrazo || null;
+  if (p.dataProva !== undefined) o.data_prova = p.dataProva || null;
+  if (p.statusGeral !== undefined) o.status_geral = p.statusGeral;
+  if (p.refImagensUrls !== undefined) o.ref_imagens_urls = p.refImagensUrls;
+  if (p.notasTecnicas !== undefined) o.notas_tecnicas = p.notasTecnicas;
+  return o;
+};
 
-const SEED_ETAPAS: EtapaProducao[] = DEFAULT_ETAPAS.map((nome, i) => ({
-  id: `e1-${i}`,
-  producaoId: "p1",
-  nomeEtapa: nome,
-  isConcluido: i < 3,
-}));
-
-function loadJson<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as T) : fallback;
-  } catch { return fallback; }
-}
-
-function saveJson<T>(key: string, data: T) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
-}
-
-function genId() { return crypto.randomUUID(); }
+type EtapaRow = { id: string; producao_id: string; nome_etapa: string; is_concluido: boolean; ordem: number };
+const rowToEtapa = (r: EtapaRow): EtapaProducao => ({
+  id: r.id, producaoId: r.producao_id, nomeEtapa: r.nome_etapa, isConcluido: r.is_concluido,
+});
 
 export function useAcervo() {
-  const [vestidos, setVestidos] = useState<Vestido[]>(() => loadJson(SK_VESTIDOS, SEED_VESTIDOS));
-  const [reservas, setReservas] = useState<ReservaAgenda[]>(() => loadJson(SK_RESERVAS, []));
-  const [producoes, setProducoes] = useState<Producao[]>(() => loadJson(SK_PRODUCOES, SEED_PRODUCOES));
-  const [etapas, setEtapas] = useState<EtapaProducao[]>(() => loadJson(SK_ETAPAS, SEED_ETAPAS));
+  const [vestidos, setVestidos] = useState<Vestido[]>([]);
+  const [reservas, setReservas] = useState<ReservaAgenda[]>([]);
+  const [producoes, setProducoes] = useState<Producao[]>([]);
+  const [etapas, setEtapas] = useState<EtapaProducao[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [vRes, rRes, pRes, eRes] = await Promise.all([
+        supabase.from("vestidos").select("*").order("nome"),
+        supabase.from("reservas_agenda").select("*"),
+        supabase.from("producoes").select("*").order("created_at", { ascending: false }),
+        supabase.from("etapas_producao").select("*").order("ordem"),
+      ]);
+      if (!active) return;
+      if (vRes.data) setVestidos((vRes.data as VestidoRow[]).map(rowToVestido));
+      if (rRes.data) setReservas((rRes.data as ReservaRow[]).map(rowToReserva));
+      if (pRes.data) setProducoes((pRes.data as ProducaoRow[]).map(rowToProducao));
+      if (eRes.data) setEtapas((eRes.data as EtapaRow[]).map(rowToEtapa));
+    })();
+    return () => { active = false; };
+  }, []);
 
   // --- Vestidos ---
-  const addVestido = useCallback((v: Omit<Vestido, "id">) => {
-    setVestidos(prev => { const next = [...prev, { ...v, id: genId() }]; saveJson(SK_VESTIDOS, next); return next; });
+  const addVestido = useCallback(async (v: Omit<Vestido, "id">) => {
+    const { data } = await supabase.from("vestidos").insert(vestidoToRow(v) as { nome: string }).select().single();
+    if (data) setVestidos(prev => [...prev, rowToVestido(data as VestidoRow)]);
   }, []);
 
-  const updateVestido = useCallback((id: string, patch: Partial<Vestido>) => {
-    setVestidos(prev => { const next = prev.map(v => v.id === id ? { ...v, ...patch } : v); saveJson(SK_VESTIDOS, next); return next; });
+  const updateVestido = useCallback(async (id: string, patch: Partial<Vestido>) => {
+    setVestidos(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
+    await supabase.from("vestidos").update(vestidoToRow(patch)).eq("id", id);
   }, []);
 
-  const deleteVestido = useCallback((id: string) => {
-    setVestidos(prev => { const next = prev.filter(v => v.id !== id); saveJson(SK_VESTIDOS, next); return next; });
+  const deleteVestido = useCallback(async (id: string) => {
+    setVestidos(prev => prev.filter(v => v.id !== id));
+    await supabase.from("vestidos").delete().eq("id", id);
   }, []);
 
   // --- Reservas ---
-  const addReserva = useCallback((r: Omit<ReservaAgenda, "id">) => {
-    setReservas(prev => { const next = [...prev, { ...r, id: genId() }]; saveJson(SK_RESERVAS, next); return next; });
+  const addReserva = useCallback(async (r: Omit<ReservaAgenda, "id">) => {
+    const { data } = await supabase.from("reservas_agenda").insert({
+      vestido_id: r.vestidoId, data_inicio: r.dataInicio, data_fim: r.dataFim, status_reserva: r.statusReserva,
+    }).select().single();
+    if (data) setReservas(prev => [...prev, rowToReserva(data as ReservaRow)]);
   }, []);
 
-  const getReservasForVestido = useCallback((vestidoId: string) => {
-    return reservas.filter(r => r.vestidoId === vestidoId);
-  }, [reservas]);
+  const getReservasForVestido = useCallback((vestidoId: string) =>
+    reservas.filter(r => r.vestidoId === vestidoId), [reservas]);
 
   // --- Producoes ---
-  const addProducao = useCallback((p: Omit<Producao, "id">) => {
-    const id = genId();
-    setProducoes(prev => { const next = [...prev, { ...p, id }]; saveJson(SK_PRODUCOES, next); return next; });
-    const newEtapas = DEFAULT_ETAPAS.map(nome => ({ id: genId(), producaoId: id, nomeEtapa: nome, isConcluido: false }));
-    setEtapas(prev => { const next = [...prev, ...newEtapas]; saveJson(SK_ETAPAS, next); return next; });
+  const addProducao = useCallback(async (p: Omit<Producao, "id">) => {
+    const { data } = await supabase.from("producoes").insert(producaoToRow(p)).select().single();
+    if (!data) return;
+    const newProd = rowToProducao(data as ProducaoRow);
+    setProducoes(prev => [newProd, ...prev]);
+    const etapaRows = DEFAULT_ETAPAS.map((nome, ordem) => ({
+      producao_id: newProd.id, nome_etapa: nome, is_concluido: false, ordem,
+    }));
+    const { data: eData } = await supabase.from("etapas_producao").insert(etapaRows).select();
+    if (eData) setEtapas(prev => [...prev, ...(eData as EtapaRow[]).map(rowToEtapa)]);
   }, []);
 
-  const updateProducao = useCallback((id: string, patch: Partial<Producao>) => {
-    setProducoes(prev => { const next = prev.map(p => p.id === id ? { ...p, ...patch } : p); saveJson(SK_PRODUCOES, next); return next; });
+  const updateProducao = useCallback(async (id: string, patch: Partial<Producao>) => {
+    setProducoes(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
+    await supabase.from("producoes").update(producaoToRow(patch)).eq("id", id);
   }, []);
 
   // --- Etapas ---
-  const toggleEtapa = useCallback((etapaId: string) => {
-    setEtapas(prev => {
-      const next = prev.map(e => e.id === etapaId ? { ...e, isConcluido: !e.isConcluido } : e);
-      saveJson(SK_ETAPAS, next);
-      return next;
-    });
-  }, []);
-
-  const getEtapasForProducao = useCallback((producaoId: string) => {
-    return etapas.filter(e => e.producaoId === producaoId);
+  const toggleEtapa = useCallback(async (etapaId: string) => {
+    const current = etapas.find(e => e.id === etapaId);
+    if (!current) return;
+    const next = !current.isConcluido;
+    setEtapas(prev => prev.map(e => e.id === etapaId ? { ...e, isConcluido: next } : e));
+    await supabase.from("etapas_producao").update({ is_concluido: next }).eq("id", etapaId);
   }, [etapas]);
+
+  const getEtapasForProducao = useCallback((producaoId: string) =>
+    etapas.filter(e => e.producaoId === producaoId), [etapas]);
 
   return {
     vestidos, addVestido, updateVestido, deleteVestido,

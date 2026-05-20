@@ -1,7 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SEO } from "@/components/SEO";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, CalendarCheck, Package, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/PageHeader";
+import {
+  DollarSign, CalendarCheck, Package, AlertTriangle, TrendingUp, TrendingDown,
+  LayoutDashboard, UserPlus, Handshake, Truck, ArrowRight,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const metrics = [
   { title: "Faturamento Hoje", value: "R$ 4.850,00", change: "+12%", up: true, icon: DollarSign },
@@ -9,12 +16,12 @@ const metrics = [
   { title: "Entregas Pendentes", value: "4", change: "2 atrasadas", up: false, icon: Package },
 ];
 
-const alerts = [
-  { text: "3 vestidos não devolvidos — prazo expirado", type: "destructive" as const },
-  { text: "Prova agendada hoje: Maria Silva — 14h", type: "default" as const },
-  { text: "Estoque baixo: categoria Longo Bordado", type: "secondary" as const },
-  { text: "Pagamento pendente: Contrato #0127", type: "destructive" as const },
-  { text: "Nova lead via Instagram: Ana Beatriz", type: "default" as const },
+const alerts: { text: string; type: "destructive" | "default" | "secondary"; href: string }[] = [
+  { text: "3 vestidos não devolvidos — prazo expirado", type: "destructive", href: "/logistica" },
+  { text: "Prova agendada hoje: Maria Silva — 14h", type: "default", href: "/crm" },
+  { text: "Estoque baixo: categoria Longo Bordado", type: "secondary", href: "/acervo" },
+  { text: "Pagamento pendente: Contrato #0127", type: "destructive", href: "/comercial" },
+  { text: "Nova lead via Instagram: Ana Beatriz", type: "default", href: "/crm" },
 ];
 
 const ScoreGauge = ({ score }: { score: number }) => {
@@ -48,18 +55,40 @@ const ScoreGauge = ({ score }: { score: number }) => {
 };
 
 const Dashboard = () => {
+  const { user } = useAuth();
+
+  const shortcuts = [
+    { label: "Novo Lead", icon: UserPlus, to: "/crm", roles: ["admin", "vendedor"] },
+    { label: "Nova Venda", icon: Handshake, to: "/comercial", roles: ["admin", "vendedor"] },
+    { label: "Logística", icon: Truck, to: "/logistica", roles: ["admin", "vendedor"] },
+  ].filter((s) => user && s.roles.includes(user.role));
+
   return (
     <>
     <SEO title="Dashboard — Més Belle" description="Visão geral do ateliê: vendas, produção e logística em um só lugar." path="/" />
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-serif">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Visão geral do ateliê</p>
-      </div>
+      <PageHeader
+        icon={LayoutDashboard}
+        title={`Olá, ${user?.name?.split(" ")[0] ?? "bem-vinda"} 👋`}
+        description="Visão geral do ateliê"
+        actions={
+          shortcuts.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {shortcuts.map((s) => (
+                <Button key={s.to} asChild size="sm" variant="outline">
+                  <Link to={s.to}>
+                    <s.icon className="h-4 w-4 mr-1" /> {s.label}
+                  </Link>
+                </Button>
+              ))}
+            </div>
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {metrics.map((m) => (
-          <Card key={m.title} className="shadow-sm">
+          <Card key={m.title} className="shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-5 pb-4">
               <div className="flex items-start justify-between">
                 <div>
@@ -97,12 +126,19 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
               {alerts.map((a, i) => (
-                <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50">
-                  <Badge variant={a.type} className="mt-0.5 shrink-0 text-xs">{a.type === "destructive" ? "Urgente" : "Info"}</Badge>
-                  <p className="text-sm">{a.text}</p>
-                </div>
+                <Link
+                  key={i}
+                  to={a.href}
+                  className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                >
+                  <Badge variant={a.type} className="mt-0.5 shrink-0 text-xs">
+                    {a.type === "destructive" ? "Urgente" : "Info"}
+                  </Badge>
+                  <p className="text-sm flex-1">{a.text}</p>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+                </Link>
               ))}
             </div>
           </CardContent>

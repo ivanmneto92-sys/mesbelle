@@ -3,6 +3,7 @@ import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Send, Truck, User, AlertTriangle, FileText } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useLogistica } from "@/hooks/useLogistica";
 import { StatusLogistica } from "@/types/logistica";
 import LogisticaDetalhesSheet from "@/components/logistica/LogisticaDetalhesSheet";
@@ -44,15 +45,16 @@ const Logistica = () => {
     <>
     <SEO title="Logística — Més Belle" description="Envios, retiradas e devoluções dos aluguéis do ateliê." path="/logistica" />
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold font-serif">Logística</h1>
-          <p className="text-muted-foreground text-sm">Entregas e retiradas</p>
-        </div>
-        <Button size="sm" onClick={() => setTermoOpen(true)}>
-          <FileText className="h-4 w-4 mr-1" /> Gerar Termo de Retirada
-        </Button>
-      </div>
+      <PageHeader
+        icon={Truck}
+        title="Logística"
+        description="Entregas, retiradas e devoluções"
+        actions={
+          <Button size="sm" onClick={() => setTermoOpen(true)}>
+            <FileText className="h-4 w-4 mr-1" /> Gerar Termo de Retirada
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {groups.map((g) => {

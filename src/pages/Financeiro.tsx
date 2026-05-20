@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Upload, DollarSign, ArrowUpRight, ArrowDownRight, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useFinanceiro } from "@/hooks/useFinanceiro";
 import { CategoriaTransacao, TipoTransacao, Transacao } from "@/types/financeiro";

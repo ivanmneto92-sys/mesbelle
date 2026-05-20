@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart,
 } from "recharts";
-import { QrCode, Star, Phone, Mail, Percent, UserPlus } from "lucide-react";
+import { QrCode, Star, Phone, Mail, Percent, UserPlus, UserCog } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useEquipe } from "@/hooks/useEquipe";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";

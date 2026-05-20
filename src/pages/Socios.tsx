@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DollarSign, TrendingUp, Briefcase, PieChart, Plus, Trash2, CalendarIcon, ShieldCheck, ShieldOff } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useSocios } from "@/hooks/useSocios";
 import { CategoriaAtivo } from "@/types/socios";
 import { format } from "date-fns";

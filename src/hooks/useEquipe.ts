@@ -54,7 +54,7 @@ export function useEquipe() {
     if (updates.ativo !== undefined) patch.ativo = updates.ativo;
     if (updates.telefone !== undefined) patch.telefone = updates.telefone;
     if (updates.email !== undefined) patch.email = updates.email;
-    await supabase.from("funcionarios").update(patch).eq("id", id);
+    await supabase.from("funcionarios").update(patch as never).eq("id", id);
   }, []);
 
   const getScoreMes = useCallback((funcId: string, mes: string) => {

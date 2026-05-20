@@ -92,13 +92,13 @@ export function useAcervo() {
 
   // --- Vestidos ---
   const addVestido = useCallback(async (v: Omit<Vestido, "id">) => {
-    const { data } = await supabase.from("vestidos").insert(vestidoToRow(v) as { nome: string }).select().single();
+    const { data } = await supabase.from("vestidos").insert(vestidoToRow(v) as never).select().single();
     if (data) setVestidos(prev => [...prev, rowToVestido(data as VestidoRow)]);
   }, []);
 
   const updateVestido = useCallback(async (id: string, patch: Partial<Vestido>) => {
     setVestidos(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
-    await supabase.from("vestidos").update(vestidoToRow(patch)).eq("id", id);
+    await supabase.from("vestidos").update(vestidoToRow(patch) as never).eq("id", id);
   }, []);
 
   const deleteVestido = useCallback(async (id: string) => {
@@ -119,7 +119,7 @@ export function useAcervo() {
 
   // --- Producoes ---
   const addProducao = useCallback(async (p: Omit<Producao, "id">) => {
-    const { data } = await supabase.from("producoes").insert(producaoToRow(p)).select().single();
+    const { data } = await supabase.from("producoes").insert(producaoToRow(p) as never).select().single();
     if (!data) return;
     const newProd = rowToProducao(data as ProducaoRow);
     setProducoes(prev => [newProd, ...prev]);
@@ -132,7 +132,7 @@ export function useAcervo() {
 
   const updateProducao = useCallback(async (id: string, patch: Partial<Producao>) => {
     setProducoes(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
-    await supabase.from("producoes").update(producaoToRow(patch)).eq("id", id);
+    await supabase.from("producoes").update(producaoToRow(patch) as never).eq("id", id);
   }, []);
 
   // --- Etapas ---

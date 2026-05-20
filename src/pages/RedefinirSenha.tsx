@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEO } from "@/components/SEO";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ const RedefinirSenha = () => {
   };
 
   return (
+    <>
+    <SEO title="Redefinir senha — Més Belle" description="Defina uma nova senha para acessar o painel Més Belle." path="/redefinir-senha" />
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "hsl(340, 83%, 6%)" }}>
       <div className="w-full max-w-[420px]">
         <div className="flex justify-center mb-10">
@@ -110,6 +113,7 @@ const RedefinirSenha = () => {
         </p>
       </div>
     </div>
+    </>
   );
 };
 

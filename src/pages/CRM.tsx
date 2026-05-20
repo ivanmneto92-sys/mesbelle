@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus } from "lucide-react";
@@ -41,6 +42,8 @@ const CRM = () => {
   };
 
   return (
+    <>
+    <SEO title="CRM — Més Belle" description="Gestão de leads, clientes e agenda de provas do ateliê Més Belle." path="/crm" />
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -91,6 +94,7 @@ const CRM = () => {
         onUpdateMedidas={updateMedidas}
       />
     </div>
+    </>
   );
 };
 

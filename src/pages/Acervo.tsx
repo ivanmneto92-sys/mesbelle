@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEO } from "@/components/SEO";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -17,6 +18,8 @@ const Acervo = () => {
   } = useAcervo();
 
   return (
+    <>
+    <SEO title="Acervo e Produção — Més Belle" description="Catálogo de vestidos e controle de produção do ateliê Més Belle." path="/acervo" />
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -62,6 +65,7 @@ const Acervo = () => {
         onSave={addVestido}
       />
     </div>
+    </>
   );
 };
 

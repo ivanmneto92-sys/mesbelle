@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEO } from "@/components/SEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,8 @@ const Socios = () => {
   };
 
   return (
+    <>
+    <SEO title="Portal de Sócios — Més Belle" description="Indicadores e relatórios para sócios do ateliê Més Belle." path="/socios" />
     <div className="space-y-6">
       {/* Header */}
       <div>
@@ -284,6 +287,7 @@ const Socios = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEO } from "@/components/SEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,8 @@ const Login = () => {
   };
 
   return (
+    <>
+    <SEO title="Acesso ao sistema Més Belle" description="Faça login para acessar o painel de gestão do ateliê Més Belle." path="/login" />
     <div className="min-h-screen flex" style={{ background: "hsl(340, 83%, 8%)" }}>
       {/* Left — brand showcase */}
       <div
@@ -174,6 +177,7 @@ const Login = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

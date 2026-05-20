@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEO } from "@/components/SEO";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,8 @@ const Equipe = () => {
   const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
   return (
+    <>
+    <SEO title="Time e Performance — Més Belle" description="Gerencie a equipe e acompanhe a performance dos vendedores." path="/equipe" />
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -371,6 +374,7 @@ const Equipe = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 };
 

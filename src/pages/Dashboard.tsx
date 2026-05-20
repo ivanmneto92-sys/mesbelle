@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SEO } from "@/components/SEO";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, CalendarCheck, Package, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 
@@ -48,6 +49,8 @@ const ScoreGauge = ({ score }: { score: number }) => {
 
 const Dashboard = () => {
   return (
+    <>
+    <SEO title="Dashboard — Més Belle" description="Visão geral do ateliê: vendas, produção e logística em um só lugar." path="/" />
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-serif">Dashboard</h1>
@@ -106,6 +109,7 @@ const Dashboard = () => {
         </Card>
       </div>
     </div>
+    </>
   );
 };
 

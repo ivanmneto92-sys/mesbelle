@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Send, Truck, User, AlertTriangle, FileText } from "lucide-react";
@@ -40,6 +41,8 @@ const Logistica = () => {
   };
 
   return (
+    <>
+    <SEO title="Logística — Més Belle" description="Envios, retiradas e devoluções dos aluguéis do ateliê." path="/logistica" />
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -107,6 +110,7 @@ const Logistica = () => {
 
       <TermoRetiradaModal items={items} open={termoOpen} onOpenChange={setTermoOpen} />
     </div>
+    </>
   );
 };
 

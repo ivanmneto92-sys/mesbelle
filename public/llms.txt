@@ -1,0 +1,9 @@
+# Més Belle
+
+> Sistema interno de gestão para ateliê de aluguel e venda de vestidos de festa. Acesso restrito a usuários autenticados.
+
+Més Belle é uma plataforma privada que centraliza CRM, comercial, acervo, logística, financeiro e gestão de equipe para o ateliê. Não há conteúdo público navegável além da tela de login.
+
+## Pages
+
+- [Login](/login): Acesso ao sistema (área restrita).

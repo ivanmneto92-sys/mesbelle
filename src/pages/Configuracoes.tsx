@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Mail, FileText, QrCode, Settings, Shield } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   usePermissoes,
   permissaoLabels,
@@ -41,10 +42,11 @@ const Configuracoes = () => {
     <>
     <SEO title="Configurações — Més Belle" description="Ajustes da conta e preferências do sistema Més Belle." path="/configuracoes" />
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold font-serif">Configurações & Automações</h1>
-        <p className="text-muted-foreground text-sm">Integrações, automações e controle de acesso</p>
-      </div>
+      <PageHeader
+        icon={Settings}
+        title="Configurações & Automações"
+        description="Integrações, automações e controle de acesso"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Controle de Acesso */}

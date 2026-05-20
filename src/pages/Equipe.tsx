@@ -105,23 +105,23 @@ const Equipe = () => {
     <>
     <SEO title="Time e Performance — Més Belle" description="Gerencie a equipe e acompanhe a performance dos vendedores." path="/equipe" />
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold font-serif">Time & Performance</h1>
-          <p className="text-muted-foreground text-sm">Gestão de equipe e desempenho</p>
-        </div>
-        <div className="flex gap-2">
-          {user?.role === "admin" && (
-            <Button size="sm" onClick={() => setNewMemberOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-1" /> Cadastrar Membro
+      <PageHeader
+        icon={UserCog}
+        title="Time & Performance"
+        description="Gestão de equipe, comissões e avaliações"
+        actions={
+          <>
+            {user?.role === "admin" && (
+              <Button size="sm" onClick={() => setNewMemberOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-1" /> Cadastrar Membro
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
+              <QrCode className="h-4 w-4 mr-1" /> QR Code Avaliação
             </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
-            <QrCode className="h-4 w-4 mr-1" /> QR Code Avaliação
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Tabela Equipe */}
       <Card className="shadow-sm">

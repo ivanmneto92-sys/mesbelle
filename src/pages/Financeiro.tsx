@@ -154,21 +154,21 @@ const Financeiro = () => {
     <>
     <SEO title="Financeiro — Més Belle" description="Receitas, despesas e fluxo de caixa do ateliê." path="/financeiro" />
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold font-serif">Financeiro & Controladoria</h1>
-          <p className="text-muted-foreground text-sm">Gestão de caixa e lucro — sem API bancária</p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => setNovoOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Lançamento
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => { setImportOpen(true); setImportStep("upload"); }}>
-            <Upload className="h-4 w-4 mr-1" /> Importar OFX/CSV
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={DollarSign}
+        title="Financeiro & Controladoria"
+        description="Gestão manual de caixa, DRE e impostos"
+        actions={
+          <>
+            <Button size="sm" onClick={() => setNovoOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Lançamento
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setImportOpen(true); setImportStep("upload"); }}>
+              <Upload className="h-4 w-4 mr-1" /> Importar OFX/CSV
+            </Button>
+          </>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

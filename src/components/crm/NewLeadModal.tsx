@@ -10,7 +10,7 @@ import { toast } from "sonner";
 interface NewLeadModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => Lead;
+  onSave: (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => Lead | Promise<Lead | null>;
 }
 
 const tiposEvento = ["Casamento", "Formatura", "Gala", "Debutante", "Festa", "Outro"];

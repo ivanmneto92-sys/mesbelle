@@ -121,10 +121,11 @@ export function useLeads() {
   // === LEADS / CRM ===
   const addLead = useCallback(async (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => {
     const insertRow = {
+      nome: lead.nome,
       ...leadPatchToRow(lead as Partial<Lead>),
       status_funil: "novo_lead",
-    };
-    const { data, error } = await supabase.from("leads").insert(insertRow).select().single();
+    } as { nome: string } & Record<string, unknown>;
+    const { data, error } = await supabase.from("leads").insert(insertRow as never).select().single();
     if (error || !data) return null;
     const newLead = rowToLead(data as LeadRow);
     setLeads((prev) => [newLead, ...prev]);
@@ -134,12 +135,12 @@ export function useLeads() {
   const updateLeadStatus = useCallback(async (leadId: string, newStatus: CrmFunnelStatus, extra?: Partial<Lead>) => {
     const patch = { ...leadPatchToRow(extra ?? {}), status_funil: newStatus };
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, statusFunil: newStatus, ...(extra ?? {}) } : l));
-    await supabase.from("leads").update(patch).eq("id", leadId);
+    await supabase.from("leads").update(patch as never).eq("id", leadId);
   }, []);
 
   const updateLead = useCallback(async (leadId: string, data: Partial<Lead>) => {
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, ...data } : l));
-    await supabase.from("leads").update(leadPatchToRow(data)).eq("id", leadId);
+    await supabase.from("leads").update(leadPatchToRow(data) as never).eq("id", leadId);
   }, []);
 
   const updateMedidas = useCallback(async (leadId: string, data: Omit<MedidasCliente, "leadId">) => {

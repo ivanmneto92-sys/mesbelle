@@ -58,12 +58,18 @@ async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Set up listener BEFORE getting session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
+          // If the active user changed, wipe legacy localStorage from the previous account
+          if (lastUserIdRef.current && lastUserIdRef.current !== session.user.id) {
+            clearAppStorage();
+          }
+          lastUserIdRef.current = session.user.id;
           // Use setTimeout to avoid potential deadlock with Supabase client
           setTimeout(async () => {
             const appUser = await buildUser(session.user);
@@ -71,6 +77,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
           }, 0);
         } else {
+          // Signed out — purge any sensitive data left in the browser
+          clearAppStorage();
+          lastUserIdRef.current = null;
           setUser(null);
           setLoading(false);
         }
@@ -80,6 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Then check existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        lastUserIdRef.current = session.user.id;
         const appUser = await buildUser(session.user);
         setUser(appUser);
       }
@@ -96,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
+    clearAppStorage();
     setUser(null);
   }, []);
 

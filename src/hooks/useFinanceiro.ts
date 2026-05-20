@@ -1,78 +1,58 @@
-import { useState, useCallback, useMemo } from "react";
-import { Transacao, TipoTransacao, CategoriaTransacao, StatusTransacao, ConfigImpostos } from "@/types/financeiro";
-
-const STORAGE_KEY = "mesbelle_financeiro";
-const IMPOSTOS_KEY = "mesbelle_impostos";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Transacao, ConfigImpostos, TipoTransacao, CategoriaTransacao, StatusTransacao } from "@/types/financeiro";
 
 const defaultImpostos: ConfigImpostos = {
-  simplesNacional: 6,
-  iss: 5,
-  debito: 1.5,
-  creditoVista: 3.2,
-  creditoParcelado: 4.8,
+  simplesNacional: 6, iss: 5, debito: 1.5, creditoVista: 3.2, creditoParcelado: 4.8,
 };
 
-const initialData: Transacao[] = [
-  { id: "1", tipo: "entrada", data: "2026-04-08", descricao: "Aluguel — Ana Beatriz", categoria: "Aluguel", valor: 1200, status: "pago" },
-  { id: "2", tipo: "saida", data: "2026-04-07", descricao: "Tecido fornecedor", categoria: "Material", valor: 850, status: "pago" },
-  { id: "3", tipo: "entrada", data: "2026-04-07", descricao: "Aluguel — Camila Rocha", categoria: "Aluguel", valor: 980, status: "pago" },
-  { id: "4", tipo: "saida", data: "2026-04-06", descricao: "Energia elétrica", categoria: "Fixo", valor: 420, status: "pago" },
-  { id: "5", tipo: "entrada", data: "2026-04-06", descricao: "Venda — Patrícia Nunes", categoria: "Venda", valor: 4800, status: "pago" },
-  { id: "6", tipo: "saida", data: "2026-04-05", descricao: "Comissão vendedora", categoria: "Pessoal", valor: 480, status: "pago" },
-  { id: "7", tipo: "saida", data: "2026-04-05", descricao: "Aluguel loja", categoria: "Fixo", valor: 3500, status: "pago" },
-  { id: "8", tipo: "saida", data: "2026-04-04", descricao: "Instagram Ads", categoria: "Marketing", valor: 600, status: "pago" },
-  { id: "9", tipo: "entrada", data: "2026-04-03", descricao: "Aluguel — Mariana Souza", categoria: "Aluguel", valor: 1500, status: "pago" },
-  { id: "10", tipo: "saida", data: "2026-04-02", descricao: "Simples Nacional", categoria: "Imposto", valor: 1740, status: "pago" },
-];
-
-function load(): Transacao[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialData;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : initialData;
-  } catch { return initialData; }
-}
-
-function save(data: Transacao[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-}
-
-function loadImpostos(): ConfigImpostos {
-  try {
-    const raw = localStorage.getItem(IMPOSTOS_KEY);
-    if (!raw) return defaultImpostos;
-    return { ...defaultImpostos, ...JSON.parse(raw) };
-  } catch { return defaultImpostos; }
-}
-
-function saveImpostos(cfg: ConfigImpostos) {
-  try { localStorage.setItem(IMPOSTOS_KEY, JSON.stringify(cfg)); } catch {}
-}
+type TxRow = { id: string; tipo: string; data: string; descricao: string; categoria: string; valor: number; status: string };
+const rowToTx = (r: TxRow): Transacao => ({
+  id: r.id, tipo: r.tipo as TipoTransacao, data: r.data, descricao: r.descricao,
+  categoria: r.categoria as CategoriaTransacao, valor: Number(r.valor), status: r.status as StatusTransacao,
+});
 
 export function useFinanceiro() {
-  const [transacoes, setTransacoes] = useState<Transacao[]>(load);
-  const [impostos, setImpostos] = useState<ConfigImpostos>(loadImpostos);
+  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
+  const [impostos, setImpostos] = useState<ConfigImpostos>(defaultImpostos);
 
-  const persist = useCallback((updated: Transacao[]) => {
-    const sorted = [...updated].sort((a, b) => b.data.localeCompare(a.data));
-    setTransacoes(sorted);
-    save(sorted);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [txRes, cfRes] = await Promise.all([
+        supabase.from("transacoes_financeiras").select("*").order("data", { ascending: false }),
+        supabase.from("config_financeiro").select("*").eq("id", 1).maybeSingle(),
+      ]);
+      if (!active) return;
+      if (txRes.data) setTransacoes((txRes.data as TxRow[]).map(rowToTx));
+      if (cfRes.data) {
+        const c = cfRes.data as { simples_nacional: number; iss: number; debito: number; credito_vista: number; credito_parcelado: number };
+        setImpostos({
+          simplesNacional: Number(c.simples_nacional), iss: Number(c.iss), debito: Number(c.debito),
+          creditoVista: Number(c.credito_vista), creditoParcelado: Number(c.credito_parcelado),
+        });
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
-  const addTransacao = useCallback((t: Omit<Transacao, "id">) => {
-    const newT: Transacao = { ...t, id: crypto.randomUUID() };
-    persist([...transacoes, newT]);
-  }, [transacoes, persist]);
+  const addTransacao = useCallback(async (t: Omit<Transacao, "id">) => {
+    const insertRow = { tipo: t.tipo, data: t.data, descricao: t.descricao, categoria: t.categoria, valor: t.valor, status: t.status };
+    const { data } = await supabase.from("transacoes_financeiras").insert(insertRow).select().single();
+    if (data) setTransacoes(prev => [rowToTx(data as TxRow), ...prev].sort((a, b) => b.data.localeCompare(a.data)));
+  }, []);
 
-  const addMany = useCallback((items: Omit<Transacao, "id">[]) => {
-    const newItems = items.map(t => ({ ...t, id: crypto.randomUUID() }));
-    persist([...transacoes, ...newItems]);
-  }, [transacoes, persist]);
+  const addMany = useCallback(async (items: Omit<Transacao, "id">[]) => {
+    if (items.length === 0) return;
+    const rows = items.map(t => ({ tipo: t.tipo, data: t.data, descricao: t.descricao, categoria: t.categoria, valor: t.valor, status: t.status }));
+    const { data } = await supabase.from("transacoes_financeiras").insert(rows).select();
+    if (data) setTransacoes(prev => [...(data as TxRow[]).map(rowToTx), ...prev].sort((a, b) => b.data.localeCompare(a.data)));
+  }, []);
 
-  const removeTransacao = useCallback((id: string) => {
-    persist(transacoes.filter(t => t.id !== id));
-  }, [transacoes, persist]);
+  const removeTransacao = useCallback(async (id: string) => {
+    setTransacoes(prev => prev.filter(t => t.id !== id));
+    await supabase.from("transacoes_financeiras").delete().eq("id", id);
+  }, []);
 
   const now = new Date();
   const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -105,15 +85,16 @@ export function useFinanceiro() {
       .slice(-6)
       .map(([key, v]) => ({
         mes: meses[parseInt(key.split("-")[1]) - 1],
-        receita: v.receita,
-        despesa: v.despesa,
-        lucro: v.receita - v.despesa,
+        receita: v.receita, despesa: v.despesa, lucro: v.receita - v.despesa,
       }));
   }, [transacoes]);
 
-  const updateImpostos = useCallback((cfg: ConfigImpostos) => {
+  const updateImpostos = useCallback(async (cfg: ConfigImpostos) => {
     setImpostos(cfg);
-    saveImpostos(cfg);
+    await supabase.from("config_financeiro").update({
+      simples_nacional: cfg.simplesNacional, iss: cfg.iss, debito: cfg.debito,
+      credito_vista: cfg.creditoVista, credito_parcelado: cfg.creditoParcelado,
+    }).eq("id", 1);
   }, []);
 
   return { transacoes, addTransacao, addMany, removeTransacao, resumoMes, gastosPorCategoria, dreData, impostos, updateImpostos };

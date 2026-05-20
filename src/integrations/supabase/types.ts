@@ -14,6 +14,153 @@ export type Database = {
   }
   public: {
     Tables: {
+      alugueis_logistica: {
+        Row: {
+          cliente_nome: string
+          cliente_telefone: string
+          codigo_rastreio: string | null
+          created_at: string
+          data_retorno: string
+          data_saida: string
+          endereco_entrega: string
+          id: string
+          status_logistica: string
+          updated_at: string
+          vestido_nome: string
+        }
+        Insert: {
+          cliente_nome?: string
+          cliente_telefone?: string
+          codigo_rastreio?: string | null
+          created_at?: string
+          data_retorno: string
+          data_saida: string
+          endereco_entrega?: string
+          id?: string
+          status_logistica?: string
+          updated_at?: string
+          vestido_nome?: string
+        }
+        Update: {
+          cliente_nome?: string
+          cliente_telefone?: string
+          codigo_rastreio?: string | null
+          created_at?: string
+          data_retorno?: string
+          data_saida?: string
+          endereco_entrega?: string
+          id?: string
+          status_logistica?: string
+          updated_at?: string
+          vestido_nome?: string
+        }
+        Relationships: []
+      }
+      ativos_patrimonio: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_compra: string
+          id: string
+          nome: string
+          percentual_desagio: number
+          valor_original: number
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data_compra: string
+          id?: string
+          nome: string
+          percentual_desagio?: number
+          valor_original?: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_compra?: string
+          id?: string
+          nome?: string
+          percentual_desagio?: number
+          valor_original?: number
+        }
+        Relationships: []
+      }
+      avaliacoes_clientes: {
+        Row: {
+          comentario: string | null
+          created_at: string
+          data: string
+          funcionario_id: string
+          id: string
+          nota: number
+        }
+        Insert: {
+          comentario?: string | null
+          created_at?: string
+          data: string
+          funcionario_id: string
+          id?: string
+          nota: number
+        }
+        Update: {
+          comentario?: string | null
+          created_at?: string
+          data?: string
+          funcionario_id?: string
+          id?: string
+          nota?: number
+        }
+        Relationships: []
+      }
+      config_financeiro: {
+        Row: {
+          credito_parcelado: number
+          credito_vista: number
+          debito: number
+          id: number
+          iss: number
+          simples_nacional: number
+          updated_at: string
+        }
+        Insert: {
+          credito_parcelado?: number
+          credito_vista?: number
+          debito?: number
+          id?: number
+          iss?: number
+          simples_nacional?: number
+          updated_at?: string
+        }
+        Update: {
+          credito_parcelado?: number
+          credito_vista?: number
+          debito?: number
+          id?: number
+          iss?: number
+          simples_nacional?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      config_socios: {
+        Row: {
+          id: number
+          multiplicador: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          multiplicador?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          multiplicador?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contratos: {
         Row: {
           assinatura_base64: string | null
@@ -75,6 +222,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      etapas_producao: {
+        Row: {
+          created_at: string
+          id: string
+          is_concluido: boolean
+          nome_etapa: string
+          ordem: number
+          producao_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_concluido?: boolean
+          nome_etapa: string
+          ordem?: number
+          producao_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_concluido?: boolean
+          nome_etapa?: string
+          ordem?: number
+          producao_id?: string
+        }
+        Relationships: []
+      }
+      funcionarios: {
+        Row: {
+          ativo: boolean
+          cargo: string
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          percentual_comissao: number
+          telefone: string | null
+          tipo_contrato: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cargo?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          percentual_comissao?: number
+          telefone?: string | null
+          tipo_contrato?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          percentual_comissao?: number
+          telefone?: string | null
+          tipo_contrato?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       leads: {
         Row: {
@@ -236,6 +449,45 @@ export type Database = {
           },
         ]
       }
+      producoes: {
+        Row: {
+          cliente_nome: string
+          created_at: string
+          data_prazo: string | null
+          data_prova: string | null
+          id: string
+          notas_tecnicas: string
+          ref_imagens_urls: string[]
+          status_geral: string
+          titulo_vestido: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_nome?: string
+          created_at?: string
+          data_prazo?: string | null
+          data_prova?: string | null
+          id?: string
+          notas_tecnicas?: string
+          ref_imagens_urls?: string[]
+          status_geral?: string
+          titulo_vestido?: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_nome?: string
+          created_at?: string
+          data_prazo?: string | null
+          data_prova?: string | null
+          id?: string
+          notas_tecnicas?: string
+          ref_imagens_urls?: string[]
+          status_geral?: string
+          titulo_vestido?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           ativo: boolean | null
@@ -275,6 +527,96 @@ export type Database = {
         }
         Relationships: []
       }
+      reservas_agenda: {
+        Row: {
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          status_reserva: string
+          vestido_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          id?: string
+          status_reserva?: string
+          vestido_id: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          status_reserva?: string
+          vestido_id?: string
+        }
+        Relationships: []
+      }
+      socios_empresa: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          data_expiracao: string | null
+          id: string
+          nome: string
+          percentual_participacao: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          data_expiracao?: string | null
+          id?: string
+          nome: string
+          percentual_participacao?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          data_expiracao?: string | null
+          id?: string
+          nome?: string
+          percentual_participacao?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transacoes_financeiras: {
+        Row: {
+          categoria: string
+          created_at: string
+          data: string
+          descricao: string
+          id: string
+          status: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data: string
+          descricao?: string
+          id?: string
+          status?: string
+          tipo: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: string
+          status?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -290,6 +632,78 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vendas_funcionarios: {
+        Row: {
+          created_at: string
+          funcionario_id: string
+          id: string
+          mes: string
+          quantidade: number
+          valor_total: number
+        }
+        Insert: {
+          created_at?: string
+          funcionario_id: string
+          id?: string
+          mes: string
+          quantidade?: number
+          valor_total?: number
+        }
+        Update: {
+          created_at?: string
+          funcionario_id?: string
+          id?: string
+          mes?: string
+          quantidade?: number
+          valor_total?: number
+        }
+        Relationships: []
+      }
+      vestidos: {
+        Row: {
+          comprimento: string
+          cor: string
+          created_at: string
+          id: string
+          imagem_url: string
+          is_consignado: boolean
+          nome: string
+          preco_aluguel: number
+          preco_venda: number
+          status: string
+          tamanho: string
+          updated_at: string
+        }
+        Insert: {
+          comprimento?: string
+          cor?: string
+          created_at?: string
+          id?: string
+          imagem_url?: string
+          is_consignado?: boolean
+          nome: string
+          preco_aluguel?: number
+          preco_venda?: number
+          status?: string
+          tamanho?: string
+          updated_at?: string
+        }
+        Update: {
+          comprimento?: string
+          cor?: string
+          created_at?: string
+          id?: string
+          imagem_url?: string
+          is_consignado?: boolean
+          nome?: string
+          preco_aluguel?: number
+          preco_venda?: number
+          status?: string
+          tamanho?: string
+          updated_at?: string
         }
         Relationships: []
       }

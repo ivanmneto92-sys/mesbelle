@@ -1,39 +1,21 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { AtivoPatrimonio, SocioEmpresa, CategoriaAtivo } from "@/types/socios";
-import { Transacao } from "@/types/financeiro";
 
-const ATIVOS_KEY = "mesbelle_ativos";
-const SOCIOS_KEY = "mesbelle_socios";
-const MULT_KEY = "mesbelle_multiplicador";
-const FIN_KEY = "mesbelle_financeiro";
+type AtivoRow = { id: string; nome: string; categoria: string; data_compra: string; valor_original: number; percentual_desagio: number };
+const rowToAtivo = (r: AtivoRow): AtivoPatrimonio => ({
+  id: r.id, nome: r.nome, categoria: r.categoria as CategoriaAtivo,
+  dataCompra: r.data_compra, valorOriginal: Number(r.valor_original),
+  percentualDesagio: Number(r.percentual_desagio),
+});
 
-const initialAtivos: AtivoPatrimonio[] = [
-  { id: "at1", nome: "Vestido Sereia Bordado", categoria: "Vestido", dataCompra: "2025-10-08", valorOriginal: 4800, percentualDesagio: 20 },
-  { id: "at2", nome: "Vestido Princesa Tule", categoria: "Vestido", dataCompra: "2025-04-08", valorOriginal: 3500, percentualDesagio: 30 },
-  { id: "at3", nome: "Vestido Midi Crepe", categoria: "Vestido", dataCompra: "2026-01-08", valorOriginal: 2200, percentualDesagio: 15 },
-  { id: "at4", nome: "Móveis da Loja", categoria: "Imobilizado", dataCompra: "2024-04-08", valorOriginal: 25000, percentualDesagio: 40 },
-  { id: "at5", nome: "Máquina de Costura Industrial", categoria: "Equipamento", dataCompra: "2025-04-08", valorOriginal: 8000, percentualDesagio: 25 },
-  { id: "at6", nome: "Vestido Longo Renda Preto", categoria: "Vestido", dataCompra: "2025-07-15", valorOriginal: 3800, percentualDesagio: 18 },
-];
+type SocioRow = { id: string; nome: string; percentual_participacao: number; ativo: boolean; data_expiracao: string | null };
+const rowToSocio = (r: SocioRow): SocioEmpresa => ({
+  id: r.id, nome: r.nome, percentualParticipacao: Number(r.percentual_participacao),
+  ativo: r.ativo, dataExpiracao: r.data_expiracao ?? undefined,
+});
 
-const initialSocios: SocioEmpresa[] = [
-  { id: "s1", nome: "Ricardo Almeida", percentualParticipacao: 50, ativo: true },
-  { id: "s2", nome: "Carolina Mendes", percentualParticipacao: 30, ativo: true },
-  { id: "s3", nome: "André Pereira", percentualParticipacao: 20, ativo: true },
-];
-
-function loadJSON<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? (parsed as T) : fallback;
-  } catch { return fallback; }
-}
-
-function saveJSON(key: string, data: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
-}
+type TxRow = { tipo: string; data: string; valor: number };
 
 function getIdade(dataCompra: string): string {
   const compra = new Date(dataCompra);
@@ -46,109 +28,100 @@ function getIdade(dataCompra: string): string {
   return rest > 0 ? `${anos} ano${anos > 1 ? "s" : ""} e ${rest} mês${rest > 1 ? "es" : ""}` : `${anos} ano${anos > 1 ? "s" : ""}`;
 }
 
-function loadFinanceiroData() {
-  try {
-    const raw = localStorage.getItem(FIN_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Transacao[]) : [];
-  } catch { return []; }
-}
-
 export function useSocios() {
-  const [ativos, setAtivos] = useState<AtivoPatrimonio[]>(() => loadJSON(ATIVOS_KEY, initialAtivos));
-  const [socios, setSocios] = useState<SocioEmpresa[]>(() => loadJSON(SOCIOS_KEY, initialSocios));
-  const [multiplicador, setMultiplicador] = useState<number>(() => {
-    try {
-      const raw = localStorage.getItem(MULT_KEY);
-      return raw ? parseFloat(raw) || 3.5 : 3.5;
-    } catch { return 3.5; }
-  });
+  const [ativos, setAtivos] = useState<AtivoPatrimonio[]>([]);
+  const [socios, setSocios] = useState<SocioEmpresa[]>([]);
+  const [multiplicador, setMultiplicador] = useState<number>(3.5);
+  const [transacoes, setTransacoes] = useState<TxRow[]>([]);
 
-  const persistAtivos = useCallback((data: AtivoPatrimonio[]) => { setAtivos(data); saveJSON(ATIVOS_KEY, data); }, []);
-  const persistSocios = useCallback((data: SocioEmpresa[]) => { setSocios(data); saveJSON(SOCIOS_KEY, data); }, []);
-
-  const updateMultiplicador = useCallback((val: number) => {
-    setMultiplicador(val);
-    try { localStorage.setItem(MULT_KEY, String(val)); } catch {}
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [aRes, sRes, cRes, tRes] = await Promise.all([
+        supabase.from("ativos_patrimonio").select("*"),
+        supabase.from("socios_empresa").select("*").order("nome"),
+        supabase.from("config_socios").select("multiplicador").eq("id", 1).maybeSingle(),
+        supabase.from("transacoes_financeiras").select("tipo, data, valor"),
+      ]);
+      if (!active) return;
+      if (aRes.data) setAtivos((aRes.data as AtivoRow[]).map(rowToAtivo));
+      if (sRes.data) setSocios((sRes.data as SocioRow[]).map(rowToSocio));
+      if (cRes.data) setMultiplicador(Number((cRes.data as { multiplicador: number }).multiplicador) || 3.5);
+      if (tRes.data) setTransacoes(tRes.data as TxRow[]);
+    })();
+    return () => { active = false; };
   }, []);
 
-  const addAtivo = useCallback((a: Omit<AtivoPatrimonio, "id">) => {
-    persistAtivos([...ativos, { ...a, id: crypto.randomUUID() }]);
-  }, [ativos, persistAtivos]);
+  const updateMultiplicador = useCallback(async (val: number) => {
+    setMultiplicador(val);
+    await supabase.from("config_socios").update({ multiplicador: val }).eq("id", 1);
+  }, []);
 
-  const removeAtivo = useCallback((id: string) => {
-    persistAtivos(ativos.filter(a => a.id !== id));
-  }, [ativos, persistAtivos]);
+  const addAtivo = useCallback(async (a: Omit<AtivoPatrimonio, "id">) => {
+    const { data } = await supabase.from("ativos_patrimonio").insert({
+      nome: a.nome, categoria: a.categoria, data_compra: a.dataCompra,
+      valor_original: a.valorOriginal, percentual_desagio: a.percentualDesagio,
+    }).select().single();
+    if (data) setAtivos(prev => [...prev, rowToAtivo(data as AtivoRow)]);
+  }, []);
 
-  const toggleSocioAtivo = useCallback((id: string) => {
-    persistSocios(socios.map(s => s.id === id ? { ...s, ativo: !s.ativo } : s));
-  }, [socios, persistSocios]);
+  const removeAtivo = useCallback(async (id: string) => {
+    setAtivos(prev => prev.filter(a => a.id !== id));
+    await supabase.from("ativos_patrimonio").delete().eq("id", id);
+  }, []);
 
-  const updateSocioExpiracao = useCallback((id: string, data: string) => {
-    persistSocios(socios.map(s => s.id === id ? { ...s, dataExpiracao: data } : s));
-  }, [socios, persistSocios]);
+  const toggleSocioAtivo = useCallback(async (id: string) => {
+    const cur = socios.find(s => s.id === id);
+    if (!cur) return;
+    const next = !cur.ativo;
+    setSocios(prev => prev.map(s => s.id === id ? { ...s, ativo: next } : s));
+    await supabase.from("socios_empresa").update({ ativo: next }).eq("id", id);
+  }, [socios]);
 
-  // Financial data from Financeiro module
+  const updateSocioExpiracao = useCallback(async (id: string, data: string) => {
+    setSocios(prev => prev.map(s => s.id === id ? { ...s, dataExpiracao: data } : s));
+    await supabase.from("socios_empresa").update({ data_expiracao: data || null }).eq("id", id);
+  }, []);
+
   const finData = useMemo(() => {
-    const transacoes = loadFinanceiroData();
     const now = new Date();
     const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-    const doMes = transacoes.filter((t: Transacao) => t.data.startsWith(mesAtual));
-    const receitaMes = doMes.filter((t: Transacao) => t.tipo === "entrada").reduce((s: number, t: Transacao) => s + t.valor, 0);
-    const despesaMes = doMes.filter((t: Transacao) => t.tipo === "saida").reduce((s: number, t: Transacao) => s + t.valor, 0);
+    const doMes = transacoes.filter(t => t.data.startsWith(mesAtual));
+    const receitaMes = doMes.filter(t => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
+    const despesaMes = doMes.filter(t => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
     const lucroMes = receitaMes - despesaMes;
 
-    // EBITDA: últimos 12 meses
     let ebitda = 0;
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const monthTx = transacoes.filter((t: Transacao) => t.data.startsWith(key));
-      const rec = monthTx.filter((t: Transacao) => t.tipo === "entrada").reduce((s: number, t: Transacao) => s + t.valor, 0);
-      const desp = monthTx.filter((t: Transacao) => t.tipo === "saida").reduce((s: number, t: Transacao) => s + t.valor, 0);
+      const monthTx = transacoes.filter(t => t.data.startsWith(key));
+      const rec = monthTx.filter(t => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
+      const desp = monthTx.filter(t => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
       ebitda += rec - desp;
     }
-
     return { receitaMes, lucroMes, ebitda };
-  }, []);
+  }, [transacoes]);
 
-  // Patrimônio calculations
-  const ativosComCalculo = useMemo(() => {
-    return ativos.map(a => ({
-      ...a,
-      valorAtual: a.valorOriginal - (a.valorOriginal * a.percentualDesagio / 100),
-      idade: getIdade(a.dataCompra),
-    }));
-  }, [ativos]);
+  const ativosComCalculo = useMemo(() => ativos.map(a => ({
+    ...a,
+    valorAtual: a.valorOriginal - (a.valorOriginal * a.percentualDesagio / 100),
+    idade: getIdade(a.dataCompra),
+  })), [ativos]);
 
   const totalPatrimonio = useMemo(() => ativosComCalculo.reduce((s, a) => s + a.valorAtual, 0), [ativosComCalculo]);
-
   const valuation = useMemo(() => finData.ebitda * multiplicador, [finData.ebitda, multiplicador]);
 
-  // Distribuição de lucros
-  const distribuicao = useMemo(() => {
-    return socios.filter(s => s.ativo).map(s => ({
+  const distribuicao = useMemo(() =>
+    socios.filter(s => s.ativo).map(s => ({
       ...s,
       lucroMensal: finData.lucroMes * (s.percentualParticipacao / 100),
-    }));
-  }, [socios, finData.lucroMes]);
+    })), [socios, finData.lucroMes]);
 
   return {
-    ativos: ativosComCalculo,
-    socios,
-    distribuicao,
-    multiplicador,
-    updateMultiplicador,
-    addAtivo,
-    removeAtivo,
-    toggleSocioAtivo,
-    updateSocioExpiracao,
-    totalPatrimonio,
-    valuation,
-    receitaMes: finData.receitaMes,
-    ebitda: finData.ebitda,
-    lucroMes: finData.lucroMes,
+    ativos: ativosComCalculo, socios, distribuicao, multiplicador, updateMultiplicador,
+    addAtivo, removeAtivo, toggleSocioAtivo, updateSocioExpiracao,
+    totalPatrimonio, valuation,
+    receitaMes: finData.receitaMes, ebitda: finData.ebitda, lucroMes: finData.lucroMes,
   };
 }

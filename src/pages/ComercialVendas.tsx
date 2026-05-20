@@ -58,6 +58,7 @@ const ComercialVendas = () => {
             onGerarContratoFromNegocio={addContratoFromNegocio}
             onUpdateStatus={updateContratoStatus}
             onAssinar={assinarContrato}
+            onGerarLink={gerarLinkAssinatura}
           />
         </TabsContent>
 

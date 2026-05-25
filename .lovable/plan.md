@@ -1,62 +1,32 @@
-## Objetivo
+## Correção de permissões RLS (403 em todo o app)
 
-Eliminar o passo manual "Gerar Contrato" e fechar a lacuna de auditoria na assinatura feita no ateliê (iPad). Hoje o fluxo exige 3 cliques após o cadastro; vamos reduzir para 2 e garantir trilha completa.
+### Causa raiz
+As funções `SECURITY DEFINER` usadas pelas políticas RLS (`has_role`, `can_read_crm`, `can_write_crm`, `can_read_socios`, `is_own_funcionario`) não têm `EXECUTE` concedido para o role `authenticated`. Resultado: toda query autenticada retorna 403 (`permission denied for function has_role`), incluindo login (role/nome), CRM, Comercial, Contratos, Acervo, Logística, Equipe, Sócios e Financeiro.
 
-## Fluxo novo
+### Mudanças
 
-```text
-CRM (cadastro do Lead)
-   │
-   ▼ Enviar para Comercial
-Negócio (aberto) — define vestido/valor/desconto/pagamento
-   │
-   ▼ Aprovar fechamento  ◄── dispara automaticamente:
-                              1. cria Contrato (pendente)
-                              2. mostra toast com link "Abrir contrato"
-                              3. troca a aba para Contratos e abre o preview
+**1. Migration SQL** — conceder EXECUTE nas 5 funções:
+```sql
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role)    TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.can_read_crm(uuid)                 TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.can_write_crm(uuid)                TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.can_read_socios(uuid)              TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.is_own_funcionario(uuid, text)     TO authenticated, anon;
 ```
+As funções permanecem `SECURITY DEFINER` — apenas o privilégio de execução é liberado. Sem isso, todas as policies que as chamam falham silenciosamente com 403.
 
-## Mudanças
+**2. `src/contexts/AuthContext.tsx`** — Melhorar tratamento de erro nas queries `user_roles` e `profiles`:
+- logar `error.message` no console
+- exibir toast "Falha ao carregar perfil — recarregue a página" se erro 403/permissão
+- não mascarar erro como "vendedor" silenciosamente
 
-### 1. `src/hooks/useLeads.ts` — automação + auditoria
+### Validação pós-fix
+- `/rest/v1/user_roles` e `/rest/v1/profiles` retornam 200
+- Dashboard, CRM, Comercial, Contratos carregam dados
+- Aprovar negociação gera contrato sem erro 403
+- Login mostra nome e cargo corretos no header
 
-- **`aprovarFechamento(negocioId)`**: após o `UPDATE` do status, chamar internamente `addContratoFromNegocio(negocio)` e retornar `{ negocio, contrato }`. Idempotente — se já existir contrato ativo para o lead, reaproveita.
-- **`assinarContrato(contratoId, base64)`**: capturar `navigator.userAgent` e o IP via `fetch("https://api.ipify.org?format=json")` (com `try/catch` — se falhar, grava `null` e segue). Persistir `ip_assinatura` e `user_agent_assinatura` no `UPDATE`, e refletir no estado local.
-- **Numeração do contrato**: trocar `Date.now().slice(-6)` por `MB-{YY}{MM}-{seq}` calculado pelo `count` da tabela no mês. Reduz colisão e fica legível.
-- **Validação mínima** antes de gerar: exigir `cpf`, `dataEvento` e `valorNegociado > 0`. Se faltar, retornar erro tratável.
-
-### 2. `src/components/comercial/NegociacoesTab.tsx`
-
-- `handleAprovar` passa a chamar `await onAprovarFechamento(id)` que agora devolve o contrato criado.
-- Toast muda para: "Fechamento aprovado e contrato #X gerado". Botão de ação no toast leva direto à aba Contratos com o preview aberto.
-- Props: `onAprovarFechamento` passa a retornar `Promise<{ contrato?: Contrato }>`.
-
-### 3. `src/pages/ComercialVendas.tsx`
-
-- Adicionar estado `contratoAutoAbrir: string | null` e propagar para `ContratosTab` como prop opcional `autoOpenContratoId`.
-- Ao aprovar, setar esse id + `setActiveTab("contratos")`.
-
-### 4. `src/components/comercial/ContratosTab.tsx`
-
-- Aceitar `autoOpenContratoId?: string` e, num `useEffect`, abrir o `Sheet` de preview quando aparecer.
-- Manter o botão "Gerar Contrato" manual como fallback (útil para contratos avulsos / recriação após cancelamento).
-
-### 5. `src/components/comercial/TrilhaAuditoria.tsx`
-
-- Sem mudança estrutural — passa a exibir IP/UA também para contratos assinados via iPad (hoje sempre "—" nesse caminho).
-
-## Pontos que NÃO vamos mexer agora
-
-- Template de termos hardcoded (`"Termos e condições..."`) — fica para um próximo passo dedicado a templates editáveis.
-- Estrutura do banco (`contratos`) já tem todas as colunas necessárias (`ip_assinatura`, `user_agent_assinatura`). Nenhuma migration.
-
-## Riscos
-
-- `api.ipify.org` é externo. Em caso de bloqueio de rede, IP fica `null` (graceful). Aceitável — UA ainda é gravado.
-- Auto-criação ao aprovar pode gerar contrato indesejado se a vendedora aprovou por engano. Mitigação: idempotência + botão "Cancelar contrato" já existe.
-
-## Validação
-
-- Aprovar uma negociação → ver toast e Sheet abrir com o contrato.
-- Assinar no iPad → reabrir Trilha de Auditoria e confirmar IP + User-Agent populados.
-- Aprovar duas vezes a mesma negociação → não duplica contrato.
+### Fora de escopo (anotado para depois)
+- Tratamento individual de erros no `Promise.all` de `useLeads.ts`
+- Índice único em `contratos.numero` para evitar duplicação no formato `MB-YYMM-###`
+- Comportamento de `addContrato` quando há contrato cancelado preexistente

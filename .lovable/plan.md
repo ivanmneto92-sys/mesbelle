@@ -1,86 +1,62 @@
-# Redesign editorial do front-end Més Belle
-
 ## Objetivo
-Elevar o sistema a um padrão "editorial de ateliê" — hierarquia clara, densidade controlada, navegação fluida e funciona impecável em iPad/celular. Mantém a identidade (burgundy + Fraunces/Nunito) mas com composição, ritmo e detalhes muito mais sofisticados.
 
-## Princípios do novo layout
-1. **Hierarquia tipográfica forte** — títulos Fraunces grandes com kerning gracioso, sub-rótulos minúsculos em uppercase, números em destaque (R$, contagens) com peso visual maior que os cards.
-2. **Espaço respira** — menos cards comprimidos, mais "agrupamentos editoriais" com divisores sutis em vez de bordas grossas. Cards ganham fundo creme (#FAF6F4) e burgundy reservado para ações/foco.
-3. **Densidade adaptativa** — tabelas viram **tabelas em desktop + cards empilhados em mobile/iPad** (não scroll horizontal). Lead/Negócio/Contrato/Vestido cabem em "stack cards" com a info essencial acima da dobra.
-4. **Navegação previsível** — header global persistente com breadcrumbs + busca rápida (⌘K), atalhos "Novo Lead / Nova Venda / Logística" sempre presentes, voltar inteligente.
-5. **Mobile-first iPad** — sidebar vira drawer, botões com alvo mínimo 44px, sheets em vez de dialogs apertados, assinatura ocupa tela cheia.
+Eliminar o passo manual "Gerar Contrato" e fechar a lacuna de auditoria na assinatura feita no ateliê (iPad). Hoje o fluxo exige 3 cliques após o cadastro; vamos reduzir para 2 e garantir trilha completa.
 
-## Mudanças por área
+## Fluxo novo
 
-### 1. Shell global (AppLayout + AppSidebar + Header)
-- Sidebar mais estreita (224 → 200 px) com agrupamentos: **Operação** (Dashboard, CRM, Comercial) / **Catálogo** (Acervo, Logística) / **Gestão** (Equipe, Financeiro, Sócios) / **Sistema** (Configurações). Cada grupo com label em micro-caps.
-- Item ativo: barra burgundy à esquerda + fundo creme + ícone preenchido (não só cor de fundo).
-- Header global novo: breadcrumbs animadas + **busca global (⌘K)** + atalhos rápidos + sino de notificações + avatar com menu.
-- Footer da sidebar mostra usuário com avatar circular maior, papel em tag, link rápido para perfil.
+```text
+CRM (cadastro do Lead)
+   │
+   ▼ Enviar para Comercial
+Negócio (aberto) — define vestido/valor/desconto/pagamento
+   │
+   ▼ Aprovar fechamento  ◄── dispara automaticamente:
+                              1. cria Contrato (pendente)
+                              2. mostra toast com link "Abrir contrato"
+                              3. troca a aba para Contratos e abre o preview
+```
 
-### 2. Dashboard
-- Cabeçalho "Olá, [Nome]" com saudação por horário, frase contextual ("Você tem 3 provas hoje") e CTA único proeminente em vez de 3 botões iguais.
-- KPIs: cartões maiores em **grid 4 colunas** (desktop) com gráfico sparkline embutido em cada um, comparativo vs. mês anterior, label minúsculo "ontem/hoje/semana".
-- Score da Loja: gauge maior, com **3 sub-KPIs ao lado** (NPS, % vestidos no prazo, taxa conversão).
-- Avisos rápidos viram **timeline** agrupada por urgência, com ação inline ("Cobrar", "Reagendar").
-- Nova seção: **"Hoje no ateliê"** — provas + entregas + retiradas do dia em coluna única.
+## Mudanças
 
-### 3. CRM (Kanban + Base + Agenda)
-- Kanban com colunas mais altas, **card de lead reformulado**: avatar inicial em circle burgundy, nome em Fraunces, evento e data em micro-tags, valor potencial em destaque, ações via long-press/menu.
-- Filtros viram **barra de chips** filtráveis (vendedora, evento, período) em vez de selects empilhados.
-- Base de Clientes: cards em grid 3 cols em vez de tabela densa; mobile vira lista vertical com swipe actions.
-- Agenda de Provas: calendário semanal compacto + lista do dia ao lado (estilo Linear/Notion).
-- Painel lateral de detalhe da cliente vira **sheet largo** com tabs Resumo/Medidas/Histórico/Contratos.
+### 1. `src/hooks/useLeads.ts` — automação + auditoria
 
-### 4. Comercial (Negociações + Contratos + Métricas)
-- Tabs viram **segmented control** elegante no topo.
-- Negociações: cards de negócio em vez de tabela bruta, com status em pill colorida lateral, valor grande, ações principais (Aprovar/Editar) sempre visíveis.
-- Contratos: tabela em desktop ganha **status-stripe lateral** colorida, ações agrupadas em menu kebab; em mobile vira lista de cards com botão "Assinar no iPad" gigante.
-- Painel de detalhe do contrato (Sheet) reorganizado: **header sticky** com nº+status+ações, blocos visuais separados (Cliente / Termos / Trilha Auditoria / Assinatura).
-- Métricas: gráficos maiores, KPIs com comparativo período-anterior, tabela de comissões com sticky header.
+- **`aprovarFechamento(negocioId)`**: após o `UPDATE` do status, chamar internamente `addContratoFromNegocio(negocio)` e retornar `{ negocio, contrato }`. Idempotente — se já existir contrato ativo para o lead, reaproveita.
+- **`assinarContrato(contratoId, base64)`**: capturar `navigator.userAgent` e o IP via `fetch("https://api.ipify.org?format=json")` (com `try/catch` — se falhar, grava `null` e segue). Persistir `ip_assinatura` e `user_agent_assinatura` no `UPDATE`, e refletir no estado local.
+- **Numeração do contrato**: trocar `Date.now().slice(-6)` por `MB-{YY}{MM}-{seq}` calculado pelo `count` da tabela no mês. Reduz colisão e fica legível.
+- **Validação mínima** antes de gerar: exigir `cpf`, `dataEvento` e `valorNegociado > 0`. Se faltar, retornar erro tratável.
 
-### 5. Acervo + Logística
-- Acervo Catálogo: grid de vestidos com **hover state cinematográfico** (zoom suave + overlay com preço e disponibilidade), filtros laterais em drawer no mobile.
-- Cards de vestido com badge "Disponível/Reservado/Em produção" canto superior direito, preço em Fraunces grande.
-- Produção: checklist 7 etapas vira **progress stepper horizontal** no card + tabela de tarefas; mobile vira accordion.
-- Logística: grid 2x2 atual vira **timeline vertical de status** (Para enviar → Enviado → Em uso → Devolvido) com cards arrastáveis entre colunas.
-- Termo de Retirada: modal full-screen em mobile/iPad otimizado para assinatura.
+### 2. `src/components/comercial/NegociacoesTab.tsx`
 
-### 6. Tabelas → padrão único
-Componente novo `DataList` que renderiza:
-- Em desktop (≥1024px): tabela com colunas configuráveis, sticky header, ordenação, paginação.
-- Em tablet/mobile: stack de cards com a mesma info essencial, ações via sheet.
-- Empty state, loading skeleton e filter chips embutidos.
+- `handleAprovar` passa a chamar `await onAprovarFechamento(id)` que agora devolve o contrato criado.
+- Toast muda para: "Fechamento aprovado e contrato #X gerado". Botão de ação no toast leva direto à aba Contratos com o preview aberto.
+- Props: `onAprovarFechamento` passa a retornar `Promise<{ contrato?: Contrato }>`.
 
-### 7. Responsividade
-- Sidebar offcanvas <1024px, com trigger persistente no header.
-- Sheets/Dialogs viram **bottom sheets** no mobile.
-- Botões primários ≥44px de altura.
-- Forms: 1 coluna no mobile, max 2 no tablet, grid no desktop.
+### 3. `src/pages/ComercialVendas.tsx`
 
-## Design tokens (sem alterar identidade)
-- Adicionar tokens: `--surface-cream` (#FAF6F4), `--surface-elevated`, `--border-subtle`, `--text-muted-soft`.
-- Sombras editoriais: `--shadow-card` (soft, 1px), `--shadow-elevated` (8px difuso). Substitui sombras genéricas do shadcn.
-- Espaçamento: nova escala 2/4/6/10/16/24/40 para ritmo mais editorial.
-- Animações: micro-fades 200ms em entradas, scale 0.98→1 em cards on click. Sem motion exagerada.
+- Adicionar estado `contratoAutoAbrir: string | null` e propagar para `ContratosTab` como prop opcional `autoOpenContratoId`.
+- Ao aprovar, setar esse id + `setActiveTab("contratos")`.
 
-## Detalhes técnicos
-- **Novos componentes**: `GlobalHeader`, `CommandPalette` (⌘K via `cmdk` já instalado), `DataList`, `StatusStripe`, `KpiCard`, `PageHero`, `BottomSheet`.
-- **Refatorar**: `AppLayout`, `AppSidebar`, todas as 8 páginas principais (Dashboard, CRM, ComercialVendas, Acervo, Logistica, Equipe, Financeiro, Socios), todos os `*Tab.tsx` da pasta `comercial/` e `crm/`.
-- **Tokens**: estender `index.css` (novas variáveis HSL) e `tailwind.config.ts` (semantic colors, shadow scale, spacing).
-- **Tabelas**: introduzir `DataList` reaproveitável; migrar ContratosTab, NegociacoesTab, BaseClientesTab, ProducaoTab, Logística primeiro.
-- Sem mexer em lógica de negócio, hooks, schemas ou Supabase. Mudança puramente de UI/UX.
+### 4. `src/components/comercial/ContratosTab.tsx`
 
-## Ordem de entrega sugerida
-1. **Fundação**: tokens, GlobalHeader, AppSidebar redesenhada, CommandPalette.
-2. **Dashboard** novo (validar linguagem visual).
-3. **CRM** (Kanban + Base + Agenda).
-4. **Comercial** (Negociações + Contratos + Métricas).
-5. **Acervo + Logística**.
-6. Polimento responsivo iPad/mobile em todas as telas.
+- Aceitar `autoOpenContratoId?: string` e, num `useEffect`, abrir o `Sheet` de preview quando aparecer.
+- Manter o botão "Gerar Contrato" manual como fallback (útil para contratos avulsos / recriação após cancelamento).
 
-## Fora de escopo
-- Mudança de fontes ou cor primária.
-- Novas funcionalidades de negócio.
-- Refactor de hooks, Supabase ou estrutura de dados.
-- Tema dark fora da Auth.
+### 5. `src/components/comercial/TrilhaAuditoria.tsx`
+
+- Sem mudança estrutural — passa a exibir IP/UA também para contratos assinados via iPad (hoje sempre "—" nesse caminho).
+
+## Pontos que NÃO vamos mexer agora
+
+- Template de termos hardcoded (`"Termos e condições..."`) — fica para um próximo passo dedicado a templates editáveis.
+- Estrutura do banco (`contratos`) já tem todas as colunas necessárias (`ip_assinatura`, `user_agent_assinatura`). Nenhuma migration.
+
+## Riscos
+
+- `api.ipify.org` é externo. Em caso de bloqueio de rede, IP fica `null` (graceful). Aceitável — UA ainda é gravado.
+- Auto-criação ao aprovar pode gerar contrato indesejado se a vendedora aprovou por engano. Mitigação: idempotência + botão "Cancelar contrato" já existe.
+
+## Validação
+
+- Aprovar uma negociação → ver toast e Sheet abrir com o contrato.
+- Assinar no iPad → reabrir Trilha de Auditoria e confirmar IP + User-Agent populados.
+- Aprovar duas vezes a mesma negociação → não duplica contrato.

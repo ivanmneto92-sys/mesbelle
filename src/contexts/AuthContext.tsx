@@ -25,22 +25,29 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export const useAuth = () => useContext(AuthContext);
 
 async function fetchUserRole(userId: string): Promise<UserRole> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
+  if (error) {
+    console.error("[Auth] Falha ao carregar cargo:", error.message);
+  }
   return (data?.role as UserRole) || "vendedor";
 }
 
 async function fetchProfile(userId: string): Promise<string> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select("nome")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
+  if (error) {
+    console.error("[Auth] Falha ao carregar perfil:", error.message);
+  }
   return data?.nome || "";
 }
+
 
 async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
   const [role, nome] = await Promise.all([

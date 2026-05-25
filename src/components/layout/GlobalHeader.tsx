@@ -72,7 +72,7 @@ export function GlobalHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { open: cmdOpen, setOpen: setCmdOpen } = useCommandPalette();
-  const alerts = useMemo(() => getLogisticaAlerts(), []);
+  const alerts = useLogisticaAlerts();
   const alertCount = alerts.length;
 
   const handleLogout = () => {

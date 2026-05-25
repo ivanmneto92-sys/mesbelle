@@ -158,6 +158,35 @@ export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead,
             <Button onClick={handleSaveDados} className="w-full">
               <Save className="h-4 w-4 mr-2" /> Salvar Dados
             </Button>
+
+            <Separator />
+
+            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-4 w-4 text-primary" />
+                <Label className="text-sm font-medium">Agendamento de Prova</Label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Data</Label>
+                  <Input type="date" value={provaData} onChange={(e) => setProvaDataLocal(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-xs">Horário</Label>
+                  <Input type="time" value={provaHora} onChange={(e) => setProvaHoraLocal(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSaveProva} size="sm" className="flex-1">
+                  <Save className="h-4 w-4 mr-2" /> {lead.provaData ? "Remarcar" : "Agendar"} Prova
+                </Button>
+                {lead.provaData && (
+                  <Button onClick={handleRemoverProva} size="sm" variant="outline">
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

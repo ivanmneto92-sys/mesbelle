@@ -13,6 +13,7 @@ import { Plus, Search, FileSignature, Eye, Printer, Link2 } from "lucide-react";
 import { Contrato, ContratoStatus, Negocio } from "@/types/comercial";
 import { SignaturePad } from "./SignaturePad";
 import { LinkAssinaturaDialog } from "./LinkAssinaturaDialog";
+import { TrilhaAuditoria } from "./TrilhaAuditoria";
 import { toast } from "sonner";
 
 interface ContratosTabProps {
@@ -233,6 +234,11 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                   <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{previewContrato.termosTexto}</pre>
                 </div>
                 <Separator />
+
+                <TrilhaAuditoria contrato={previewContrato} />
+
+                <Separator />
+
 
                 {previewContrato.statusAssinatura === "pendente" && (
                   <div className="space-y-2">

@@ -53,7 +53,7 @@ const ComercialVendas = () => {
             negocios={negocios}
             onUpdateNegocio={updateNegocio}
             onAprovarFechamento={aprovarFechamento}
-            onSwitchToContratos={() => setActiveTab("contratos")}
+            onSwitchToContratos={handleSwitchToContratos}
           />
         </TabsContent>
 
@@ -65,6 +65,8 @@ const ComercialVendas = () => {
             onUpdateStatus={updateContratoStatus}
             onAssinar={assinarContrato}
             onGerarLink={gerarLinkAssinatura}
+            autoOpenContratoId={autoOpenContratoId}
+            onAutoOpenHandled={() => setAutoOpenContratoId(null)}
           />
         </TabsContent>
 

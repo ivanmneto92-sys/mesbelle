@@ -235,6 +235,11 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                 </div>
                 <Separator />
 
+                <TrilhaAuditoria contrato={previewContrato} />
+
+                <Separator />
+
+
                 {previewContrato.statusAssinatura === "pendente" && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Assinatura da Cliente</p>

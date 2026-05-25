@@ -91,7 +91,7 @@ export type Database = {
           comentario: string | null
           created_at: string
           data: string
-          funcionario_id: string
+          funcionario_id: string | null
           id: string
           nota: number
         }
@@ -99,7 +99,7 @@ export type Database = {
           comentario?: string | null
           created_at?: string
           data: string
-          funcionario_id: string
+          funcionario_id?: string | null
           id?: string
           nota: number
         }
@@ -107,7 +107,7 @@ export type Database = {
           comentario?: string | null
           created_at?: string
           data?: string
-          funcionario_id?: string
+          funcionario_id?: string | null
           id?: string
           nota?: number
         }
@@ -786,6 +786,17 @@ export type Database = {
       is_own_funcionario: {
         Args: { _funcionario_email: string; _user_id: string }
         Returns: boolean
+      }
+      listar_vendedores_publico: {
+        Args: never
+        Returns: {
+          id: string
+          nome: string
+        }[]
+      }
+      submeter_avaliacao_publica: {
+        Args: { _comentario: string; _funcionario_id: string; _nota: number }
+        Returns: Json
       }
     }
     Enums: {

@@ -66,6 +66,8 @@ type ContratoRow = {
   cpf_cliente: string; data_evento: string; data_criacao: string; valor_total: number;
   status_assinatura: string; termos_texto: string; assinatura_base64: string | null;
   data_assinatura: string | null;
+  ip_assinatura: string | null; user_agent_assinatura: string | null;
+  signing_token: string | null; token_expires_at: string | null; email_cliente: string | null;
 };
 const rowToContrato = (r: ContratoRow): Contrato => ({
   id: r.id, numero: r.numero, leadId: r.lead_id, negocioId: r.negocio_id ?? undefined,
@@ -73,6 +75,11 @@ const rowToContrato = (r: ContratoRow): Contrato => ({
   dataCriacao: r.data_criacao, valorTotal: Number(r.valor_total),
   statusAssinatura: r.status_assinatura as ContratoStatus, termosTexto: r.termos_texto,
   assinaturaBase64: r.assinatura_base64 ?? undefined, dataAssinatura: r.data_assinatura ?? undefined,
+  ipAssinatura: r.ip_assinatura ?? undefined,
+  userAgentAssinatura: r.user_agent_assinatura ?? undefined,
+  signingToken: r.signing_token ?? undefined,
+  tokenExpiresAt: r.token_expires_at ?? undefined,
+  emailCliente: r.email_cliente ?? undefined,
 });
 
 type NegocioRow = {

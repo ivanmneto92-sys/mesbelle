@@ -48,10 +48,17 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
     setEditModal({ open: false, negocio: null });
   };
 
-  const handleAprovar = (negocioId: string) => {
-    onAprovarFechamento(negocioId);
-    toast.success("Fechamento aprovado! Gere o contrato na aba Contratos.");
-    onSwitchToContratos();
+  const handleAprovar = async (negocioId: string) => {
+    const res = await onAprovarFechamento(negocioId);
+    const contrato = res && typeof res === "object" ? res.contrato : null;
+    if (contrato) {
+      toast.success(`Fechamento aprovado — Contrato #${contrato.numero} gerado`, {
+        action: { label: "Abrir contrato", onClick: () => onSwitchToContratos(contrato.id) },
+      });
+    } else {
+      toast.success("Fechamento aprovado. Verifique os dados para gerar o contrato.");
+    }
+    onSwitchToContratos(contrato?.id);
   };
 
   const renderCard = (n: Negocio) => {

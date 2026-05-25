@@ -85,6 +85,7 @@ export default function AssinaturaPublica() {
       const j = await r.json();
       ip = j.ip ?? "";
     } catch { /* ignore */ }
+    setEvidenceIp(ip);
 
     const { data, error } = await supabase.rpc("assinar_contrato_publico", {
       _token: token,

@@ -13,6 +13,7 @@ import { Plus, Search, FileSignature, Eye, Printer, Link2 } from "lucide-react";
 import { Contrato, ContratoStatus, Negocio } from "@/types/comercial";
 import { SignaturePad } from "./SignaturePad";
 import { LinkAssinaturaDialog } from "./LinkAssinaturaDialog";
+import { TrilhaAuditoria } from "./TrilhaAuditoria";
 import { toast } from "sonner";
 
 interface ContratosTabProps {

@@ -123,17 +123,17 @@ const Dashboard = () => {
         description="Resumo do dia, alertas urgentes e atalhos para suas ações mais frequentes."
         actions={
           shortcuts.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               {shortcuts.map((s) => (
                 <Button
                   key={s.to}
                   asChild
                   size="default"
                   variant={s.primary ? "default" : "outline"}
-                  className={s.primary ? "h-10 rounded-full px-5 shadow-glow" : "h-10 rounded-full px-4 bg-card border-border-subtle"}
+                  className={s.primary ? "h-10 rounded-full px-4 sm:px-5 shadow-glow flex-1 sm:flex-none min-w-0" : "h-10 rounded-full px-3 sm:px-4 bg-card border-border-subtle flex-1 sm:flex-none min-w-0"}
                 >
                   <Link to={s.to}>
-                    <s.icon className="h-4 w-4 mr-1.5" /> {s.label}
+                    <s.icon className="h-4 w-4 mr-1.5 shrink-0" /> <span className="truncate">{s.label}</span>
                   </Link>
                 </Button>
               ))}

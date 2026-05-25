@@ -107,10 +107,12 @@ export function usePermissoes() {
       };
       setPermissoes(next);
 
+      const update: Record<string, any> = { [role]: next[role] };
       const { error } = await supabase
         .from("permissoes_config")
-        .update({ [role]: next[role] })
+        .update(update)
         .eq("id", 1);
+
 
       if (error) {
         console.error("[Permissoes] Falha ao salvar:", error.message);

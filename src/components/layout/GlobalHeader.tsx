@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Bell, AlertTriangle, Send, LogOut, User, Search, UserPlus, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,27 +15,53 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { useAuth } from "@/contexts/AuthContext";
-import { AluguelLogistica } from "@/types/logistica";
+import { supabase } from "@/integrations/supabase/client";
 import { CommandPalette, useCommandPalette } from "./CommandPalette";
 
-function getLogisticaAlerts() {
-  const alerts: { icon: typeof AlertTriangle; text: string; color: string; href: string }[] = [];
-  try {
-    const raw = localStorage.getItem("mesbelle_logistica");
-    if (!raw) return alerts;
-    const items: AluguelLogistica[] = JSON.parse(raw);
-    if (!Array.isArray(items)) return alerts;
+type LogisticaAlert = { icon: typeof AlertTriangle; text: string; color: string; href: string };
+
+function useLogisticaAlerts() {
+  const [alerts, setAlerts] = useState<LogisticaAlert[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
     const today = new Date().toISOString().split("T")[0];
-    items.forEach((item) => {
-      if (item.statusLogistica === "atrasado") {
-        const days = Math.floor((Date.now() - new Date(item.dataRetorno).getTime()) / 86400000);
-        alerts.push({ icon: AlertTriangle, text: `${item.vestidoNome} — ${days} dia(s) de atraso`, color: "text-destructive", href: "/logistica" });
-      }
-      if (item.statusLogistica === "para_enviar" && item.dataSaida === today) {
-        alerts.push({ icon: Send, text: `${item.vestidoNome} — envio agendado para hoje`, color: "text-info", href: "/logistica" });
-      }
-    });
-  } catch { /* ignore */ }
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("alugueis_logistica")
+        .select("vestido_nome, status_logistica, data_saida, data_retorno")
+        .or(`status_logistica.eq.atrasado,and(status_logistica.eq.para_enviar,data_saida.eq.${today})`);
+
+      if (!mounted || error || !data) return;
+
+      const next: LogisticaAlert[] = [];
+      data.forEach((item: any) => {
+        if (item.status_logistica === "atrasado") {
+          const days = Math.floor((Date.now() - new Date(item.data_retorno).getTime()) / 86400000);
+          next.push({
+            icon: AlertTriangle,
+            text: `${item.vestido_nome} — ${days} dia(s) de atraso`,
+            color: "text-destructive",
+            href: "/logistica",
+          });
+        } else if (item.status_logistica === "para_enviar" && item.data_saida === today) {
+          next.push({
+            icon: Send,
+            text: `${item.vestido_nome} — envio agendado para hoje`,
+            color: "text-info",
+            href: "/logistica",
+          });
+        }
+      });
+      setAlerts(next);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return alerts;
 }
 

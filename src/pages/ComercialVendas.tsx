@@ -17,8 +17,14 @@ const ComercialVendas = () => {
   } = useLeads();
 
   const [activeTab, setActiveTab] = useState("negociacoes");
+  const [autoOpenContratoId, setAutoOpenContratoId] = useState<string | null>(null);
 
   const negociosAprovados = negocios.filter((n) => n.statusNegociacao === "aprovado");
+
+  const handleSwitchToContratos = (contratoId?: string) => {
+    setActiveTab("contratos");
+    if (contratoId) setAutoOpenContratoId(contratoId);
+  };
 
   return (
     <>
@@ -47,7 +53,7 @@ const ComercialVendas = () => {
             negocios={negocios}
             onUpdateNegocio={updateNegocio}
             onAprovarFechamento={aprovarFechamento}
-            onSwitchToContratos={() => setActiveTab("contratos")}
+            onSwitchToContratos={handleSwitchToContratos}
           />
         </TabsContent>
 
@@ -59,6 +65,8 @@ const ComercialVendas = () => {
             onUpdateStatus={updateContratoStatus}
             onAssinar={assinarContrato}
             onGerarLink={gerarLinkAssinatura}
+            autoOpenContratoId={autoOpenContratoId}
+            onAutoOpenHandled={() => setAutoOpenContratoId(null)}
           />
         </TabsContent>
 

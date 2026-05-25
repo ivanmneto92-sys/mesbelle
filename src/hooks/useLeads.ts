@@ -202,16 +202,25 @@ export function useLeads() {
     await supabase.from("negocios").update(patch as never).eq("id", negocioId);
   }, []);
 
-  const aprovarFechamento = useCallback(async (negocioId: string) => {
-    setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, statusNegociacao: "aprovado" as StatusNegociacao } : n));
-    await supabase.from("negocios").update({ status_negociacao: "aprovado" }).eq("id", negocioId);
+  // === CONTRATOS ===
+  // Generates a human-readable contract number like MB-YYMM-### based on existing rows in the current month.
+  const gerarNumeroContrato = useCallback(async (): Promise<string> => {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count } = await supabase
+      .from("contratos")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", start);
+    const seq = String((count ?? 0) + 1).padStart(3, "0");
+    return `MB-${yy}${mm}-${seq}`;
   }, []);
 
-  // === CONTRATOS ===
   const addContrato = useCallback(async (lead: Lead, valorTotal: number) => {
     const existing = contratos.find((c) => c.leadId === lead.id && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
-    const numero = String(Date.now()).slice(-6);
+    const numero = await gerarNumeroContrato();
     const insertRow = {
       numero, lead_id: lead.id, nome_cliente: lead.nome, cpf_cliente: lead.cpf,
       data_evento: lead.dataEvento, valor_total: valorTotal, status_assinatura: "pendente",
@@ -222,15 +231,19 @@ export function useLeads() {
     const newContrato = rowToContrato(data as ContratoRow);
     setContratos((prev) => [newContrato, ...prev]);
     return newContrato;
-  }, [contratos]);
+  }, [contratos, gerarNumeroContrato]);
 
   const addContratoFromNegocio = useCallback(async (negocio: Negocio) => {
     const lead = leads.find((l) => l.id === negocio.clienteId);
-    if (!lead) return;
+    if (!lead) return null;
     const existing = contratos.find((c) => c.leadId === negocio.clienteId && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
+    // Validação mínima — evita contratos incompletos
+    if (!lead.cpf?.trim() || !negocio.dataEvento || negocio.valorNegociado <= 0) {
+      return null;
+    }
     const valorFinal = negocio.valorNegociado - negocio.desconto;
-    const numero = String(Date.now()).slice(-6);
+    const numero = await gerarNumeroContrato();
     const insertRow = {
       numero, lead_id: negocio.clienteId, negocio_id: negocio.id,
       nome_cliente: negocio.clienteNome, cpf_cliente: negocio.clienteCpf,
@@ -242,7 +255,16 @@ export function useLeads() {
     const newContrato = rowToContrato(data as ContratoRow);
     setContratos((prev) => [newContrato, ...prev]);
     return newContrato;
-  }, [leads, contratos]);
+  }, [leads, contratos, gerarNumeroContrato]);
+
+  const aprovarFechamento = useCallback(async (negocioId: string): Promise<{ contrato?: Contrato | null }> => {
+    setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, statusNegociacao: "aprovado" as StatusNegociacao } : n));
+    await supabase.from("negocios").update({ status_negociacao: "aprovado" }).eq("id", negocioId);
+    const negocio = negocios.find((n) => n.id === negocioId);
+    if (!negocio) return { contrato: null };
+    const contrato = await addContratoFromNegocio({ ...negocio, statusNegociacao: "aprovado" });
+    return { contrato };
+  }, [negocios, addContratoFromNegocio]);
 
   const updateContratoStatus = useCallback(async (contratoId: string, status: ContratoStatus) => {
     setContratos((prev) => prev.map((c) => c.id === contratoId ? { ...c, statusAssinatura: status } : c));
@@ -251,15 +273,35 @@ export function useLeads() {
 
   const assinarContrato = useCallback(async (contratoId: string, assinaturaBase64: string) => {
     const dataAssinatura = new Date().toISOString();
+    const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null;
+    // Captura IP de forma best-effort. Se falhar (rede/bloqueio), grava null e segue.
+    let ip: string | null = null;
+    try {
+      const r = await fetch("https://api.ipify.org?format=json");
+      if (r.ok) {
+        const j = await r.json();
+        if (typeof j?.ip === "string") ip = j.ip;
+      }
+    } catch { /* ignore */ }
+
     setContratos((prev) => prev.map((c) =>
       c.id === contratoId
-        ? { ...c, statusAssinatura: "assinado" as ContratoStatus, assinaturaBase64, dataAssinatura }
+        ? {
+            ...c,
+            statusAssinatura: "assinado" as ContratoStatus,
+            assinaturaBase64,
+            dataAssinatura,
+            ipAssinatura: ip ?? undefined,
+            userAgentAssinatura: userAgent ?? undefined,
+          }
         : c
     ));
     await supabase.from("contratos").update({
       status_assinatura: "assinado",
       assinatura_base64: assinaturaBase64,
       data_assinatura: dataAssinatura,
+      ip_assinatura: ip,
+      user_agent_assinatura: userAgent,
     }).eq("id", contratoId);
   }, []);
 

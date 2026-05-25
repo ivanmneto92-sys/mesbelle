@@ -13,8 +13,8 @@ import { toast } from "sonner";
 interface NegociacoesTabProps {
   negocios: Negocio[];
   onUpdateNegocio: (negocioId: string, data: Partial<Negocio>) => void;
-  onAprovarFechamento: (negocioId: string) => void;
-  onSwitchToContratos: () => void;
+  onAprovarFechamento: (negocioId: string) => Promise<{ contrato?: { id: string; numero: string } | null }> | void;
+  onSwitchToContratos: (contratoId?: string) => void;
 }
 
 const metodosPagamento = ["Cartão 1x", "Cartão 2x", "Cartão 3x", "Cartão 6x", "PIX", "Boleto", "Dinheiro"];
@@ -48,10 +48,17 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
     setEditModal({ open: false, negocio: null });
   };
 
-  const handleAprovar = (negocioId: string) => {
-    onAprovarFechamento(negocioId);
-    toast.success("Fechamento aprovado! Gere o contrato na aba Contratos.");
-    onSwitchToContratos();
+  const handleAprovar = async (negocioId: string) => {
+    const res = await onAprovarFechamento(negocioId);
+    const contrato = res && typeof res === "object" ? res.contrato : null;
+    if (contrato) {
+      toast.success(`Fechamento aprovado — Contrato #${contrato.numero} gerado`, {
+        action: { label: "Abrir contrato", onClick: () => onSwitchToContratos(contrato.id) },
+      });
+    } else {
+      toast.success("Fechamento aprovado. Verifique os dados para gerar o contrato.");
+    }
+    onSwitchToContratos(contrato?.id);
   };
 
   const renderCard = (n: Negocio) => {

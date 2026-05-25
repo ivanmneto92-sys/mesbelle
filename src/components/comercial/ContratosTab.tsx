@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +23,26 @@ interface ContratosTabProps {
   onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
   onAssinar: (contratoId: string, assinaturaBase64: string) => void;
   onGerarLink: (contratoId: string, validadeHoras: number) => Promise<string | null>;
+  autoOpenContratoId?: string | null;
+  onAutoOpenHandled?: () => void;
 }
 
-export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus, onAssinar, onGerarLink }: ContratosTabProps) {
+export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus, onAssinar, onGerarLink, autoOpenContratoId, onAutoOpenHandled }: ContratosTabProps) {
   const [busca, setBusca] = useState("");
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
   const [selectedNegocioId, setSelectedNegocioId] = useState("");
   const [previewContrato, setPreviewContrato] = useState<Contrato | null>(null);
   const [linkContrato, setLinkContrato] = useState<Contrato | null>(null);
+
+  // Auto-abre o preview quando vier um contrato recém-criado por aprovação de negociação.
+  useEffect(() => {
+    if (!autoOpenContratoId) return;
+    const found = contratos.find((c) => c.id === autoOpenContratoId);
+    if (found) {
+      setPreviewContrato(found);
+      onAutoOpenHandled?.();
+    }
+  }, [autoOpenContratoId, contratos, onAutoOpenHandled]);
 
   const filtered = contratos.filter((c) =>
     c.nomeCliente.toLowerCase().includes(busca.toLowerCase()) ||

@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SignaturePad } from "@/components/comercial/SignaturePad";
-import { Loader2, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, ShieldCheck, AlertCircle, CheckCircle2, Download } from "lucide-react";
 import { SEO } from "@/components/SEO";
+import { baixarContratoPDF } from "@/components/comercial/ContratoAssinadoPDF";
+import { toast } from "sonner";
 
 interface PublicContrato {
   id: string;

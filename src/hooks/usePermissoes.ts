@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/contexts/AuthContext";
 
 export interface RolePermissoes {
@@ -19,8 +20,6 @@ export interface PermissoesConfig {
   vendedor: RolePermissoes;
   socio: RolePermissoes;
 }
-
-const STORAGE_KEY = "mesbelle_permissoes";
 
 const defaultPermissoes: PermissoesConfig = {
   vendedor: {
@@ -51,35 +50,77 @@ const defaultPermissoes: PermissoesConfig = {
   },
 };
 
-function loadPermissoes(): PermissoesConfig {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        vendedor: { ...defaultPermissoes.vendedor, ...parsed.vendedor },
-        socio: { ...defaultPermissoes.socio, ...parsed.socio },
-      };
-    }
-  } catch {}
-  return defaultPermissoes;
+function mergeConfig(raw: any): PermissoesConfig {
+  if (!raw) return defaultPermissoes;
+  return {
+    vendedor: { ...defaultPermissoes.vendedor, ...(raw.vendedor || {}) },
+    socio: { ...defaultPermissoes.socio, ...(raw.socio || {}) },
+  };
 }
 
 export function usePermissoes() {
-  const [permissoes, setPermissoes] = useState<PermissoesConfig>(loadPermissoes);
+  const [permissoes, setPermissoes] = useState<PermissoesConfig>(defaultPermissoes);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("permissoes_config")
+        .select("vendedor, socio")
+        .eq("id", 1)
+        .maybeSingle();
+      if (!mounted) return;
+      if (error) {
+        console.error("[Permissoes] Falha ao carregar:", error.message);
+      } else if (data) {
+        setPermissoes(mergeConfig(data));
+      }
+      setLoading(false);
+    })();
+
+    const channel = supabase
+      .channel("permissoes_config_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "permissoes_config" },
+        (payload) => {
+          const next = (payload.new ?? payload.old) as any;
+          if (next) setPermissoes(mergeConfig(next));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      mounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const updatePermissao = useCallback(
-    (role: "vendedor" | "socio", key: keyof RolePermissoes, value: boolean) => {
-      setPermissoes((prev) => {
-        const next = {
-          ...prev,
-          [role]: { ...prev[role], [key]: value },
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        return next;
-      });
+    async (role: "vendedor" | "socio", key: keyof RolePermissoes, value: boolean) => {
+      const previous = permissoes;
+      const next: PermissoesConfig = {
+        ...previous,
+        [role]: { ...previous[role], [key]: value },
+      };
+      setPermissoes(next);
+
+      const update: any = { [role]: next[role] };
+      const { error } = await (supabase as any)
+        .from("permissoes_config")
+        .update(update)
+        .eq("id", 1);
+
+
+
+      if (error) {
+        console.error("[Permissoes] Falha ao salvar:", error.message);
+        setPermissoes(previous);
+      }
     },
-    []
+    [permissoes]
   );
 
   const temPermissao = useCallback(
@@ -92,7 +133,7 @@ export function usePermissoes() {
     [permissoes]
   );
 
-  return { permissoes, updatePermissao, temPermissao };
+  return { permissoes, updatePermissao, temPermissao, loading };
 }
 
 // Mapping from route paths to permission keys

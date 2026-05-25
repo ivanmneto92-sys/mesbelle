@@ -1,32 +1,46 @@
-## Correção de permissões RLS (403 em todo o app)
-
-### Causa raiz
-As funções `SECURITY DEFINER` usadas pelas políticas RLS (`has_role`, `can_read_crm`, `can_write_crm`, `can_read_socios`, `is_own_funcionario`) não têm `EXECUTE` concedido para o role `authenticated`. Resultado: toda query autenticada retorna 403 (`permission denied for function has_role`), incluindo login (role/nome), CRM, Comercial, Contratos, Acervo, Logística, Equipe, Sócios e Financeiro.
+## Migrar dados restantes do localStorage para o banco
 
 ### Mudanças
 
-**1. Migration SQL** — conceder EXECUTE nas 5 funções:
+**1. Migration — nova tabela `permissoes_config` (singleton)**
 ```sql
-GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role)    TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.can_read_crm(uuid)                 TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.can_write_crm(uuid)                TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.can_read_socios(uuid)              TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.is_own_funcionario(uuid, text)     TO authenticated, anon;
+CREATE TABLE public.permissoes_config (
+  id smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  vendedor jsonb NOT NULL,
+  socio jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.permissoes_config ENABLE ROW LEVEL SECURITY;
+-- Todos autenticados leem
+CREATE POLICY "Permissoes read auth" ON public.permissoes_config FOR SELECT TO authenticated USING (true);
+-- Apenas admin escreve
+CREATE POLICY "Permissoes insert admin" ON public.permissoes_config FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'));
+CREATE POLICY "Permissoes update admin" ON public.permissoes_config FOR UPDATE TO authenticated USING (has_role(auth.uid(), 'admin'));
+-- Seed com defaults
+INSERT INTO public.permissoes_config (id, vendedor, socio) VALUES (1, '{...defaults...}', '{...defaults...}');
+-- Realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.permissoes_config;
 ```
-As funções permanecem `SECURITY DEFINER` — apenas o privilégio de execução é liberado. Sem isso, todas as policies que as chamam falham silenciosamente com 403.
 
-**2. `src/contexts/AuthContext.tsx`** — Melhorar tratamento de erro nas queries `user_roles` e `profiles`:
-- logar `error.message` no console
-- exibir toast "Falha ao carregar perfil — recarregue a página" se erro 403/permissão
-- não mascarar erro como "vendedor" silenciosamente
+**2. `src/hooks/usePermissoes.ts` — refatorar**
+- Remover `loadPermissoes()` / `localStorage`
+- Carregar de `permissoes_config` no mount (estado loading)
+- `updatePermissao` faz `update` no Supabase (otimista + rollback em erro)
+- Inscrever em realtime para propagar mudanças entre dispositivos
 
-### Validação pós-fix
-- `/rest/v1/user_roles` e `/rest/v1/profiles` retornam 200
-- Dashboard, CRM, Comercial, Contratos carregam dados
-- Aprovar negociação gera contrato sem erro 403
-- Login mostra nome e cargo corretos no header
+**3. `src/components/layout/GlobalHeader.tsx` — alertas de logística**
+- Substituir `getLogisticaAlerts()` por hook que consulta `alugueis_logistica`:
+  - `status_logistica = 'atrasado'` OR (`status_logistica = 'para_enviar'` AND `data_saida = today`)
+- Remover referência a `mesbelle_logistica`
 
-### Fora de escopo (anotado para depois)
-- Tratamento individual de erros no `Promise.all` de `useLeads.ts`
-- Índice único em `contratos.numero` para evitar duplicação no formato `MB-YYMM-###`
-- Comportamento de `addContrato` quando há contrato cancelado preexistente
+**4. Cleanup**
+- Remover `ACERVO_STORAGE_KEYS` export de `src/hooks/useAcervo.ts` (não tem consumidores)
+- Manter `LEGACY_STORAGE_KEYS` em `useLeads.ts` (limpa cache antigo no logout — útil por mais um ciclo)
+
+### Validação
+- Admin altera permissão de Vendedor → recarregar em outro navegador → mudança presente
+- Header mostra alertas reais de aluguéis atrasados/para enviar hoje
+- Vendedor não consegue alterar `permissoes_config` (403)
+
+### Fora de escopo
+- Sessão Supabase Auth permanece em localStorage (padrão e correto)

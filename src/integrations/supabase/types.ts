@@ -464,6 +464,27 @@ export type Database = {
           },
         ]
       }
+      permissoes_config: {
+        Row: {
+          id: number
+          socio: Json
+          updated_at: string
+          vendedor: Json
+        }
+        Insert: {
+          id?: number
+          socio: Json
+          updated_at?: string
+          vendedor: Json
+        }
+        Update: {
+          id?: number
+          socio?: Json
+          updated_at?: string
+          vendedor?: Json
+        }
+        Relationships: []
+      }
       producoes: {
         Row: {
           cliente_nome: string

@@ -32,6 +32,32 @@ export default function AssinaturaPublica() {
   const [state, setState] = useState<LoadState>("loading");
   const [contrato, setContrato] = useState<PublicContrato | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [evidenceIp, setEvidenceIp] = useState<string>("");
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!contrato) return;
+    setDownloading(true);
+    try {
+      await baixarContratoPDF({
+        numero: contrato.numero,
+        nome_cliente: contrato.nome_cliente,
+        cpf_cliente: contrato.cpf_cliente,
+        data_evento: contrato.data_evento,
+        valor_total: contrato.valor_total,
+        termos_texto: contrato.termos_texto,
+        assinatura_base64: contrato.assinatura_base64,
+        data_assinatura: contrato.data_assinatura,
+        ip_assinatura: evidenceIp || null,
+        user_agent: navigator.userAgent,
+        token: token ?? null,
+      });
+    } catch (e) {
+      toast.error("Não foi possível gerar o PDF.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const load = async () => {
     if (!token) { setState("invalid"); return; }

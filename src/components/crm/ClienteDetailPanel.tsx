@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Save, User, Ruler, FileText, History } from "lucide-react";
+import { MessageCircle, Save, User, Ruler, FileText, History, CalendarClock, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface ClienteDetailPanelProps {

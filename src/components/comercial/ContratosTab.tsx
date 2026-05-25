@@ -88,7 +88,21 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
   const handlePrint = (contrato: Contrato) => {
     const win = window.open("", "_blank");
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Contrato #${contrato.numero}</title>
+    const esc = (s: unknown) =>
+      String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    // Only accept safe data: image URIs for the signature; otherwise omit.
+    const sigOk =
+      typeof contrato.assinaturaBase64 === "string" &&
+      /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/.test(contrato.assinaturaBase64);
+    const sigBlock = sigOk
+      ? `<div class="sig"><p style="font-size:14px;font-weight:bold">Assinatura da Cliente</p><img src="${esc(contrato.assinaturaBase64)}" alt="Assinatura"/><p class="sig-date">Assinado em: ${esc(contrato.dataAssinatura ? new Date(contrato.dataAssinatura).toLocaleString("pt-BR") : "—")}</p></div>`
+      : '<div class="sig"><p>Pendente de assinatura</p></div>';
+    win.document.write(`<!DOCTYPE html><html><head><title>Contrato #${esc(contrato.numero)}</title>
       <style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:20px;color:#333}
       h1{text-align:center;color:#5A0019;font-size:20px}
       .info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
@@ -98,16 +112,16 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
       .sig img{max-width:300px;max-height:150px}
       .sig-date{font-size:12px;color:#888;margin-top:8px}
       @media print{body{margin:20px}}</style></head><body>
-      <h1>CONTRATO #${contrato.numero}</h1>
+      <h1>CONTRATO #${esc(contrato.numero)}</h1>
       <h2 style="text-align:center;font-size:14px;color:#5A0019">Més Belle Ateliê</h2>
       <div class="info">
-        <div><span class="label">Cliente</span><br><strong>${contrato.nomeCliente}</strong></div>
-        <div><span class="label">CPF</span><br><strong>${contrato.cpfCliente}</strong></div>
-        <div><span class="label">Data do Evento</span><br><strong>${new Date(contrato.dataEvento + "T00:00:00").toLocaleDateString("pt-BR")}</strong></div>
-        <div><span class="label">Valor Total</span><br><strong>R$ ${contrato.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></div>
+        <div><span class="label">Cliente</span><br><strong>${esc(contrato.nomeCliente)}</strong></div>
+        <div><span class="label">CPF</span><br><strong>${esc(contrato.cpfCliente)}</strong></div>
+        <div><span class="label">Data do Evento</span><br><strong>${esc(new Date(contrato.dataEvento + "T00:00:00").toLocaleDateString("pt-BR"))}</strong></div>
+        <div><span class="label">Valor Total</span><br><strong>R$ ${esc(contrato.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 }))}</strong></div>
       </div>
-      <div class="terms">${contrato.termosTexto}</div>
-      ${contrato.assinaturaBase64 ? `<div class="sig"><p style="font-size:14px;font-weight:bold">Assinatura da Cliente</p><img src="${contrato.assinaturaBase64}" alt="Assinatura"/><p class="sig-date">Assinado em: ${contrato.dataAssinatura ? new Date(contrato.dataAssinatura).toLocaleString("pt-BR") : "—"}</p></div>` : '<div class="sig"><p>Pendente de assinatura</p></div>'}
+      <div class="terms">${esc(contrato.termosTexto)}</div>
+      ${sigBlock}
       </body></html>`);
     win.document.close();
     win.print();

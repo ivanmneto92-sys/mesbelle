@@ -73,7 +73,10 @@ export function KpiCard({ eyebrow, value, hint, trend, icon: Icon, sparkline, ac
       </div>
       {sparkline && sparkline.length >= 2 && (
         <div className="mt-3 -mx-1">
-          <Sparkline data={sparkline} color={a.stroke} />
+          <Sparkline
+            data={sparkline}
+            color={trend ? (trend.up ? "hsl(var(--success))" : "hsl(var(--destructive))") : a.stroke}
+          />
         </div>
       )}
     </Card>

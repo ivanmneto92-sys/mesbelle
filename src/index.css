@@ -124,6 +124,33 @@
   h1, h2, h3, h4 {
     font-family: 'Fraunces', 'Nunito', serif;
     font-optical-sizing: auto;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
+  .font-display {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+  .label-eyebrow {
+    @apply text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground;
+  }
+}
+
+@layer components {
+  .card-editorial {
+    @apply bg-card rounded-2xl border border-[hsl(var(--border-subtle))] shadow-[var(--shadow-card)] transition-shadow;
+  }
+  .card-editorial:hover {
+    box-shadow: var(--shadow-elevated);
+  }
+  .surface-cream {
+    background-color: hsl(var(--surface-cream));
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .shadow-editorial { box-shadow: var(--shadow-card); }
+  .shadow-editorial-lg { box-shadow: var(--shadow-elevated); }
 }

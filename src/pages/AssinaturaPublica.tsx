@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SignaturePad } from "@/components/comercial/SignaturePad";
-import { Loader2, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, ShieldCheck, AlertCircle, CheckCircle2, Download } from "lucide-react";
 import { SEO } from "@/components/SEO";
+import { baixarContratoPDF } from "@/components/comercial/ContratoAssinadoPDF";
+import { toast } from "sonner";
 
 interface PublicContrato {
   id: string;
@@ -29,6 +32,32 @@ export default function AssinaturaPublica() {
   const [state, setState] = useState<LoadState>("loading");
   const [contrato, setContrato] = useState<PublicContrato | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [evidenceIp, setEvidenceIp] = useState<string>("");
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (!contrato) return;
+    setDownloading(true);
+    try {
+      await baixarContratoPDF({
+        numero: contrato.numero,
+        nome_cliente: contrato.nome_cliente,
+        cpf_cliente: contrato.cpf_cliente,
+        data_evento: contrato.data_evento,
+        valor_total: contrato.valor_total,
+        termos_texto: contrato.termos_texto,
+        assinatura_base64: contrato.assinatura_base64,
+        data_assinatura: contrato.data_assinatura,
+        ip_assinatura: evidenceIp || null,
+        user_agent: navigator.userAgent,
+        token: token ?? null,
+      });
+    } catch (e) {
+      toast.error("Não foi possível gerar o PDF.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const load = async () => {
     if (!token) { setState("invalid"); return; }
@@ -56,6 +85,7 @@ export default function AssinaturaPublica() {
       const j = await r.json();
       ip = j.ip ?? "";
     } catch { /* ignore */ }
+    setEvidenceIp(ip);
 
     const { data, error } = await supabase.rpc("assinar_contrato_publico", {
       _token: token,
@@ -195,7 +225,13 @@ export default function AssinaturaPublica() {
                         )}
                       </div>
                     )}
-                    <p className="text-xs text-muted-foreground">Você pode fechar esta página.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                      <Button onClick={handleDownloadPDF} disabled={downloading} size="lg" className="gap-2">
+                        {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        Baixar contrato em PDF
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">O PDF inclui sua assinatura, data, hora e evidências de autenticidade. Guarde uma cópia para seus registros.</p>
                   </CardContent>
                 </Card>
               )}

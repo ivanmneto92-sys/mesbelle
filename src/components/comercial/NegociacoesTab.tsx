@@ -13,8 +13,8 @@ import { toast } from "sonner";
 interface NegociacoesTabProps {
   negocios: Negocio[];
   onUpdateNegocio: (negocioId: string, data: Partial<Negocio>) => void;
-  onAprovarFechamento: (negocioId: string) => void;
-  onSwitchToContratos: () => void;
+  onAprovarFechamento: (negocioId: string) => Promise<{ contrato?: { id: string; numero: string } | null }> | void;
+  onSwitchToContratos: (contratoId?: string) => void;
 }
 
 const metodosPagamento = ["Cartão 1x", "Cartão 2x", "Cartão 3x", "Cartão 6x", "PIX", "Boleto", "Dinheiro"];

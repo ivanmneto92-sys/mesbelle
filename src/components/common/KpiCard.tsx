@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Card } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -20,6 +21,7 @@ const accentMap = {
 } as const;
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const gid = useId().replace(/:/g, "");
   if (data.length < 2) return null;
   const max = Math.max(...data);
   const min = Math.min(...data);
@@ -34,13 +36,13 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   return (
     <svg viewBox="0 0 100 30" className="w-full h-8" preserveAspectRatio="none">
       <defs>
-        <linearGradient id={`sg-${color}`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+        <linearGradient id={`sg-${gid}`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      <polygon points={`0,30 ${points} 100,30`} fill={`url(#sg-${color})`} />
+      <polygon points={`0,30 ${points} 100,30`} fill={`url(#sg-${gid})`} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }

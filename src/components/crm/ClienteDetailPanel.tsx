@@ -26,11 +26,15 @@ export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead,
     busto: "", cintura: "", quadril: "", altura: "", salto: "", manequim: "",
   });
   const [notas, setNotas] = useState("");
+  const [provaData, setProvaDataLocal] = useState("");
+  const [provaHora, setProvaHoraLocal] = useState("");
 
   useEffect(() => {
     if (lead) {
       setEditData({ nome: lead.nome, telefone: lead.telefone, email: lead.email, endereco: lead.endereco });
       setNotas(lead.notasInternas || "");
+      setProvaDataLocal(lead.provaData || "");
+      setProvaHoraLocal(lead.provaHora || "");
       if (medidas) {
         setEditMedidas({ busto: medidas.busto, cintura: medidas.cintura, quadril: medidas.quadril, altura: medidas.altura, salto: medidas.salto || "", manequim: medidas.manequim });
       } else {
@@ -56,6 +60,29 @@ export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead,
   const handleSaveNotas = () => {
     onUpdateLead(lead.id, { notasInternas: notas });
     toast.success("Notas salvas");
+  };
+
+  const handleSaveProva = () => {
+    if (!provaData) {
+      toast.error("Informe a data da prova");
+      return;
+    }
+    onUpdateLead(lead.id, {
+      provaData,
+      provaHora: provaHora || undefined,
+      statusFunil: "prova_agendada",
+    });
+    toast.success("Prova agendada");
+  };
+
+  const handleRemoverProva = () => {
+    setProvaDataLocal("");
+    setProvaHoraLocal("");
+    onUpdateLead(lead.id, {
+      provaData: null as unknown as undefined,
+      provaHora: null as unknown as undefined,
+    });
+    toast.success("Prova removida");
   };
 
   const sections = [

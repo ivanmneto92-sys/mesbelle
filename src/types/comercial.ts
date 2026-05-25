@@ -77,6 +77,11 @@ export interface Contrato {
   termosTexto: string;
   assinaturaBase64?: string;
   dataAssinatura?: string;
+  ipAssinatura?: string;
+  userAgentAssinatura?: string;
+  signingToken?: string;
+  tokenExpiresAt?: string;
+  emailCliente?: string;
 }
 
 // Legacy compat — kept for old kanban (removed)

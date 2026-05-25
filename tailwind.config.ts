@@ -65,11 +65,25 @@ export default {
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
         info: "hsl(var(--info))",
+        surface: {
+          cream: "hsl(var(--surface-cream))",
+          elevated: "hsl(var(--surface-elevated))",
+          sunken: "hsl(var(--surface-sunken))",
+        },
+        "border-subtle": "hsl(var(--border-subtle))",
+        "muted-soft": "hsl(var(--text-muted-soft))",
+      },
+      boxShadow: {
+        editorial: "var(--shadow-card)",
+        "editorial-lg": "var(--shadow-elevated)",
+        glow: "var(--shadow-glow)",
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "2xl": "1.25rem",
+        "3xl": "1.75rem",
       },
       keyframes: {
         "accordion-down": {

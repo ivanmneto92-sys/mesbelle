@@ -47,9 +47,27 @@
     --sidebar-border: 340 60% 22%;
     --sidebar-ring: 343 100% 18%;
 
-    --success: 142 71% 45%;
-    --warning: 38 92% 50%;
-    --info: 210 80% 55%;
+    --success: 142 50% 38%;
+    --warning: 32 85% 48%;
+    --info: 210 75% 48%;
+
+    /* Editorial surfaces */
+    --surface-cream: 28 35% 96%;
+    --surface-elevated: 0 0% 100%;
+    --surface-sunken: 28 20% 94%;
+    --border-subtle: 28 18% 88%;
+    --text-muted-soft: 340 12% 42%;
+
+    /* Editorial shadows */
+    --shadow-card: 0 1px 2px hsl(340 30% 15% / 0.04), 0 1px 1px hsl(340 30% 15% / 0.03);
+    --shadow-elevated: 0 10px 30px -12px hsl(340 30% 15% / 0.12), 0 4px 8px -4px hsl(340 30% 15% / 0.06);
+    --shadow-glow: 0 0 0 4px hsl(343 100% 18% / 0.08);
+
+    /* Status accent stripes */
+    --stripe-success: 142 50% 38%;
+    --stripe-warning: 32 85% 48%;
+    --stripe-danger: 0 70% 52%;
+    --stripe-neutral: 28 12% 72%;
   }
 
   .dark {
@@ -106,6 +124,33 @@
   h1, h2, h3, h4 {
     font-family: 'Fraunces', 'Nunito', serif;
     font-optical-sizing: auto;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
+  .font-display {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+  .label-eyebrow {
+    @apply text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground;
+  }
+}
+
+@layer components {
+  .card-editorial {
+    @apply bg-card rounded-2xl border border-[hsl(var(--border-subtle))] shadow-[var(--shadow-card)] transition-shadow;
+  }
+  .card-editorial:hover {
+    box-shadow: var(--shadow-elevated);
+  }
+  .surface-cream {
+    background-color: hsl(var(--surface-cream));
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .shadow-editorial { box-shadow: var(--shadow-card); }
+  .shadow-editorial-lg { box-shadow: var(--shadow-elevated); }
 }

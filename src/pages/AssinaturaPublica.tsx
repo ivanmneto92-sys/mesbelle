@@ -225,7 +225,13 @@ export default function AssinaturaPublica() {
                         )}
                       </div>
                     )}
-                    <p className="text-xs text-muted-foreground">Você pode fechar esta página.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                      <Button onClick={handleDownloadPDF} disabled={downloading} size="lg" className="gap-2">
+                        {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        Baixar contrato em PDF
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">O PDF inclui sua assinatura, data, hora e evidências de autenticidade. Guarde uma cópia para seus registros.</p>
                   </CardContent>
                 </Card>
               )}

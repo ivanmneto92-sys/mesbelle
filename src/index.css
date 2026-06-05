@@ -118,18 +118,18 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Nunito', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-feature-settings: "ss01", "cv11";
   }
   h1, h2, h3, h4 {
-    font-family: 'Fraunces', 'Nunito', serif;
-    font-optical-sizing: auto;
-    letter-spacing: -0.015em;
+    font-family: 'Space Grotesk', 'DM Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
   }
   .font-display {
-    font-family: 'Fraunces', serif;
-    font-optical-sizing: auto;
-    letter-spacing: -0.02em;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
   }
   .label-eyebrow {
     @apply text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground;

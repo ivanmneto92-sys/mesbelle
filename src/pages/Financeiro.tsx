@@ -112,7 +112,7 @@ const Financeiro = () => {
       toast.error(firstZodError(parsed.error));
       return;
     }
-    addTransacao(parsed.data);
+    addTransacao(parsed.data as Omit<Transacao, "id">);
     toast.success("Lançamento salvo");
     setNovoOpen(false);
     setNovoDesc("");
@@ -152,7 +152,7 @@ const Financeiro = () => {
       toast.error(`Importação inválida: ${firstZodError(parsed.error)}`);
       return;
     }
-    addMany(parsed.data);
+    addMany(parsed.data as Omit<Transacao, "id">[]);
     toast.success(`${parsed.data.length} transações importadas`);
     setImportOpen(false);
     setImportStep("upload");

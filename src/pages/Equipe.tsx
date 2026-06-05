@@ -18,6 +18,7 @@ import { useEquipe } from "@/hooks/useEquipe";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { novoFuncionarioSchema, comissaoSchema, firstZodError } from "@/lib/schemas";
 
 function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -58,38 +59,43 @@ const Equipe = () => {
   const saveComissao = () => {
     if (!selectedId) return;
     const val = parseFloat(editComissao.replace(",", "."));
-    if (isNaN(val) || val < 0 || val > 100) {
-      toast.error("Percentual inválido");
+    const parsed = comissaoSchema.safeParse({ percentual: isNaN(val) ? -1 : val });
+    if (!parsed.success) {
+      toast.error(firstZodError(parsed.error));
       return;
     }
-    updateFuncionario(selectedId, { percentualComissao: val / 100 });
+    updateFuncionario(selectedId, { percentualComissao: parsed.data.percentual / 100 });
     toast.success("Comissão atualizada");
   };
 
   const handleCreateMember = async () => {
-    if (!newMember.nome || !newMember.email) {
-      toast.error("Nome e e-mail são obrigatórios");
+    const comissaoNum = parseFloat(newMember.percentual_comissao.replace(",", ".")) || 0;
+    const parsed = novoFuncionarioSchema.safeParse({
+      ...newMember,
+      percentual_comissao: comissaoNum,
+    });
+    if (!parsed.success) {
+      toast.error(firstZodError(parsed.error));
       return;
     }
     setCreatingMember(true);
     try {
-      const comissao = parseFloat(newMember.percentual_comissao.replace(",", ".")) || 0;
       const { data, error } = await supabase.functions.invoke("create-team-member", {
         body: {
-          nome: newMember.nome,
-          email: newMember.email,
-          role: newMember.role,
-          cargo: newMember.cargo,
-          tipo_contrato: newMember.tipo_contrato,
-          percentual_comissao: comissao / 100,
-          telefone: newMember.telefone,
+          nome: parsed.data.nome,
+          email: parsed.data.email,
+          role: parsed.data.role,
+          cargo: parsed.data.cargo,
+          tipo_contrato: parsed.data.tipo_contrato,
+          percentual_comissao: parsed.data.percentual_comissao / 100,
+          telefone: parsed.data.telefone,
         },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success(`${newMember.nome} cadastrado(a) com sucesso! Um e-mail foi enviado para ${newMember.email} com instruções para definir a senha.`);
+      toast.success(`${parsed.data.nome} cadastrado(a) com sucesso! Um e-mail foi enviado para ${parsed.data.email} com instruções para definir a senha.`);
       setNewMemberOpen(false);
       setNewMember({ nome: "", email: "", role: "vendedor", cargo: "", tipo_contrato: "CLT", percentual_comissao: "", telefone: "" });
     } catch (err: any) {

@@ -43,6 +43,24 @@ const Login = () => {
     setIsLoading(false);
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        toast.error("Erro ao entrar com Google");
+        setIsLoading(false);
+        return;
+      }
+      if (result.redirected) return;
+    } catch {
+      toast.error("Falha ao iniciar login com Google");
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
     <SEO title="Acesso ao sistema Més Belle" description="Faça login para acessar o painel de gestão do ateliê Més Belle." path="/login" />

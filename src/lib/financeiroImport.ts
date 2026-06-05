@@ -77,7 +77,7 @@ export function parseOFX(text: string): ImportResult {
 
     const v = validate(candidate, idx, block);
     if (v.ok) valid.push(v.data);
-    else if (!v.ok) invalid.push(v.failure);
+    else invalid.push(v.failure);
   }
 
   return { valid, invalid, totalDetected: idx, format: "ofx" };

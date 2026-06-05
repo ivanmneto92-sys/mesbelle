@@ -480,41 +480,87 @@ const Financeiro = () => {
 
           {importStep === "review" && (
             <div className="mt-4 space-y-4">
-              <p className="text-sm text-muted-foreground">{importItems.length} transações encontradas. Categorize antes de importar:</p>
-              <div className="max-h-80 overflow-y-auto border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {importItems.map((item, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="text-sm">{formatDateBR(item.data)}</TableCell>
-                        <TableCell className="text-sm max-w-48 truncate">{item.descricao}</TableCell>
-                        <TableCell>
-                          <Select value={item.categoria} onValueChange={v => updateImportCategory(i, v as CategoriaTransacao)}>
-                            <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className={`text-right font-medium tabular-nums ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
-                          {item.tipo === "entrada" ? "+" : "−"} {formatBRL(item.valor)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              {/* Resumo */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg border p-2 text-center">
+                  <p className="text-[11px] uppercase text-muted-foreground tracking-wider">Detectadas</p>
+                  <p className="text-lg font-semibold tabular-nums">{importTotal}</p>
+                </div>
+                <div className="rounded-lg border border-success/30 bg-success/5 p-2 text-center">
+                  <p className="text-[11px] uppercase text-success tracking-wider flex items-center justify-center gap-1"><CheckCircle2 className="h-3 w-3" />Válidas</p>
+                  <p className="text-lg font-semibold tabular-nums text-success">{importItems.length}</p>
+                </div>
+                <div className={`rounded-lg border p-2 text-center ${importErrors.length > 0 ? "border-destructive/30 bg-destructive/5" : ""}`}>
+                  <p className={`text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 ${importErrors.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                    <AlertTriangle className="h-3 w-3" />Com erro
+                  </p>
+                  <p className={`text-lg font-semibold tabular-nums ${importErrors.length > 0 ? "text-destructive" : ""}`}>{importErrors.length}</p>
+                </div>
               </div>
-              <Button className="w-full" onClick={handleConfirmImport}>
-                Confirmar Importação ({importItems.length} itens)
-              </Button>
+
+              {/* Erros */}
+              {importErrors.length > 0 && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="text-sm font-medium text-destructive mb-2 flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" /> {importErrors.length} item(s) ignorado(s)
+                  </p>
+                  <div className="max-h-32 overflow-y-auto space-y-1 text-xs">
+                    {importErrors.slice(0, 20).map((err, i) => (
+                      <div key={i} className="flex gap-2">
+                        <span className="text-muted-foreground shrink-0">Linha {err.line}:</span>
+                        <span className="text-destructive">{err.reason}</span>
+                      </div>
+                    ))}
+                    {importErrors.length > 20 && (
+                      <p className="text-muted-foreground italic">…e mais {importErrors.length - 20} erro(s)</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {importItems.length > 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Categorize antes de importar:</p>
+                  <div className="max-h-72 overflow-y-auto border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Categoria</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importItems.map((item, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-sm">{formatDateBR(item.data)}</TableCell>
+                            <TableCell className="text-sm max-w-48 truncate">{item.descricao}</TableCell>
+                            <TableCell>
+                              <Select value={item.categoria} onValueChange={v => updateImportCategory(i, v as CategoriaTransacao)}>
+                                <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className={`text-right font-medium tabular-nums ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
+                              {item.tipo === "entrada" ? "+" : "−"} {formatBRL(item.valor)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <Button className="w-full" onClick={handleConfirmImport}>
+                    Confirmar Importação ({importItems.length} itens)
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-6 text-sm text-muted-foreground">
+                  Nenhum item válido para importar. Corrija o arquivo e tente novamente.
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

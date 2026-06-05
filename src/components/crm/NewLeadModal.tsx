@@ -31,7 +31,7 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
       return;
     }
     try {
-      await onSave(parsed.data);
+      await onSave(parsed.data as Omit<Lead, "id" | "criadoEm" | "statusFunil">);
       toast.success("Lead cadastrado com sucesso!");
       setForm({ nome: "", telefone: "", email: "", cpf: "", endereco: "", tipoEvento: "", dataEvento: "", notasInternas: "", vendedorResponsavel: "Juliana Costa" });
       onClose();

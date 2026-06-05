@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { vestidoSchema, firstZodError } from "@/lib/schemas";
 
 interface Props {
   open: boolean;
@@ -26,20 +28,37 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx. 5MB)");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Apenas arquivos de imagem são aceitos");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => setImagemUrl(reader.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleSave = () => {
-    if (!nome.trim()) return;
-    onSave({
+    const candidate = {
       nome, cor, tamanho, comprimento, isConsignado,
       precoAluguel: Number(precoAluguel) || 0,
       precoVenda: Number(precoVenda) || 0,
+      imagemUrl,
+    };
+    const parsed = vestidoSchema.safeParse(candidate);
+    if (!parsed.success) {
+      toast.error(firstZodError(parsed.error));
+      return;
+    }
+    onSave({
+      ...parsed.data,
       status: "disponivel",
-      imagemUrl: imagemUrl || "/placeholder.svg",
+      imagemUrl: parsed.data.imagemUrl || "/placeholder.svg",
     });
+    toast.success("Vestido cadastrado");
     // reset
     setNome(""); setCor(""); setTamanho("M"); setComprimento("Longo");
     setPrecoAluguel(""); setPrecoVenda(""); setIsConsignado(false); setImagemUrl("");

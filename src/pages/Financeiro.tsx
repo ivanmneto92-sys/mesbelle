@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { transacaoSchema, transacaoArraySchema, firstZodError } from "@/lib/schemas";
+import { parseFinanceiroFile, type ImportFailure } from "@/lib/financeiroImport";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const categorias: CategoriaTransacao[] = ["Aluguel", "Venda", "Material", "Pessoal", "Fixo", "Variável", "Marketing", "Imposto", "Outros"];
 

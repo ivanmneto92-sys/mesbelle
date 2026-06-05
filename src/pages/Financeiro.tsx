@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { transacaoSchema, transacaoArraySchema, firstZodError } from "@/lib/schemas";
+import { parseFinanceiroFile, type ImportFailure } from "@/lib/financeiroImport";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const categorias: CategoriaTransacao[] = ["Aluguel", "Venda", "Material", "Pessoal", "Fixo", "Variável", "Marketing", "Imposto", "Outros"];
 
@@ -33,49 +35,8 @@ function formatDateBR(d: string) {
   return `${day}/${m}`;
 }
 
-// OFX parser (simplified)
-function parseOFX(text: string): Omit<Transacao, "id">[] {
-  const items: Omit<Transacao, "id">[] = [];
-  const regex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const block = match[1];
-    const get = (tag: string) => {
-      const m = new RegExp(`<${tag}>([^<\\n]+)`, "i").exec(block);
-      return m ? m[1].trim() : "";
-    };
-    const amount = parseFloat(get("TRNAMT")) || 0;
-    const rawDate = get("DTPOSTED");
-    const dateStr = rawDate.length >= 8
-      ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
-      : new Date().toISOString().split("T")[0];
-    items.push({
-      tipo: amount >= 0 ? "entrada" : "saida",
-      data: dateStr,
-      descricao: get("MEMO") || get("NAME") || "Importado",
-      categoria: "Outros",
-      valor: Math.abs(amount),
-      status: "pago",
-    });
-  }
-  return items;
-}
+// parsers OFX/CSV movidos para src/lib/financeiroImport.ts
 
-function parseCSV(text: string): Omit<Transacao, "id">[] {
-  const lines = text.trim().split("\n").slice(1); // skip header
-  return lines.map(line => {
-    const parts = line.split(/[;,]/);
-    const valor = parseFloat((parts[3] || parts[2] || "0").replace(/[^\d.,-]/g, "").replace(",", ".")) || 0;
-    return {
-      tipo: (valor >= 0 ? "entrada" : "saida") as TipoTransacao,
-      data: parts[0]?.trim().split("/").reverse().join("-") || new Date().toISOString().split("T")[0],
-      descricao: parts[1]?.trim() || "Importado",
-      categoria: "Outros" as CategoriaTransacao,
-      valor: Math.abs(valor),
-      status: "pago" as const,
-    };
-  }).filter(t => t.valor > 0);
-}
 
 const Financeiro = () => {
   const { transacoes, addTransacao, addMany, removeTransacao, resumoMes, gastosPorCategoria, dreData, impostos, updateImpostos } = useFinanceiro();
@@ -91,6 +52,8 @@ const Financeiro = () => {
   // Modal importar
   const [importOpen, setImportOpen] = useState(false);
   const [importItems, setImportItems] = useState<Omit<Transacao, "id">[]>([]);
+  const [importErrors, setImportErrors] = useState<ImportFailure[]>([]);
+  const [importTotal, setImportTotal] = useState(0);
   const [importStep, setImportStep] = useState<"upload" | "review">("upload");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -128,35 +91,60 @@ const Financeiro = () => {
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const ext = file.name.toLowerCase();
-      let parsed: Omit<Transacao, "id">[] = [];
-      if (ext.endsWith(".ofx") || ext.endsWith(".ofc")) {
-        parsed = parseOFX(text);
-      } else {
-        parsed = parseCSV(text);
+      try {
+        const text = ev.target?.result as string;
+        const result = parseFinanceiroFile(file.name, text);
+        if (result.totalDetected === 0) {
+          toast.error("Nenhuma transação detectada no arquivo");
+          return;
+        }
+        setImportItems(result.valid);
+        setImportErrors(result.invalid);
+        setImportTotal(result.totalDetected);
+        setImportStep("review");
+        if (result.invalid.length > 0) {
+          toast.warning(`${result.valid.length} válida(s) • ${result.invalid.length} com erro de ${result.totalDetected} detectada(s)`);
+        } else {
+          toast.success(`${result.valid.length} transação(ões) prontas para revisão`);
+        }
+      } catch (err) {
+        console.error("[Importação] Falha ao processar arquivo:", err);
+        toast.error("Falha ao processar o arquivo. Verifique o formato.");
+      } finally {
+        if (fileRef.current) fileRef.current.value = "";
       }
-      if (parsed.length === 0) {
-        toast.error("Nenhuma transação encontrada no arquivo");
-        return;
-      }
-      setImportItems(parsed);
-      setImportStep("review");
     };
+    reader.onerror = () => toast.error("Não foi possível ler o arquivo");
     reader.readAsText(file);
   }, []);
 
-  const handleConfirmImport = () => {
+  const handleConfirmImport = async () => {
+    if (importItems.length === 0) {
+      toast.error("Nenhum item válido para importar");
+      return;
+    }
     const parsed = transacaoArraySchema.safeParse(importItems);
     if (!parsed.success) {
       toast.error(`Importação inválida: ${firstZodError(parsed.error)}`);
       return;
     }
-    addMany(parsed.data as Omit<Transacao, "id">[]);
-    toast.success(`${parsed.data.length} transações importadas`);
-    setImportOpen(false);
-    setImportStep("upload");
-    setImportItems([]);
+    try {
+      await addMany(parsed.data as Omit<Transacao, "id">[]);
+      const skipped = importErrors.length;
+      toast.success(
+        skipped > 0
+          ? `${parsed.data.length} importada(s) • ${skipped} ignorada(s) por erro`
+          : `${parsed.data.length} transações importadas`
+      );
+      setImportOpen(false);
+      setImportStep("upload");
+      setImportItems([]);
+      setImportErrors([]);
+      setImportTotal(0);
+    } catch (err) {
+      console.error("[Importação] Falha ao salvar:", err);
+      toast.error("Erro ao salvar transações no banco");
+    }
   };
 
   const updateImportCategory = (index: number, cat: CategoriaTransacao) => {
@@ -492,41 +480,87 @@ const Financeiro = () => {
 
           {importStep === "review" && (
             <div className="mt-4 space-y-4">
-              <p className="text-sm text-muted-foreground">{importItems.length} transações encontradas. Categorize antes de importar:</p>
-              <div className="max-h-80 overflow-y-auto border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {importItems.map((item, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="text-sm">{formatDateBR(item.data)}</TableCell>
-                        <TableCell className="text-sm max-w-48 truncate">{item.descricao}</TableCell>
-                        <TableCell>
-                          <Select value={item.categoria} onValueChange={v => updateImportCategory(i, v as CategoriaTransacao)}>
-                            <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className={`text-right font-medium tabular-nums ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
-                          {item.tipo === "entrada" ? "+" : "−"} {formatBRL(item.valor)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              {/* Resumo */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-lg border p-2 text-center">
+                  <p className="text-[11px] uppercase text-muted-foreground tracking-wider">Detectadas</p>
+                  <p className="text-lg font-semibold tabular-nums">{importTotal}</p>
+                </div>
+                <div className="rounded-lg border border-success/30 bg-success/5 p-2 text-center">
+                  <p className="text-[11px] uppercase text-success tracking-wider flex items-center justify-center gap-1"><CheckCircle2 className="h-3 w-3" />Válidas</p>
+                  <p className="text-lg font-semibold tabular-nums text-success">{importItems.length}</p>
+                </div>
+                <div className={`rounded-lg border p-2 text-center ${importErrors.length > 0 ? "border-destructive/30 bg-destructive/5" : ""}`}>
+                  <p className={`text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 ${importErrors.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                    <AlertTriangle className="h-3 w-3" />Com erro
+                  </p>
+                  <p className={`text-lg font-semibold tabular-nums ${importErrors.length > 0 ? "text-destructive" : ""}`}>{importErrors.length}</p>
+                </div>
               </div>
-              <Button className="w-full" onClick={handleConfirmImport}>
-                Confirmar Importação ({importItems.length} itens)
-              </Button>
+
+              {/* Erros */}
+              {importErrors.length > 0 && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="text-sm font-medium text-destructive mb-2 flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" /> {importErrors.length} item(s) ignorado(s)
+                  </p>
+                  <div className="max-h-32 overflow-y-auto space-y-1 text-xs">
+                    {importErrors.slice(0, 20).map((err, i) => (
+                      <div key={i} className="flex gap-2">
+                        <span className="text-muted-foreground shrink-0">Linha {err.line}:</span>
+                        <span className="text-destructive">{err.reason}</span>
+                      </div>
+                    ))}
+                    {importErrors.length > 20 && (
+                      <p className="text-muted-foreground italic">…e mais {importErrors.length - 20} erro(s)</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {importItems.length > 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Categorize antes de importar:</p>
+                  <div className="max-h-72 overflow-y-auto border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Categoria</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importItems.map((item, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="text-sm">{formatDateBR(item.data)}</TableCell>
+                            <TableCell className="text-sm max-w-48 truncate">{item.descricao}</TableCell>
+                            <TableCell>
+                              <Select value={item.categoria} onValueChange={v => updateImportCategory(i, v as CategoriaTransacao)}>
+                                <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className={`text-right font-medium tabular-nums ${item.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
+                              {item.tipo === "entrada" ? "+" : "−"} {formatBRL(item.valor)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <Button className="w-full" onClick={handleConfirmImport}>
+                    Confirmar Importação ({importItems.length} itens)
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-6 text-sm text-muted-foreground">
+                  Nenhum item válido para importar. Corrija o arquivo e tente novamente.
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

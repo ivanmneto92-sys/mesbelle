@@ -35,49 +35,8 @@ function formatDateBR(d: string) {
   return `${day}/${m}`;
 }
 
-// OFX parser (simplified)
-function parseOFX(text: string): Omit<Transacao, "id">[] {
-  const items: Omit<Transacao, "id">[] = [];
-  const regex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    const block = match[1];
-    const get = (tag: string) => {
-      const m = new RegExp(`<${tag}>([^<\\n]+)`, "i").exec(block);
-      return m ? m[1].trim() : "";
-    };
-    const amount = parseFloat(get("TRNAMT")) || 0;
-    const rawDate = get("DTPOSTED");
-    const dateStr = rawDate.length >= 8
-      ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
-      : new Date().toISOString().split("T")[0];
-    items.push({
-      tipo: amount >= 0 ? "entrada" : "saida",
-      data: dateStr,
-      descricao: get("MEMO") || get("NAME") || "Importado",
-      categoria: "Outros",
-      valor: Math.abs(amount),
-      status: "pago",
-    });
-  }
-  return items;
-}
+// parsers OFX/CSV movidos para src/lib/financeiroImport.ts
 
-function parseCSV(text: string): Omit<Transacao, "id">[] {
-  const lines = text.trim().split("\n").slice(1); // skip header
-  return lines.map(line => {
-    const parts = line.split(/[;,]/);
-    const valor = parseFloat((parts[3] || parts[2] || "0").replace(/[^\d.,-]/g, "").replace(",", ".")) || 0;
-    return {
-      tipo: (valor >= 0 ? "entrada" : "saida") as TipoTransacao,
-      data: parts[0]?.trim().split("/").reverse().join("-") || new Date().toISOString().split("T")[0],
-      descricao: parts[1]?.trim() || "Importado",
-      categoria: "Outros" as CategoriaTransacao,
-      valor: Math.abs(valor),
-      status: "pago" as const,
-    };
-  }).filter(t => t.valor > 0);
-}
 
 const Financeiro = () => {
   const { transacoes, addTransacao, addMany, removeTransacao, resumoMes, gastosPorCategoria, dreData, impostos, updateImpostos } = useFinanceiro();

@@ -54,7 +54,7 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
       return;
     }
     onSave({
-      ...parsed.data,
+      ...(parsed.data as Omit<Vestido, "id" | "status" | "imagemUrl">),
       status: "disponivel",
       imagemUrl: parsed.data.imagemUrl || "/placeholder.svg",
     });

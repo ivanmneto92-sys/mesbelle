@@ -77,7 +77,7 @@ export function parseOFX(text: string): ImportResult {
 
     const v = validate(candidate, idx, block);
     if (v.ok) valid.push(v.data);
-    else invalid.push(v.failure);
+    else if (!v.ok) invalid.push(v.failure);
   }
 
   return { valid, invalid, totalDetected: idx, format: "ofx" };
@@ -156,7 +156,7 @@ export function parseCSV(text: string): ImportResult {
 
     const v = validate(candidate, lineNo, line);
     if (v.ok) valid.push(v.data);
-    else invalid.push(v.failure);
+    else if (!v.ok) invalid.push(v.failure);
   });
 
   return { valid, invalid, totalDetected: dataLines.length, format: "csv" };

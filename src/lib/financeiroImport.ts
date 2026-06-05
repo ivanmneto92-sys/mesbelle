@@ -23,13 +23,14 @@ export interface ImportResult {
 const MAX_RAW = 200;
 const truncate = (s: string) => (s.length > MAX_RAW ? s.slice(0, MAX_RAW) + "…" : s);
 
-function validate(candidate: ParsedItem, line: number, raw: string): { ok: true; data: ParsedItem } | { ok: false; failure: ImportFailure } {
+function validate(candidate: ParsedItem, line: number, raw: string): ParsedItem | ImportFailure {
   const parsed = transacaoSchema.safeParse(candidate);
-  if (parsed.success) return { ok: true, data: parsed.data as ParsedItem };
-  return {
-    ok: false,
-    failure: { line, raw: truncate(raw), reason: parsed.error.issues[0]?.message ?? "Dados inválidos" },
-  };
+  if (parsed.success) return parsed.data as ParsedItem;
+  return { line, raw: truncate(raw), reason: parsed.error.issues[0]?.message ?? "Dados inválidos" };
+}
+
+function isFailure(v: ParsedItem | ImportFailure): v is ImportFailure {
+  return (v as ImportFailure).reason !== undefined;
 }
 
 // ----------------- OFX -----------------
@@ -76,8 +77,8 @@ export function parseOFX(text: string): ImportResult {
     };
 
     const v = validate(candidate, idx, block);
-    if (v.ok) valid.push(v.data);
-    else invalid.push(v.failure);
+    if (isFailure(v)) invalid.push(v);
+    else valid.push(v);
   }
 
   return { valid, invalid, totalDetected: idx, format: "ofx" };
@@ -155,8 +156,8 @@ export function parseCSV(text: string): ImportResult {
     };
 
     const v = validate(candidate, lineNo, line);
-    if (v.ok) valid.push(v.data);
-    else if (!v.ok) invalid.push(v.failure);
+    if (isFailure(v)) invalid.push(v);
+    else valid.push(v);
   });
 
   return { valid, invalid, totalDetected: dataLines.length, format: "csv" };

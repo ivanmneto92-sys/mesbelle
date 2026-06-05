@@ -14,8 +14,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        serif: ["Fraunces", "serif"],
-        sans: ["Nunito", "sans-serif"],
+        // Bold minimalist: títulos com Space Grotesk, corpo com DM Sans.
+        // Mantemos a chave "serif" para compatibilidade com `font-serif` espalhado pelo app.
+        serif: ["Space Grotesk", "sans-serif"],
+        sans: ["DM Sans", "sans-serif"],
+        display: ["Space Grotesk", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

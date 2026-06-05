@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { transacaoSchema, transacaoArraySchema, firstZodError } from "@/lib/schemas";
 
 const categorias: CategoriaTransacao[] = ["Aluguel", "Venda", "Material", "Pessoal", "Fixo", "Variável", "Marketing", "Imposto", "Outros"];
 
@@ -98,18 +99,20 @@ const Financeiro = () => {
 
   const handleSaveNovo = () => {
     const valor = parseFloat(novoValor.replace(/[^\d.,]/g, "").replace(",", "."));
-    if (!valor || !novoDesc || !novoData) {
-      toast.error("Preencha todos os campos");
-      return;
-    }
-    addTransacao({
+    const candidate = {
       tipo: novoTipo,
-      data: format(novoData, "yyyy-MM-dd"),
+      data: novoData ? format(novoData, "yyyy-MM-dd") : "",
       descricao: novoDesc,
       categoria: novoCat,
-      valor,
-      status: "pago",
-    });
+      valor: isNaN(valor) ? 0 : valor,
+      status: "pago" as const,
+    };
+    const parsed = transacaoSchema.safeParse(candidate);
+    if (!parsed.success) {
+      toast.error(firstZodError(parsed.error));
+      return;
+    }
+    addTransacao(parsed.data as Omit<Transacao, "id">);
     toast.success("Lançamento salvo");
     setNovoOpen(false);
     setNovoDesc("");
@@ -119,6 +122,10 @@ const Financeiro = () => {
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx. 10MB)");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
@@ -140,8 +147,13 @@ const Financeiro = () => {
   }, []);
 
   const handleConfirmImport = () => {
-    addMany(importItems);
-    toast.success(`${importItems.length} transações importadas`);
+    const parsed = transacaoArraySchema.safeParse(importItems);
+    if (!parsed.success) {
+      toast.error(`Importação inválida: ${firstZodError(parsed.error)}`);
+      return;
+    }
+    addMany(parsed.data as Omit<Transacao, "id">[]);
+    toast.success(`${parsed.data.length} transações importadas`);
     setImportOpen(false);
     setImportStep("upload");
     setImportItems([]);

@@ -93,6 +93,8 @@ const Financeiro = () => {
   // Modal importar
   const [importOpen, setImportOpen] = useState(false);
   const [importItems, setImportItems] = useState<Omit<Transacao, "id">[]>([]);
+  const [importErrors, setImportErrors] = useState<ImportFailure[]>([]);
+  const [importTotal, setImportTotal] = useState(0);
   const [importStep, setImportStep] = useState<"upload" | "review">("upload");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -130,35 +132,60 @@ const Financeiro = () => {
     }
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const ext = file.name.toLowerCase();
-      let parsed: Omit<Transacao, "id">[] = [];
-      if (ext.endsWith(".ofx") || ext.endsWith(".ofc")) {
-        parsed = parseOFX(text);
-      } else {
-        parsed = parseCSV(text);
+      try {
+        const text = ev.target?.result as string;
+        const result = parseFinanceiroFile(file.name, text);
+        if (result.totalDetected === 0) {
+          toast.error("Nenhuma transação detectada no arquivo");
+          return;
+        }
+        setImportItems(result.valid);
+        setImportErrors(result.invalid);
+        setImportTotal(result.totalDetected);
+        setImportStep("review");
+        if (result.invalid.length > 0) {
+          toast.warning(`${result.valid.length} válida(s) • ${result.invalid.length} com erro de ${result.totalDetected} detectada(s)`);
+        } else {
+          toast.success(`${result.valid.length} transação(ões) prontas para revisão`);
+        }
+      } catch (err) {
+        console.error("[Importação] Falha ao processar arquivo:", err);
+        toast.error("Falha ao processar o arquivo. Verifique o formato.");
+      } finally {
+        if (fileRef.current) fileRef.current.value = "";
       }
-      if (parsed.length === 0) {
-        toast.error("Nenhuma transação encontrada no arquivo");
-        return;
-      }
-      setImportItems(parsed);
-      setImportStep("review");
     };
+    reader.onerror = () => toast.error("Não foi possível ler o arquivo");
     reader.readAsText(file);
   }, []);
 
-  const handleConfirmImport = () => {
+  const handleConfirmImport = async () => {
+    if (importItems.length === 0) {
+      toast.error("Nenhum item válido para importar");
+      return;
+    }
     const parsed = transacaoArraySchema.safeParse(importItems);
     if (!parsed.success) {
       toast.error(`Importação inválida: ${firstZodError(parsed.error)}`);
       return;
     }
-    addMany(parsed.data as Omit<Transacao, "id">[]);
-    toast.success(`${parsed.data.length} transações importadas`);
-    setImportOpen(false);
-    setImportStep("upload");
-    setImportItems([]);
+    try {
+      await addMany(parsed.data as Omit<Transacao, "id">[]);
+      const skipped = importErrors.length;
+      toast.success(
+        skipped > 0
+          ? `${parsed.data.length} importada(s) • ${skipped} ignorada(s) por erro`
+          : `${parsed.data.length} transações importadas`
+      );
+      setImportOpen(false);
+      setImportStep("upload");
+      setImportItems([]);
+      setImportErrors([]);
+      setImportTotal(0);
+    } catch (err) {
+      console.error("[Importação] Falha ao salvar:", err);
+      toast.error("Erro ao salvar transações no banco");
+    }
   };
 
   const updateImportCategory = (index: number, cat: CategoriaTransacao) => {

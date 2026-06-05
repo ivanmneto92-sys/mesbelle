@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { leadSchema, firstZodError } from "@/lib/schemas";
 
 interface NewLeadModalProps {
   open: boolean;
@@ -23,15 +24,20 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
-  const handleSave = () => {
-    if (!form.nome || !form.telefone) {
-      toast.error("Nome e telefone são obrigatórios");
+  const handleSave = async () => {
+    const parsed = leadSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(firstZodError(parsed.error));
       return;
     }
-    onSave(form);
-    toast.success("Lead cadastrado com sucesso!");
-    setForm({ nome: "", telefone: "", email: "", cpf: "", endereco: "", tipoEvento: "", dataEvento: "", notasInternas: "", vendedorResponsavel: "Juliana Costa" });
-    onClose();
+    try {
+      await onSave(parsed.data);
+      toast.success("Lead cadastrado com sucesso!");
+      setForm({ nome: "", telefone: "", email: "", cpf: "", endereco: "", tipoEvento: "", dataEvento: "", notasInternas: "", vendedorResponsavel: "Juliana Costa" });
+      onClose();
+    } catch {
+      toast.error("Erro ao salvar lead");
+    }
   };
 
   return (

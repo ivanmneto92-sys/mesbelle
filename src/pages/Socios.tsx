@@ -14,6 +14,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { DollarSign, TrendingUp, Briefcase, PieChart, Plus, Trash2, CalendarIcon, ShieldCheck, ShieldOff } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useSocios } from "@/hooks/useSocios";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { CategoriaAtivo } from "@/types/socios";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -26,11 +28,12 @@ function formatBRL(v: number) {
 const categoriasAtivo: CategoriaAtivo[] = ["Vestido", "Imobilizado", "Equipamento"];
 
 const Socios = () => {
+  const { range, setRange } = useDateRange();
   const {
     ativos, socios, distribuicao, multiplicador, updateMultiplicador,
     addAtivo, removeAtivo, toggleSocioAtivo, updateSocioExpiracao,
     totalPatrimonio, valuation, receitaMes, ebitda,
-  } = useSocios();
+  } = useSocios(range);
 
   const [multInput, setMultInput] = useState(String(multiplicador));
   const [addOpen, setAddOpen] = useState(false);
@@ -75,6 +78,7 @@ const Socios = () => {
         icon={Briefcase}
         title="Portal de Sócios"
         description="Visão macro, valuation e distribuição de lucros"
+        actions={<DateRangePicker value={range} onChange={setRange} />}
       />
 
       {/* KPI Cards */}

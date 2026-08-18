@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AtivoPatrimonio, SocioEmpresa, CategoriaAtivo } from "@/types/socios";
+import type { DateRange } from "@/hooks/useDateRange";
 
 type AtivoRow = { id: string; nome: string; categoria: string; data_compra: string; valor_original: number; percentual_desagio: number };
 const rowToAtivo = (r: AtivoRow): AtivoPatrimonio => ({
@@ -28,7 +29,7 @@ function getIdade(dataCompra: string): string {
   return rest > 0 ? `${anos} ano${anos > 1 ? "s" : ""} e ${rest} mês${rest > 1 ? "es" : ""}` : `${anos} ano${anos > 1 ? "s" : ""}`;
 }
 
-export function useSocios() {
+export function useSocios(range?: DateRange) {
   const [ativos, setAtivos] = useState<AtivoPatrimonio[]>([]);
   const [socios, setSocios] = useState<SocioEmpresa[]>([]);
   const [multiplicador, setMultiplicador] = useState<number>(3.5);
@@ -103,6 +104,16 @@ export function useSocios() {
     return { receitaMes, lucroMes, ebitda };
   }, [transacoes]);
 
+  // Receita/lucro do período selecionado (filtro de data), quando fornecido.
+  // O EBITDA/valuation acima permanece sobre os últimos 12 meses, independente do filtro.
+  const periodoData = useMemo(() => {
+    if (!range) return { receitaPeriodo: finData.receitaMes, lucroPeriodo: finData.lucroMes };
+    const doPeriodo = transacoes.filter(t => t.data >= range.from && t.data <= range.to);
+    const receitaPeriodo = doPeriodo.filter(t => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
+    const despesaPeriodo = doPeriodo.filter(t => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
+    return { receitaPeriodo, lucroPeriodo: receitaPeriodo - despesaPeriodo };
+  }, [transacoes, range, finData.receitaMes, finData.lucroMes]);
+
   const ativosComCalculo = useMemo(() => ativos.map(a => ({
     ...a,
     valorAtual: a.valorOriginal - (a.valorOriginal * a.percentualDesagio / 100),
@@ -115,13 +126,13 @@ export function useSocios() {
   const distribuicao = useMemo(() =>
     socios.filter(s => s.ativo).map(s => ({
       ...s,
-      lucroMensal: finData.lucroMes * (s.percentualParticipacao / 100),
-    })), [socios, finData.lucroMes]);
+      lucroMensal: periodoData.lucroPeriodo * (s.percentualParticipacao / 100),
+    })), [socios, periodoData.lucroPeriodo]);
 
   return {
     ativos: ativosComCalculo, socios, distribuicao, multiplicador, updateMultiplicador,
     addAtivo, removeAtivo, toggleSocioAtivo, updateSocioExpiracao,
     totalPatrimonio, valuation,
-    receitaMes: finData.receitaMes, ebitda: finData.ebitda, lucroMes: finData.lucroMes,
+    receitaMes: periodoData.receitaPeriodo, ebitda: finData.ebitda, lucroMes: periodoData.lucroPeriodo,
   };
 }

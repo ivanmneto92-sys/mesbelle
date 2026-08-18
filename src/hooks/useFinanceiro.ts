@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Transacao, ConfigImpostos, TipoTransacao, CategoriaTransacao, StatusTransacao } from "@/types/financeiro";
+import type { DateRange } from "@/hooks/useDateRange";
 
 const defaultImpostos: ConfigImpostos = {
   simplesNacional: 6, iss: 5, debito: 1.5, creditoVista: 3.2, creditoParcelado: 4.8,
@@ -12,15 +13,17 @@ const rowToTx = (r: TxRow): Transacao => ({
   categoria: r.categoria as CategoriaTransacao, valor: Number(r.valor), status: r.status as StatusTransacao,
 });
 
-export function useFinanceiro() {
+export function useFinanceiro(range?: DateRange) {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [impostos, setImpostos] = useState<ConfigImpostos>(defaultImpostos);
 
   useEffect(() => {
     let active = true;
     (async () => {
+      let txQuery = supabase.from("transacoes_financeiras").select("*").order("data", { ascending: false });
+      if (range) txQuery = txQuery.gte("data", range.from).lte("data", range.to);
       const [txRes, cfRes] = await Promise.all([
-        supabase.from("transacoes_financeiras").select("*").order("data", { ascending: false }),
+        txQuery,
         supabase.from("config_financeiro").select("*").eq("id", 1).maybeSingle(),
       ]);
       if (!active) return;
@@ -34,7 +37,7 @@ export function useFinanceiro() {
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [range]);
 
   const addTransacao = useCallback(async (t: Omit<Transacao, "id">) => {
     const insertRow = { tipo: t.tipo, data: t.data, descricao: t.descricao, categoria: t.categoria, valor: t.valor, status: t.status };

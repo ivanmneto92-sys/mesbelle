@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negocio, StatusNegociacao } from "@/types/comercial";
+import type { DateRange } from "@/hooks/useDateRange";
 
 // ============= Legacy storage cleanup =============
 // Kept for compatibility — clears any residual data from the old localStorage-based system.
@@ -95,7 +96,7 @@ const rowToNegocio = (r: NegocioRow): Negocio => ({
   dataEvento: r.data_evento, criadoEm: r.criado_em,
 });
 
-export function useLeads() {
+export function useLeads(range?: DateRange) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [medidas, setMedidas] = useState<MedidasCliente[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -110,8 +111,10 @@ export function useLeads() {
   useEffect(() => {
     let active = true;
     (async () => {
+      let leadsQuery = supabase.from("leads").select("*").order("created_at", { ascending: false });
+      if (range) leadsQuery = leadsQuery.gte("criado_em", range.from).lte("criado_em", range.to);
       const [leadsRes, medidasRes, contratosRes, negociosRes] = await Promise.all([
-        supabase.from("leads").select("*").order("created_at", { ascending: false }),
+        leadsQuery,
         supabase.from("medidas").select("*"),
         supabase.from("contratos").select("*").order("created_at", { ascending: false }),
         supabase.from("negocios").select("*").order("created_at", { ascending: false }),
@@ -123,7 +126,7 @@ export function useLeads() {
       if (negociosRes.data) setNegocios((negociosRes.data as NegocioRow[]).map(rowToNegocio));
     })();
     return () => { active = false; };
-  }, []);
+  }, [range]);
 
   // === LEADS / CRM ===
   const addLead = useCallback(async (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => {

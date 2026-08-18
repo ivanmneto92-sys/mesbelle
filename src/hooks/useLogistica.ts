@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AluguelLogistica, StatusLogistica } from "@/types/logistica";
+import type { DateRange } from "@/hooks/useDateRange";
 
 type Row = {
   id: string; vestido_nome: string; cliente_nome: string; cliente_telefone: string;
@@ -15,13 +16,15 @@ const rowTo = (r: Row): AluguelLogistica => ({
   codigoRastreio: r.codigo_rastreio ?? undefined,
 });
 
-export function useLogistica() {
+export function useLogistica(range?: DateRange) {
   const [items, setItems] = useState<AluguelLogistica[]>([]);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase.from("alugueis_logistica").select("*").order("created_at", { ascending: false });
+      let query = supabase.from("alugueis_logistica").select("*").order("created_at", { ascending: false });
+      if (range) query = query.gte("data_saida", range.from).lte("data_saida", range.to);
+      const { data } = await query;
       if (!active || !data) return;
       const today = new Date().toISOString().split("T")[0];
       const mapped = (data as Row[]).map(rowTo);
@@ -40,7 +43,7 @@ export function useLogistica() {
       }
     })();
     return () => { active = false; };
-  }, []);
+  }, [range]);
 
   const updateStatus = useCallback(async (id: string, status: StatusLogistica) => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, statusLogistica: status } : i));

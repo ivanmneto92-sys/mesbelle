@@ -15,6 +15,8 @@ import {
 import { QrCode, Star, Phone, Mail, Percent, UserPlus, UserCog } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useEquipe } from "@/hooks/useEquipe";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,7 +33,8 @@ const vendedorColors: Record<string, string> = {
 };
 
 const Equipe = () => {
-  const { funcionarios, updateFuncionario, chartData, vendedores, historicoVendas } = useEquipe();
+  const { range, setRange } = useDateRange();
+  const { funcionarios, updateFuncionario, chartData, vendedores, historicoVendas } = useEquipe(range);
   const { user } = useAuth();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -117,7 +120,8 @@ const Equipe = () => {
         title="Time & Performance"
         description="Gestão de equipe, comissões e avaliações"
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <DateRangePicker value={range} onChange={setRange} />
             {user?.role === "admin" && (
               <Button size="sm" onClick={() => setNewMemberOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-1" /> Cadastrar Membro
@@ -126,7 +130,7 @@ const Equipe = () => {
             <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
               <QrCode className="h-4 w-4 mr-1" /> QR Code Avaliação
             </Button>
-          </>
+          </div>
         }
       />
 

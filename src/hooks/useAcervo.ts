@@ -4,6 +4,7 @@ import {
   Vestido, ReservaAgenda, Producao, EtapaProducao, DEFAULT_ETAPAS,
   VestidoStatus, ReservaStatus, ProducaoStatus,
 } from "@/types/acervo";
+import type { DateRange } from "@/hooks/useDateRange";
 
 // Legacy keys kept for cleanup in AuthContext
 export const ACERVO_STORAGE_KEYS = ["mesbelle_vestidos", "mesbelle_reservas", "mesbelle_producoes", "mesbelle_etapas"];
@@ -66,7 +67,7 @@ const rowToEtapa = (r: EtapaRow): EtapaProducao => ({
   id: r.id, producaoId: r.producao_id, nomeEtapa: r.nome_etapa, isConcluido: r.is_concluido,
 });
 
-export function useAcervo() {
+export function useAcervo(range?: DateRange) {
   const [vestidos, setVestidos] = useState<Vestido[]>([]);
   const [reservas, setReservas] = useState<ReservaAgenda[]>([]);
   const [producoes, setProducoes] = useState<Producao[]>([]);
@@ -75,10 +76,16 @@ export function useAcervo() {
   useEffect(() => {
     let active = true;
     (async () => {
+      let producoesQuery = supabase.from("producoes").select("*").order("created_at", { ascending: false });
+      if (range) {
+        producoesQuery = producoesQuery
+          .gte("created_at", `${range.from}T00:00:00`)
+          .lte("created_at", `${range.to}T23:59:59`);
+      }
       const [vRes, rRes, pRes, eRes] = await Promise.all([
         supabase.from("vestidos").select("*").order("nome"),
         supabase.from("reservas_agenda").select("*"),
-        supabase.from("producoes").select("*").order("created_at", { ascending: false }),
+        producoesQuery,
         supabase.from("etapas_producao").select("*").order("ordem"),
       ]);
       if (!active) return;
@@ -88,7 +95,7 @@ export function useAcervo() {
       if (eRes.data) setEtapas((eRes.data as EtapaRow[]).map(rowToEtapa));
     })();
     return () => { active = false; };
-  }, []);
+  }, [range]);
 
   // --- Vestidos ---
   const addVestido = useCallback(async (v: Omit<Vestido, "id">) => {

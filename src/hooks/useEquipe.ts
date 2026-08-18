@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Funcionario, AvaliacaoCliente, VendaFuncionario, TipoContrato } from "@/types/equipe";
+import type { DateRange } from "@/hooks/useDateRange";
 
 const now = new Date();
 const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -19,7 +20,7 @@ const rowToFunc = (r: FuncRow): Funcionario => ({
   telefone: r.telefone ?? undefined, email: r.email ?? undefined,
 });
 
-export function useEquipe() {
+export function useEquipe(range?: DateRange) {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoCliente[]>([]);
   const [vendas, setVendas] = useState<VendaFuncionario[]>([]);
@@ -27,10 +28,12 @@ export function useEquipe() {
   useEffect(() => {
     let active = true;
     (async () => {
+      let avaliacoesQuery = supabase.from("avaliacoes_clientes").select("*");
+      if (range) avaliacoesQuery = avaliacoesQuery.gte("data", range.from).lte("data", range.to);
       const [fRes, vRes, aRes] = await Promise.all([
         supabase.from("funcionarios").select("*").order("nome"),
         supabase.from("vendas_funcionarios").select("*"),
-        supabase.from("avaliacoes_clientes").select("*"),
+        avaliacoesQuery,
       ]);
       if (!active) return;
       if (fRes.data) setFuncionarios((fRes.data as FuncRow[]).map(rowToFunc));
@@ -42,7 +45,7 @@ export function useEquipe() {
       })));
     })();
     return () => { active = false; };
-  }, []);
+  }, [range]);
 
   const updateFuncionario = useCallback(async (id: string, updates: Partial<Funcionario>) => {
     setFuncionarios(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));

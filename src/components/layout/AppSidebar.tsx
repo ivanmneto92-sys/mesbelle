@@ -148,7 +148,7 @@ export function AppSidebar() {
               {getInitials(user.name)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user.name || user.email}</p>
               <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/50">{user.role}</p>
             </div>
           </div>

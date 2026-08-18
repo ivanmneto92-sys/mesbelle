@@ -5,18 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Plus, ShoppingBag, LayoutGrid, Scissors } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAcervo } from "@/hooks/useAcervo";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { CatalogoTab } from "@/components/acervo/CatalogoTab";
 import { ProducaoTab } from "@/components/acervo/ProducaoTab";
 import { NovoVestidoSheet } from "@/components/acervo/NovoVestidoSheet";
 
 const Acervo = () => {
   const [showNovo, setShowNovo] = useState(false);
+  const { range, setRange } = useDateRange();
   const {
     vestidos, addVestido, updateVestido, deleteVestido,
     reservas, addReserva, getReservasForVestido,
     producoes, addProducao, updateProducao,
     toggleEtapa, getEtapasForProducao,
-  } = useAcervo();
+  } = useAcervo(range);
 
   return (
     <>
@@ -27,9 +30,12 @@ const Acervo = () => {
         title="Acervo & Produção"
         description="Inventário, reservas e linha de produção"
         actions={
-          <Button size="sm" onClick={() => setShowNovo(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Novo Vestido
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <DateRangePicker value={range} onChange={setRange} />
+            <Button size="sm" onClick={() => setShowNovo(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Novo Vestido
+            </Button>
+          </div>
         }
       />
 

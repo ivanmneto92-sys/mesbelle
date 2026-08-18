@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserPlus, Users, Filter, CalendarCheck, ContactRound } from "lucide-react";
 import { useLeads } from "@/hooks/useLeads";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { Lead, CrmFunnelStatus } from "@/types/comercial";
 import { CrmKanbanBoard } from "@/components/crm/CrmKanbanBoard";
 import { BaseClientesTab } from "@/components/crm/BaseClientesTab";
@@ -13,10 +15,22 @@ import { NewLeadModal } from "@/components/crm/NewLeadModal";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 const CRM = () => {
+  // O Kanban precisa de todos os leads — o filtro de data não é passado ao hook,
+  // só é aplicado localmente nas abas Base de Clientes e Agenda de Provas.
   const {
     leads, addLead, updateLeadStatus, updateLead,
     updateMedidas, getMedidas, enviarParaComercial,
   } = useLeads();
+  const { range, setRange } = useDateRange();
+
+  const leadsNoPeriodo = useMemo(
+    () => leads.filter((l) => l.criadoEm >= range.from && l.criadoEm <= range.to),
+    [leads, range]
+  );
+  const leadsComProvaNoPeriodo = useMemo(
+    () => leads.filter((l) => !!l.provaData && l.provaData >= range.from && l.provaData <= range.to),
+    [leads, range]
+  );
 
   const [activeTab, setActiveTab] = useState("funil");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
@@ -50,9 +64,12 @@ const CRM = () => {
         title="CRM"
         description="Relacionamento, leads e agenda de provas"
         actions={
-          <Button size="sm" onClick={() => setNewLeadOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-1" /> Novo Lead / Cliente
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <DateRangePicker value={range} onChange={setRange} />
+            <Button size="sm" onClick={() => setNewLeadOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-1" /> Novo Lead / Cliente
+            </Button>
+          </div>
         }
       />
 
@@ -74,14 +91,14 @@ const CRM = () => {
 
         <TabsContent value="clientes" className="mt-4">
           <BaseClientesTab
-            leads={leads}
+            leads={leadsNoPeriodo}
             onClienteClick={handleLeadClick}
             getMedidas={getMedidas}
           />
         </TabsContent>
 
         <TabsContent value="agenda" className="mt-4">
-          <AgendaProvasTab leads={leads} onLeadClick={handleLeadClick} />
+          <AgendaProvasTab leads={leadsComProvaNoPeriodo} onLeadClick={handleLeadClick} />
         </TabsContent>
       </Tabs>
 

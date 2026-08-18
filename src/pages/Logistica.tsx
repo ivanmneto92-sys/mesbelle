@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Truck, User, AlertTriangle, FileText } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useLogistica } from "@/hooks/useLogistica";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { StatusLogistica } from "@/types/logistica";
 import LogisticaDetalhesSheet from "@/components/logistica/LogisticaDetalhesSheet";
 import TermoRetiradaModal from "@/components/logistica/TermoRetiradaModal";
@@ -26,7 +28,8 @@ function getDiasAtraso(dataRetorno: string): number {
 }
 
 const Logistica = () => {
-  const { items, updateStatus, updateRastreio, getByStatus } = useLogistica();
+  const { range, setRange } = useDateRange();
+  const { items, updateStatus, updateRastreio, getByStatus } = useLogistica(range);
   const [detailItem, setDetailItem] = useState<AluguelLogistica | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [termoOpen, setTermoOpen] = useState(false);
@@ -50,9 +53,12 @@ const Logistica = () => {
         title="Logística"
         description="Entregas, retiradas e devoluções"
         actions={
-          <Button size="sm" onClick={() => setTermoOpen(true)}>
-            <FileText className="h-4 w-4 mr-1" /> Gerar Termo de Retirada
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <DateRangePicker value={range} onChange={setRange} />
+            <Button size="sm" onClick={() => setTermoOpen(true)}>
+              <FileText className="h-4 w-4 mr-1" /> Gerar Termo de Retirada
+            </Button>
+          </div>
         }
       />
 

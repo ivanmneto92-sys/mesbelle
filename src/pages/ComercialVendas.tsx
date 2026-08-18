@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Handshake, BarChart3, ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useLeads } from "@/hooks/useLeads";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { NegociacoesTab } from "@/components/comercial/NegociacoesTab";
 import { ContratosTab } from "@/components/comercial/ContratosTab";
 import { MetricasTab } from "@/components/comercial/MetricasTab";
@@ -15,11 +17,21 @@ const ComercialVendas = () => {
     updateNegocio, aprovarFechamento,
     addContratoFromNegocio, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
   } = useLeads();
+  const { range, setRange } = useDateRange();
 
   const [activeTab, setActiveTab] = useState("negociacoes");
   const [autoOpenContratoId, setAutoOpenContratoId] = useState<string | null>(null);
 
-  const negociosAprovados = negocios.filter((n) => n.statusNegociacao === "aprovado");
+  const negociosNoPeriodo = useMemo(
+    () => negocios.filter((n) => n.criadoEm >= range.from && n.criadoEm <= range.to),
+    [negocios, range]
+  );
+  const contratosNoPeriodo = useMemo(
+    () => contratos.filter((c) => c.dataCriacao >= range.from && c.dataCriacao <= range.to),
+    [contratos, range]
+  );
+
+  const negociosAprovados = negociosNoPeriodo.filter((n) => n.statusNegociacao === "aprovado");
 
   const handleSwitchToContratos = (contratoId?: string) => {
     setActiveTab("contratos");
@@ -35,9 +47,12 @@ const ComercialVendas = () => {
         title="Comercial"
         description="Negociações, contratos e performance"
         actions={
-          <Button variant="outline" size="sm" onClick={() => setActiveTab("contratos")}>
-            <FileText className="h-4 w-4 mr-1" /> Emitir Contrato
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <DateRangePicker value={range} onChange={setRange} />
+            <Button variant="outline" size="sm" onClick={() => setActiveTab("contratos")}>
+              <FileText className="h-4 w-4 mr-1" /> Emitir Contrato
+            </Button>
+          </div>
         }
       />
 
@@ -50,7 +65,7 @@ const ComercialVendas = () => {
 
         <TabsContent value="negociacoes" className="mt-4">
           <NegociacoesTab
-            negocios={negocios}
+            negocios={negociosNoPeriodo}
             onUpdateNegocio={updateNegocio}
             onAprovarFechamento={aprovarFechamento}
             onSwitchToContratos={handleSwitchToContratos}
@@ -59,7 +74,7 @@ const ComercialVendas = () => {
 
         <TabsContent value="contratos" className="mt-4">
           <ContratosTab
-            contratos={contratos}
+            contratos={contratosNoPeriodo}
             negociosAprovados={negociosAprovados}
             onGerarContratoFromNegocio={addContratoFromNegocio}
             onUpdateStatus={updateContratoStatus}
@@ -71,7 +86,7 @@ const ComercialVendas = () => {
         </TabsContent>
 
         <TabsContent value="metricas" className="mt-4">
-          <MetricasTab leads={leads} contratos={contratos} negocios={negocios} />
+          <MetricasTab leads={leads} contratos={contratosNoPeriodo} negocios={negociosNoPeriodo} />
         </TabsContent>
       </Tabs>
     </div>

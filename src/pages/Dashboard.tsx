@@ -6,10 +6,13 @@ import { KpiCard } from "@/components/common/KpiCard";
 import {
   DollarSign, CalendarCheck, Package, AlertTriangle,
   UserPlus, Handshake, Truck, ArrowRight, Clock, MapPin, Scissors, TrendingUp,
+  Users, Ticket, Percent, Target, Wallet,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const typeMeta = {
@@ -62,9 +65,12 @@ function greeting() {
   return "Boa noite";
 }
 
+const fmtPct = (v: number) => `${v.toFixed(0)}%`;
+
 const Dashboard = () => {
   const { user } = useAuth();
-  const { kpis, agendaHoje, alertas, score, loading } = useDashboard();
+  const { range, setRange } = useDateRange();
+  const { kpis, agendaHoje, alertas, score, loading } = useDashboard(range);
   const firstName = user?.name?.split(" ")[0] ?? "bem-vinda";
 
   const shortcuts = [
@@ -108,6 +114,17 @@ const Dashboard = () => {
     },
   ];
 
+  const periodMetrics = [
+    { eyebrow: "Faturamento do Período", value: fmtBRL(kpis.faturamentoPeriodo), icon: DollarSign, accent: "primary" as const },
+    { eyebrow: "Volume de Leads", value: String(kpis.volumeLeads), icon: Users, accent: "info" as const },
+    { eyebrow: "Agendamentos (Provas)", value: String(kpis.agendamentos), icon: CalendarCheck, accent: "info" as const },
+    { eyebrow: "Aluguéis", value: String(kpis.alugueis), icon: Package, accent: "warning" as const },
+    { eyebrow: "Ticket Médio", value: fmtBRL(kpis.ticketMedio), icon: Ticket, accent: "primary" as const },
+    { eyebrow: "Conversão por Agendamento", value: fmtPct(kpis.conversaoPorAgendamento), icon: Percent, accent: "success" as const },
+    { eyebrow: "Custo por Agendamento", value: fmtBRL(kpis.custoPorAgendamento), icon: Target, accent: "warning" as const },
+    { eyebrow: "Custo de Aquisição", value: fmtBRL(kpis.custoDeAquisicao), icon: Wallet, accent: "warning" as const },
+  ];
+
   const tituloHeader = loading
     ? `${firstName}, carregando seu dia…`
     : kpis.agendamentosHoje === 0 && kpis.entregasPendentes === 0
@@ -122,9 +139,9 @@ const Dashboard = () => {
         title={tituloHeader}
         description="Resumo do dia, alertas urgentes e atalhos para suas ações mais frequentes."
         actions={
-          shortcuts.length > 0 && (
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              {shortcuts.map((s) => (
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <DateRangePicker value={range} onChange={setRange} />
+            {shortcuts.length > 0 && shortcuts.map((s) => (
                 <Button
                   key={s.to}
                   asChild
@@ -137,13 +154,19 @@ const Dashboard = () => {
                   </Link>
                 </Button>
               ))}
-            </div>
-          )
+          </div>
         }
       />
 
-      {/* KPIs */}
+      {/* KPIs do período selecionado */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {loading
+          ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
+          : periodMetrics.map((m) => <KpiCard key={m.eyebrow} {...m} />)}
+      </div>
+
+      {/* KPIs de hoje */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
           : metrics.map((m) => <KpiCard key={m.eyebrow} {...m} />)}

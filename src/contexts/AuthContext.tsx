@@ -56,7 +56,7 @@ async function buildUser(supabaseUser: SupabaseUser): Promise<User> {
   ]);
   return {
     id: supabaseUser.id,
-    name: nome || supabaseUser.email || "",
+    name: nome || "",
     email: supabaseUser.email || "",
     role,
   };

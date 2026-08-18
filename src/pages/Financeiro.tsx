@@ -13,6 +13,8 @@ import { Plus, Upload, DollarSign, ArrowUpRight, ArrowDownRight, Trash2 } from "
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useFinanceiro } from "@/hooks/useFinanceiro";
+import { useDateRange } from "@/hooks/useDateRange";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { CategoriaTransacao, TipoTransacao, Transacao } from "@/types/financeiro";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,7 +41,8 @@ function formatDateBR(d: string) {
 
 
 const Financeiro = () => {
-  const { transacoes, addTransacao, addMany, removeTransacao, resumoMes, gastosPorCategoria, dreData, impostos, updateImpostos } = useFinanceiro();
+  const { range, setRange } = useDateRange();
+  const { transacoes, addTransacao, addMany, removeTransacao, resumoMes, gastosPorCategoria, dreData, impostos, updateImpostos } = useFinanceiro(range);
 
   // Modal novo lançamento
   const [novoOpen, setNovoOpen] = useState(false);
@@ -160,14 +163,15 @@ const Financeiro = () => {
         title="Financeiro & Controladoria"
         description="Gestão manual de caixa, DRE e impostos"
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <DateRangePicker value={range} onChange={setRange} />
             <Button size="sm" onClick={() => setNovoOpen(true)}>
               <Plus className="h-4 w-4 mr-1" /> Lançamento
             </Button>
             <Button variant="outline" size="sm" onClick={() => { setImportOpen(true); setImportStep("upload"); }}>
               <Upload className="h-4 w-4 mr-1" /> Importar OFX/CSV
             </Button>
-          </>
+          </div>
         }
       />
 

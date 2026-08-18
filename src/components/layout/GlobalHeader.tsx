@@ -179,14 +179,14 @@ export function GlobalHeader() {
                   {getInitials(user?.name)}
                 </div>
                 <div className="text-left hidden lg:block">
-                  <p className="text-sm font-medium leading-tight truncate max-w-[160px]">{user?.name}</p>
+                  <p className="text-sm font-medium leading-tight truncate max-w-[160px]">{user?.name || user?.email}</p>
                   <p className="text-[10px] text-muted-foreground capitalize tracking-wider uppercase leading-tight">{user?.role}</p>
                 </div>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 shadow-editorial-lg border-border-subtle">
               <DropdownMenuLabel className="font-normal">
-                <p className="text-sm font-medium truncate">{user?.name}</p>
+                <p className="text-sm font-medium truncate">{user?.name || user?.email}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{user?.role}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

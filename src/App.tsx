@@ -17,6 +17,12 @@ import Financeiro from "./pages/Financeiro";
 import Equipe from "./pages/Equipe";
 import Socios from "./pages/Socios";
 import Configuracoes from "./pages/Configuracoes";
+import Perfil from "./pages/Perfil";
+import MarketingLeads from "./pages/marketing/MarketingLeads";
+import MetaAds from "./pages/marketing/MetaAds";
+import AgendamentoComercial from "./pages/agendamento/AgendamentoComercial";
+import CalendarioVisitas from "./pages/agendamento/CalendarioVisitas";
+import CalendarioAgenda from "./pages/agendamento/CalendarioAgenda";
 import NotFound from "./pages/NotFound";
 import AssinaturaPublica from "./pages/AssinaturaPublica";
 import AvaliacaoPublica from "./pages/AvaliacaoPublica";
@@ -33,6 +39,12 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/equipe": ["admin"],
   "/socios": ["admin", "socio"],
   "/configuracoes": ["admin"],
+  "/perfil": ["admin", "vendedor", "socio"],
+  "/marketing/leads": ["admin", "vendedor"],
+  "/marketing/meta-ads": ["admin"],
+  "/agendamento/comercial": ["admin", "vendedor"],
+  "/agendamento/visitas": ["admin", "vendedor"],
+  "/agendamento/agenda": ["admin", "vendedor"],
 };
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
@@ -79,6 +91,12 @@ const AppRoutes = () => {
       <Route path="/equipe" element={<ProtectedRoute path="/equipe"><Equipe /></ProtectedRoute>} />
       <Route path="/socios" element={<ProtectedRoute path="/socios"><Socios /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute path="/configuracoes"><Configuracoes /></ProtectedRoute>} />
+      <Route path="/perfil" element={<ProtectedRoute path="/perfil"><Perfil /></ProtectedRoute>} />
+      <Route path="/marketing/leads" element={<ProtectedRoute path="/marketing/leads"><MarketingLeads /></ProtectedRoute>} />
+      <Route path="/marketing/meta-ads" element={<ProtectedRoute path="/marketing/meta-ads"><MetaAds /></ProtectedRoute>} />
+      <Route path="/agendamento/comercial" element={<ProtectedRoute path="/agendamento/comercial"><AgendamentoComercial /></ProtectedRoute>} />
+      <Route path="/agendamento/visitas" element={<ProtectedRoute path="/agendamento/visitas"><CalendarioVisitas /></ProtectedRoute>} />
+      <Route path="/agendamento/agenda" element={<ProtectedRoute path="/agendamento/agenda"><CalendarioAgenda /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import {
   LayoutDashboard, Users, ShoppingBag, Truck, DollarSign,
-  UserCog, Briefcase, Settings, LogOut, ChevronLeft, Handshake, Sparkles,
+  UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
+  Megaphone, BarChart3, CalendarDays, Kanban, CalendarCheck, CalendarClock, UserCircle,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -9,21 +11,56 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { usePermissoes, routePermissionMap } from "@/hooks/usePermissoes";
 
-type NavItem = {
+type LeafItem = {
   title: string;
   url: string;
   icon: typeof LayoutDashboard;
   roles: UserRole[];
 };
 
-const navGroups: { label: string; items: NavItem[] }[] = [
+type ParentItem = {
+  title: string;
+  icon: typeof LayoutDashboard;
+  roles: UserRole[];
+  children: LeafItem[];
+};
+
+type NavEntry = LeafItem | ParentItem;
+
+const isParent = (item: NavEntry): item is ParentItem => "children" in item;
+
+const navGroups: { label: string; items: NavEntry[] }[] = [
   {
     label: "Operação",
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "vendedor", "socio"] },
-      { title: "CRM", url: "/crm", icon: Users, roles: ["admin", "vendedor"] },
+      {
+        title: "Marketing",
+        icon: Megaphone,
+        roles: ["admin", "vendedor"],
+        children: [
+          { title: "Leads", url: "/marketing/leads", icon: Users, roles: ["admin", "vendedor"] },
+          { title: "Meta Ads", url: "/marketing/meta-ads", icon: BarChart3, roles: ["admin"] },
+        ],
+      },
+      {
+        title: "Agendamento",
+        icon: CalendarDays,
+        roles: ["admin", "vendedor"],
+        children: [
+          { title: "Comercial", url: "/agendamento/comercial", icon: Kanban, roles: ["admin", "vendedor"] },
+          { title: "Calendário Visitas", url: "/agendamento/visitas", icon: CalendarCheck, roles: ["admin", "vendedor"] },
+          { title: "Prova & Entregas", url: "/agendamento/agenda", icon: CalendarClock, roles: ["admin", "vendedor"] },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Comercial",
+    items: [
       { title: "Comercial", url: "/comercial", icon: Handshake, roles: ["admin", "vendedor"] },
     ],
   },
@@ -45,6 +82,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Sistema",
     items: [
+      { title: "Perfil", url: "/perfil", icon: UserCircle, roles: ["admin", "vendedor", "socio"] },
       { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ["admin"] },
     ],
   },
@@ -61,14 +99,37 @@ export function AppSidebar() {
   const location = useLocation();
   const { temPermissao } = usePermissoes();
 
-  const filterItems = (items: NavItem[]) =>
-    items.filter((item) => {
-      if (!user) return false;
-      if (!item.roles.includes(user.role)) return false;
-      const permKey = routePermissionMap[item.url];
-      if (permKey && !temPermissao(user.role, permKey)) return false;
-      return true;
-    });
+  const canSeeLeaf = (item: LeafItem) => {
+    if (!user) return false;
+    if (!item.roles.includes(user.role)) return false;
+    const permKey = routePermissionMap[item.url];
+    if (permKey && !temPermissao(user.role, permKey)) return false;
+    return true;
+  };
+
+  const filterItems = (items: NavEntry[]): NavEntry[] =>
+    items.reduce<NavEntry[]>((acc, item) => {
+      if (isParent(item)) {
+        const children = item.children.filter(canSeeLeaf);
+        if (children.length > 0) acc.push({ ...item, children });
+        return acc;
+      }
+      if (canSeeLeaf(item)) acc.push(item);
+      return acc;
+    }, []);
+
+  const isChildActive = (item: LeafItem) =>
+    item.url === "/" ? location.pathname === "/" : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navGroups.forEach((g) => g.items.forEach((item) => {
+      if (isParent(item)) {
+        initial[item.title] = item.children.some(isChildActive);
+      }
+    }));
+    return initial;
+  });
 
   const handleLogout = () => {
     logout();
@@ -112,9 +173,58 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu className="gap-0.5">
                   {items.map((item) => {
-                    const isActive = item.url === "/"
-                      ? location.pathname === "/"
-                      : location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                    if (isParent(item)) {
+                      const parentActive = item.children.some(isChildActive);
+                      const open = collapsed ? true : (openGroups[item.title] ?? parentActive);
+                      return (
+                        <Collapsible
+                          key={item.title}
+                          open={collapsed ? undefined : open}
+                          onOpenChange={(next) => setOpenGroups((prev) => ({ ...prev, [item.title]: next }))}
+                        >
+                          <SidebarMenuItem>
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuButton
+                                isActive={parentActive}
+                                tooltip={item.title}
+                                className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent/70 data-[active=true]:text-sidebar-foreground data-[active=true]:font-medium"
+                              >
+                                <item.icon className="h-[18px] w-[18px] shrink-0" />
+                                {!collapsed && (
+                                  <>
+                                    <span className="text-sm flex-1 text-left">{item.title}</span>
+                                    <ChevronRight className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
+                                  </>
+                                )}
+                              </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                            {!collapsed && (
+                              <CollapsibleContent>
+                                <div className="ml-[18px] mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-border/50 pl-3">
+                                  {item.children.map((child) => {
+                                    const active = isChildActive(child);
+                                    return (
+                                      <NavLink
+                                        key={child.url}
+                                        to={child.url}
+                                        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors ${
+                                          active ? "bg-sidebar-accent/60 text-sidebar-foreground font-medium" : ""
+                                        }`}
+                                      >
+                                        <child.icon className="h-4 w-4 shrink-0" />
+                                        <span className="truncate">{child.title}</span>
+                                      </NavLink>
+                                    );
+                                  })}
+                                </div>
+                              </CollapsibleContent>
+                            )}
+                          </SidebarMenuItem>
+                        </Collapsible>
+                      );
+                    }
+
+                    const isActive = isChildActive(item);
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="data-[active=true]:bg-transparent">

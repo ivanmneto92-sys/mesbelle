@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negocio, StatusNegociacao } from "@/types/comercial";
 import type { DateRange } from "@/hooks/useDateRange";
+import { googleCalendar } from "@/hooks/useGoogleCalendar";
 
 // ============= Legacy storage cleanup =============
 // Kept for compatibility — clears any residual data from the old localStorage-based system.
@@ -146,12 +147,44 @@ export function useLeads(range?: DateRange) {
     const patch = { ...leadPatchToRow(extra ?? {}), status_funil: newStatus };
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, statusFunil: newStatus, ...(extra ?? {}) } : l));
     await supabase.from("leads").update(patch as never).eq("id", leadId);
-  }, []);
+
+    if (extra && "provaData" in extra) {
+      const lead = leads.find((l) => l.id === leadId);
+      if (extra.provaData) {
+        // Sincronizar com Google Calendar (fire-and-forget — não bloquear a UI)
+        googleCalendar.upsertProva({
+          leadId,
+          nome: extra.nome ?? lead?.nome ?? "",
+          data: extra.provaData,
+          hora: extra.provaHora ?? lead?.provaHora,
+          tipoEvento: lead?.tipoEvento,
+        }).catch(console.error);
+      } else {
+        googleCalendar.deleteProva(leadId).catch(console.error);
+      }
+    }
+  }, [leads]);
 
   const updateLead = useCallback(async (leadId: string, data: Partial<Lead>) => {
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, ...data } : l));
     await supabase.from("leads").update(leadPatchToRow(data) as never).eq("id", leadId);
-  }, []);
+
+    if (data.provaData !== undefined) {
+      const lead = leads.find((l) => l.id === leadId);
+      if (data.provaData && lead) {
+        // Sincronizar com Google Calendar (fire-and-forget — não bloquear a UI)
+        googleCalendar.upsertProva({
+          leadId,
+          nome: data.nome ?? lead.nome,
+          data: data.provaData,
+          hora: data.provaHora ?? lead.provaHora,
+          tipoEvento: lead.tipoEvento,
+        }).catch(console.error);
+      } else if (!data.provaData) {
+        googleCalendar.deleteProva(leadId).catch(console.error);
+      }
+    }
+  }, [leads]);
 
   const updateMedidas = useCallback(async (leadId: string, data: Omit<MedidasCliente, "leadId">) => {
     const payload = {

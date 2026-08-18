@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AluguelLogistica, StatusLogistica } from "@/types/logistica";
 import type { DateRange } from "@/hooks/useDateRange";
+import { googleCalendar } from "@/hooks/useGoogleCalendar";
 
 type Row = {
   id: string; vestido_nome: string; cliente_nome: string; cliente_telefone: string;
@@ -48,7 +49,24 @@ export function useLogistica(range?: DateRange) {
   const updateStatus = useCallback(async (id: string, status: StatusLogistica) => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, statusLogistica: status } : i));
     await supabase.from("alugueis_logistica").update({ status_logistica: status }).eq("id", id);
-  }, []);
+
+    // Sincronizar com Google Calendar (fire-and-forget — não bloquear a UI)
+    const item = items.find((i) => i.id === id);
+    if (item) {
+      if (item.dataSaida) {
+        googleCalendar.upsertEntrega({
+          aluguelId: item.id, vestido: item.vestidoNome, cliente: item.clienteNome,
+          tipo: "saida", data: item.dataSaida,
+        }).catch(console.error);
+      }
+      if (item.dataRetorno) {
+        googleCalendar.upsertEntrega({
+          aluguelId: item.id, vestido: item.vestidoNome, cliente: item.clienteNome,
+          tipo: "retorno", data: item.dataRetorno,
+        }).catch(console.error);
+      }
+    }
+  }, [items]);
 
   const updateRastreio = useCallback(async (id: string, codigo: string) => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, codigoRastreio: codigo } : i));

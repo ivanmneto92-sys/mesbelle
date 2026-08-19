@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Users, ShoppingBag, Truck, DollarSign,
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
-  Megaphone, BarChart3, CalendarDays, Kanban, CalendarCheck, CalendarClock, UserCircle,
+  Megaphone, BarChart3, CalendarDays, Kanban, CalendarCheck, CalendarClock, UserCircle, ScrollText,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -61,7 +61,16 @@ const navGroups: { label: string; items: NavEntry[] }[] = [
   {
     label: "Comercial",
     items: [
-      { title: "Comercial", url: "/comercial", icon: Handshake, roles: ["admin", "vendedor"] },
+      {
+        title: "Comercial",
+        icon: Handshake,
+        roles: ["admin", "vendedor"],
+        children: [
+          { title: "Negociações", url: "/comercial/negociacoes", icon: Handshake, roles: ["admin", "vendedor"] },
+          { title: "Contratos", url: "/comercial/contratos", icon: ScrollText, roles: ["admin", "vendedor"] },
+          { title: "Métricas", url: "/comercial/metricas", icon: BarChart3, roles: ["admin", "vendedor"] },
+        ],
+      },
     ],
   },
   {

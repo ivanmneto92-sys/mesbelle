@@ -10,10 +10,12 @@ import Login from "./pages/Login";
 import RedefinirSenha from "./pages/RedefinirSenha";
 import Dashboard from "./pages/Dashboard";
 import CRM from "./pages/CRM";
-import ComercialVendas from "./pages/ComercialVendas";
-import Negociacoes from "./pages/comercial/Negociacoes";
-import Contratos from "./pages/comercial/Contratos";
-import Metricas from "./pages/comercial/Metricas";
+import ComercialRelatorio from "./pages/comercial/ComercialRelatorio";
+import ComercialRelatorioAgendamento from "./pages/comercial/ComercialRelatorioAgendamento";
+import ComercialAgendamento from "./pages/comercial/ComercialAgendamento";
+import ComercialCalendario from "./pages/comercial/ComercialCalendario";
+import ComercialContratos from "./pages/comercial/ComercialContratos";
+import ComercialKanban from "./pages/comercial/ComercialKanban";
 import Acervo from "./pages/Acervo";
 import Logistica from "./pages/Logistica";
 import Financeiro from "./pages/Financeiro";
@@ -35,7 +37,12 @@ const queryClient = new QueryClient();
 const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/": ["admin", "vendedor", "socio"],
   "/crm": ["admin", "vendedor"],
-  "/comercial": ["admin", "vendedor"],
+  "/comercial/relatorio": ["admin", "vendedor", "socio"],
+  "/comercial/relatorio-agendamento": ["admin", "vendedor"],
+  "/comercial/agendamento": ["admin", "vendedor"],
+  "/comercial/calendario": ["admin", "vendedor"],
+  "/comercial/contratos": ["admin", "vendedor"],
+  "/comercial/kanban": ["admin", "vendedor"],
   "/acervo": ["admin", "vendedor"],
   "/logistica": ["admin", "vendedor"],
   "/financeiro": ["admin"],
@@ -87,12 +94,13 @@ const AppRoutes = () => {
       <Route path="/avaliacao" element={<AvaliacaoPublica />} />
       <Route path="/" element={<ProtectedRoute path="/"><Dashboard /></ProtectedRoute>} />
       <Route path="/crm" element={<ProtectedRoute path="/crm"><CRM /></ProtectedRoute>} />
-      <Route path="/comercial" element={<ProtectedRoute path="/comercial"><ComercialVendas /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/comercial/negociacoes" replace />} />
-        <Route path="negociacoes" element={<Negociacoes />} />
-        <Route path="contratos" element={<Contratos />} />
-        <Route path="metricas" element={<Metricas />} />
-      </Route>
+      <Route path="/comercial" element={<Navigate to="/comercial/relatorio" replace />} />
+      <Route path="/comercial/relatorio" element={<ProtectedRoute path="/comercial/relatorio"><ComercialRelatorio /></ProtectedRoute>} />
+      <Route path="/comercial/relatorio-agendamento" element={<ProtectedRoute path="/comercial/relatorio-agendamento"><ComercialRelatorioAgendamento /></ProtectedRoute>} />
+      <Route path="/comercial/agendamento" element={<ProtectedRoute path="/comercial/agendamento"><ComercialAgendamento /></ProtectedRoute>} />
+      <Route path="/comercial/calendario" element={<ProtectedRoute path="/comercial/calendario"><ComercialCalendario /></ProtectedRoute>} />
+      <Route path="/comercial/contratos" element={<ProtectedRoute path="/comercial/contratos"><ComercialContratos /></ProtectedRoute>} />
+      <Route path="/comercial/kanban" element={<ProtectedRoute path="/comercial/kanban"><ComercialKanban /></ProtectedRoute>} />
       <Route path="/acervo" element={<ProtectedRoute path="/acervo"><Acervo /></ProtectedRoute>} />
       <Route path="/logistica" element={<ProtectedRoute path="/logistica"><Logistica /></ProtectedRoute>} />
       <Route path="/financeiro" element={<ProtectedRoute path="/financeiro"><Financeiro /></ProtectedRoute>} />

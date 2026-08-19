@@ -6,10 +6,11 @@ import { FileText, Handshake, BarChart3, ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useLeads } from "@/hooks/useLeads";
 import { useDateRange } from "@/hooks/useDateRange";
-import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { useComercialKpis } from "@/hooks/useComercialKpis";
 import { NegociacoesTab } from "@/components/comercial/NegociacoesTab";
 import { ContratosTab } from "@/components/comercial/ContratosTab";
 import { MetricasTab } from "@/components/comercial/MetricasTab";
+import { ComercialKpiStrip } from "@/components/comercial/ComercialKpiStrip";
 
 const ComercialVendas = () => {
   const {
@@ -32,6 +33,7 @@ const ComercialVendas = () => {
   );
 
   const negociosAprovados = negociosNoPeriodo.filter((n) => n.statusNegociacao === "aprovado");
+  const kpis = useComercialKpis(leads, contratos, negocios, range);
 
   const handleSwitchToContratos = (contratoId?: string) => {
     setActiveTab("contratos");
@@ -47,14 +49,15 @@ const ComercialVendas = () => {
         title="Comercial"
         description="Negociações, contratos e performance"
         actions={
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <DateRangePicker value={range} onChange={setRange} />
-            <Button variant="outline" size="sm" onClick={() => setActiveTab("contratos")}>
-              <FileText className="h-4 w-4 mr-1" /> Emitir Contrato
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("contratos")}>
+            <FileText className="h-4 w-4 mr-1" /> Emitir Contrato
+          </Button>
         }
       />
+
+      <ComercialKpiStrip kpis={kpis} range={range} onRangeChange={setRange} />
+
+      <div className="border-t border-border-subtle" />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto overflow-x-auto justify-start">
@@ -86,7 +89,7 @@ const ComercialVendas = () => {
         </TabsContent>
 
         <TabsContent value="metricas" className="mt-4">
-          <MetricasTab leads={leads} contratos={contratosNoPeriodo} negocios={negociosNoPeriodo} />
+          <MetricasTab leads={leads} contratos={contratos} negocios={negocios} range={range} />
         </TabsContent>
       </Tabs>
     </div>

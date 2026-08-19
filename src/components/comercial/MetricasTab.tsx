@@ -1,83 +1,52 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lead, Contrato, Negocio, CRM_KANBAN_COLUMNS } from "@/types/comercial";
-import { Users, TrendingUp, UserX, DollarSign, Award } from "lucide-react";
+import { Award } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import type { DateRange } from "@/hooks/useDateRange";
 
 interface MetricasTabProps {
   leads: Lead[];
   contratos: Contrato[];
   negocios: Negocio[];
+  range: DateRange;
 }
 
-export function MetricasTab({ leads, contratos, negocios }: MetricasTabProps) {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+export function MetricasTab({ leads, contratos, range }: MetricasTabProps) {
+  const leadsNoPeriodo = useMemo(
+    () => leads.filter((l) => l.criadoEm >= range.from && l.criadoEm <= range.to),
+    [leads, range]
+  );
+  const contratosNoPeriodo = useMemo(
+    () => contratos.filter((c) => c.dataCriacao >= range.from && c.dataCriacao <= range.to),
+    [contratos, range]
+  );
 
-  // Faturamento = soma dos contratos assinados no mês
-  const contratosAssinados = contratos.filter((c) => {
-    if (c.statusAssinatura !== "assinado") return false;
-    const d = new Date(c.dataCriacao);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  });
-  const faturamento = contratosAssinados.reduce((sum, c) => sum + c.valorTotal, 0);
+  // Ranking vendedoras — contratos assinados no período
+  const ranking = useMemo(() => {
+    const vendedoraMap = new Map<string, number>();
+    contratosNoPeriodo.filter((c) => c.statusAssinatura === "assinado").forEach((c) => {
+      const lead = leads.find((l) => l.id === c.leadId);
+      const vendedora = lead?.vendedorResponsavel || "Não atribuído";
+      vendedoraMap.set(vendedora, (vendedoraMap.get(vendedora) || 0) + c.valorTotal);
+    });
+    return [...vendedoraMap.entries()]
+      .map(([nome, valor]) => ({ nome, valor }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [contratosNoPeriodo, leads]);
 
-  // Conversão = contratos fechados / total leads
-  const totalLeads = leads.length;
-  const totalContratos = contratos.filter((c) => c.statusAssinatura === "assinado").length;
-  const taxaConversao = totalLeads > 0 ? ((totalContratos / totalLeads) * 100).toFixed(1) : "0";
-
-  // Ticket médio
-  const allAssinados = contratos.filter((c) => c.statusAssinatura === "assinado");
-  const ticketMedio = allAssinados.length > 0 ? allAssinados.reduce((s, c) => s + c.valorTotal, 0) / allAssinados.length : 0;
-
-  // No-show
-  const noShows = leads.filter((l) => l.statusFunil === "no_show").length;
-  const taxaNoShow = totalLeads > 0 ? ((noShows / totalLeads) * 100).toFixed(1) : "0";
-
-  // Ranking vendedoras
-  const vendedoraMap = new Map<string, number>();
-  contratos.filter((c) => c.statusAssinatura === "assinado").forEach((c) => {
-    const lead = leads.find((l) => l.id === c.leadId);
-    const vendedora = lead?.vendedorResponsavel || "Não atribuído";
-    vendedoraMap.set(vendedora, (vendedoraMap.get(vendedora) || 0) + c.valorTotal);
-  });
-  const ranking = [...vendedoraMap.entries()]
-    .map(([nome, valor]) => ({ nome, valor }))
-    .sort((a, b) => b.valor - a.valor);
-
-  // Funnel data
-  const funnelData = CRM_KANBAN_COLUMNS.map((col) => ({
-    name: col.title,
-    value: leads.filter((l) => l.statusFunil === col.id).length,
-  }));
+  // Funil CRM — leads criados no período
+  const funnelData = useMemo(
+    () => CRM_KANBAN_COLUMNS.map((col) => ({
+      name: col.title,
+      value: leadsNoPeriodo.filter((l) => l.statusFunil === col.id).length,
+    })),
+    [leadsNoPeriodo]
+  );
   const barColors = ["hsl(210,80%,55%)", "hsl(40,55%,50%)", "hsl(350,57%,27%)", "hsl(0,84%,60%)"];
-
-  const kpis = [
-    { label: "Faturamento do Mês", value: `R$ ${faturamento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: DollarSign, color: "text-success" },
-    { label: "Taxa de Conversão", value: `${taxaConversao}%`, icon: TrendingUp, color: "text-info" },
-    { label: "Ticket Médio", value: `R$ ${ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, icon: Users, color: "text-primary" },
-    { label: "Taxa de No-Show", value: `${taxaNoShow}%`, icon: UserX, color: "text-destructive" },
-  ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
-          <Card key={kpi.label} className="shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                  <p className="text-2xl font-bold mt-1">{kpi.value}</p>
-                </div>
-                <kpi.icon className={`h-8 w-8 ${kpi.color} opacity-60`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-sm">
           <CardHeader>
@@ -109,7 +78,7 @@ export function MetricasTab({ leads, contratos, negocios }: MetricasTabProps) {
           </CardHeader>
           <CardContent>
             {ranking.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhuma venda registrada</p>
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhuma venda registrada no período</p>
             ) : (
               <div className="space-y-3">
                 {ranking.map((r, i) => (

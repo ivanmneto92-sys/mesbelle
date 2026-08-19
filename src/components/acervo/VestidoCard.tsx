@@ -39,6 +39,7 @@ export function VestidoCard({ vestido: v, onClick, onAgenda }: Props) {
       </div>
       <CardContent className="p-3 space-y-1.5">
         <p className="font-semibold text-sm truncate font-serif">{v.nome}</p>
+        {v.sku && <p className="text-[10px] text-muted-foreground font-mono">{v.sku}</p>}
         <p className="text-xs text-muted-foreground">
           {v.cor} • {v.tamanho} • {v.comprimento}
         </p>

@@ -39,8 +39,8 @@ const items: CmdItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, url: "/", roles: ["admin", "vendedor", "socio"], group: "Navegar" },
   { label: "CRM — Leads", icon: Users, url: "/crm", roles: ["admin", "vendedor"], group: "Navegar" },
   { label: "Comercial", icon: Handshake, url: "/comercial", roles: ["admin", "vendedor"], group: "Navegar" },
-  { label: "Acervo & Produção", icon: ShoppingBag, url: "/acervo", roles: ["admin", "vendedor"], group: "Navegar" },
-  { label: "Logística", icon: Truck, url: "/logistica", roles: ["admin", "vendedor"], group: "Navegar" },
+  { label: "Acervo", icon: ShoppingBag, url: "/operacional/acervo", roles: ["admin", "vendedor"], group: "Navegar" },
+  { label: "Logística", icon: Truck, url: "/operacional/logistica", roles: ["admin", "vendedor"], group: "Navegar" },
   { label: "Financeiro", icon: DollarSign, url: "/financeiro", roles: ["admin"], group: "Navegar" },
   { label: "Time & Performance", icon: UserCog, url: "/equipe", roles: ["admin"], group: "Navegar" },
   { label: "Portal de Sócios", icon: Briefcase, url: "/socios", roles: ["admin", "socio"], group: "Navegar" },
@@ -49,7 +49,7 @@ const items: CmdItem[] = [
   { label: "Novo lead", hint: "Cadastrar cliente", icon: UserPlus, url: "/crm?new=lead", roles: ["admin", "vendedor"], group: "Ações rápidas" },
   { label: "Nova negociação", hint: "Iniciar venda", icon: Handshake, url: "/comercial?tab=negociacoes", roles: ["admin", "vendedor"], group: "Ações rápidas" },
   { label: "Gerar contrato", hint: "Para assinatura", icon: FileSignature, url: "/comercial?tab=contratos", roles: ["admin", "vendedor"], group: "Ações rápidas" },
-  { label: "Registrar retirada", hint: "Logística", icon: Package, url: "/logistica", roles: ["admin", "vendedor"], group: "Ações rápidas" },
+  { label: "Registrar retirada", hint: "Logística", icon: Package, url: "/operacional/logistica", roles: ["admin", "vendedor"], group: "Ações rápidas" },
 ];
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void; }

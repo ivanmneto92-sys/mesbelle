@@ -4,6 +4,7 @@ import {
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
   Megaphone, BarChart3, CalendarDays, Kanban, CalendarClock, UserCircle, ScrollText,
   FileBarChart, Wallet, TrendingUp, ArrowLeftRight, PieChart, UserSearch,
+  Package2, LayoutGrid, Scissors,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -68,10 +69,19 @@ const navGroups: { label: string; items: NavEntry[] }[] = [
     ],
   },
   {
-    label: "Catálogo",
+    label: "Operacional",
     items: [
-      { title: "Acervo & Produção", url: "/acervo", icon: ShoppingBag, roles: ["admin", "vendedor"] },
-      { title: "Logística", url: "/logistica", icon: Truck, roles: ["admin", "vendedor"] },
+      {
+        title: "Operacional",
+        icon: Package2,
+        roles: ["admin", "vendedor", "socio"],
+        children: [
+          { title: "Acervo", url: "/operacional/acervo", icon: LayoutGrid, roles: ["admin", "vendedor"] },
+          { title: "Produção", url: "/operacional/producao", icon: Scissors, roles: ["admin"] },
+          { title: "Logística", url: "/operacional/logistica", icon: Truck, roles: ["admin", "vendedor"] },
+          { title: "Relatório", url: "/operacional/relatorio", icon: BarChart3, roles: ["admin", "socio"] },
+        ],
+      },
     ],
   },
   {

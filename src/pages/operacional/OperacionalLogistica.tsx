@@ -27,7 +27,7 @@ function getDiasAtraso(dataRetorno: string): number {
   return Math.max(0, diff);
 }
 
-const Logistica = () => {
+const OperacionalLogistica = () => {
   const { range, setRange } = useDateRange();
   const { items, updateStatus, updateRastreio, getByStatus } = useLogistica(range);
   const [detailItem, setDetailItem] = useState<AluguelLogistica | null>(null);
@@ -46,7 +46,7 @@ const Logistica = () => {
 
   return (
     <>
-    <SEO title="Logística — Més Belle" description="Envios, retiradas e devoluções dos aluguéis do ateliê." path="/logistica" />
+    <SEO title="Logística — Més Belle" description="Envios, retiradas e devoluções dos aluguéis do ateliê." path="/operacional/logistica" />
     <div className="space-y-6">
       <PageHeader
         icon={Truck}
@@ -122,4 +122,4 @@ const Logistica = () => {
   );
 };
 
-export default Logistica;
+export default OperacionalLogistica;

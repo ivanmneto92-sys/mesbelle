@@ -163,7 +163,7 @@ export function useDashboard(range: DateRange) {
         type: "retirada",
         title: l.cliente_nome,
         subtitle: `Retirada — ${l.vestido_nome}`,
-        href: "/logistica",
+        href: "/operacional/logistica",
       });
     });
     logistica.filter(l => l.data_retorno === hoje).forEach(l => {
@@ -172,7 +172,7 @@ export function useDashboard(range: DateRange) {
         type: "entrega",
         title: l.cliente_nome,
         subtitle: `Devolução — ${l.vestido_nome}`,
-        href: "/logistica",
+        href: "/operacional/logistica",
       });
     });
     agenda.sort((a, b) => (a.time || "z").localeCompare(b.time || "z"));
@@ -181,7 +181,7 @@ export function useDashboard(range: DateRange) {
     // Alertas
     const al: AlertaItem[] = [];
     if (entregasAtrasadas > 0) {
-      al.push({ severity: "urgent", text: `${entregasAtrasadas} vestido${entregasAtrasadas > 1 ? "s" : ""} não devolvido${entregasAtrasadas > 1 ? "s" : ""} — prazo expirado`, href: "/logistica", cta: "Cobrar" });
+      al.push({ severity: "urgent", text: `${entregasAtrasadas} vestido${entregasAtrasadas > 1 ? "s" : ""} não devolvido${entregasAtrasadas > 1 ? "s" : ""} — prazo expirado`, href: "/operacional/logistica", cta: "Cobrar" });
     }
     const contratosPendentes = ((contratosRes.data ?? []) as Array<{ numero: string; created_at: string }>)
       .filter(c => (Date.now() - new Date(c.created_at).getTime()) > 3 * 24 * 60 * 60 * 1000);

@@ -16,8 +16,10 @@ import ComercialAgendamento from "./pages/comercial/ComercialAgendamento";
 import ComercialCalendario from "./pages/comercial/ComercialCalendario";
 import ComercialContratos from "./pages/comercial/ComercialContratos";
 import ComercialKanban from "./pages/comercial/ComercialKanban";
-import Acervo from "./pages/Acervo";
-import Logistica from "./pages/Logistica";
+import OperacionalAcervo from "./pages/operacional/OperacionalAcervo";
+import OperacionalProducao from "./pages/operacional/OperacionalProducao";
+import OperacionalLogistica from "./pages/operacional/OperacionalLogistica";
+import OperacionalRelatorio from "./pages/operacional/OperacionalRelatorio";
 import FinanceiroDRE from "./pages/financeiro/FinanceiroDRE";
 import FinanceiroFluxo from "./pages/financeiro/FinanceiroFluxo";
 import FinanceiroRelatorios from "./pages/financeiro/FinanceiroRelatorios";
@@ -43,8 +45,10 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/comercial/calendario": ["admin", "vendedor"],
   "/comercial/contratos": ["admin", "vendedor"],
   "/comercial/kanban": ["admin", "vendedor"],
-  "/acervo": ["admin", "vendedor"],
-  "/logistica": ["admin", "vendedor"],
+  "/operacional/acervo": ["admin", "vendedor"],
+  "/operacional/producao": ["admin"],
+  "/operacional/logistica": ["admin", "vendedor"],
+  "/operacional/relatorio": ["admin", "socio"],
   "/financeiro/dre": ["admin", "socio"],
   "/financeiro/fluxo": ["admin"],
   "/financeiro/relatorios": ["admin", "socio"],
@@ -101,8 +105,12 @@ const AppRoutes = () => {
       <Route path="/comercial/calendario" element={<ProtectedRoute path="/comercial/calendario"><ComercialCalendario /></ProtectedRoute>} />
       <Route path="/comercial/contratos" element={<ProtectedRoute path="/comercial/contratos"><ComercialContratos /></ProtectedRoute>} />
       <Route path="/comercial/kanban" element={<ProtectedRoute path="/comercial/kanban"><ComercialKanban /></ProtectedRoute>} />
-      <Route path="/acervo" element={<ProtectedRoute path="/acervo"><Acervo /></ProtectedRoute>} />
-      <Route path="/logistica" element={<ProtectedRoute path="/logistica"><Logistica /></ProtectedRoute>} />
+      <Route path="/acervo" element={<Navigate to="/operacional/acervo" replace />} />
+      <Route path="/logistica" element={<Navigate to="/operacional/logistica" replace />} />
+      <Route path="/operacional/acervo" element={<ProtectedRoute path="/operacional/acervo"><OperacionalAcervo /></ProtectedRoute>} />
+      <Route path="/operacional/producao" element={<ProtectedRoute path="/operacional/producao"><OperacionalProducao /></ProtectedRoute>} />
+      <Route path="/operacional/logistica" element={<ProtectedRoute path="/operacional/logistica"><OperacionalLogistica /></ProtectedRoute>} />
+      <Route path="/operacional/relatorio" element={<ProtectedRoute path="/operacional/relatorio"><OperacionalRelatorio /></ProtectedRoute>} />
       <Route path="/financeiro" element={<Navigate to="/financeiro/dre" replace />} />
       <Route path="/financeiro/dre" element={<ProtectedRoute path="/financeiro/dre"><FinanceiroDRE /></ProtectedRoute>} />
       <Route path="/financeiro/fluxo" element={<ProtectedRoute path="/financeiro/fluxo"><FinanceiroFluxo /></ProtectedRoute>} />

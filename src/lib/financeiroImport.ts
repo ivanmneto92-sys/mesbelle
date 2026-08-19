@@ -1,4 +1,4 @@
-import { Transacao, TipoTransacao, CategoriaTransacao, StatusTransacao } from "@/types/financeiro";
+import { Transacao, TipoTransacao, StatusTransacao } from "@/types/financeiro";
 import { transacaoSchema } from "@/lib/schemas";
 
 export type ParsedItem = Omit<Transacao, "id">;
@@ -71,7 +71,7 @@ export function parseOFX(text: string): ImportResult {
       tipo: amount >= 0 ? "entrada" : "saida",
       data: dateStr,
       descricao: get("MEMO") || get("NAME") || "Importado",
-      categoria: "Outros" as CategoriaTransacao,
+      categoria: "outros",
       valor: Math.abs(amount),
       status: "pago" as StatusTransacao,
     };
@@ -150,7 +150,7 @@ export function parseCSV(text: string): ImportResult {
       tipo: (valor >= 0 ? "entrada" : "saida") as TipoTransacao,
       data: dataISO,
       descricao,
-      categoria: "Outros" as CategoriaTransacao,
+      categoria: "outros",
       valor: Math.abs(valor),
       status: "pago" as StatusTransacao,
     };

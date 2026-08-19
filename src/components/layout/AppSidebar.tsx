@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
-  LayoutDashboard, Users, ShoppingBag, Truck, DollarSign,
+  LayoutDashboard, Users, ShoppingBag, Truck,
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
   Megaphone, BarChart3, CalendarDays, Kanban, CalendarClock, UserCircle, ScrollText,
-  FileBarChart,
+  FileBarChart, Wallet, TrendingUp, ArrowLeftRight, PieChart, UserSearch,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -77,7 +77,17 @@ const navGroups: { label: string; items: NavEntry[] }[] = [
   {
     label: "Gestão",
     items: [
-      { title: "Financeiro", url: "/financeiro", icon: DollarSign, roles: ["admin"] },
+      {
+        title: "Financeiro",
+        icon: Wallet,
+        roles: ["admin", "socio", "vendedor"],
+        children: [
+          { title: "DRE", url: "/financeiro/dre", icon: TrendingUp, roles: ["admin", "socio"] },
+          { title: "Entradas & Saídas", url: "/financeiro/fluxo", icon: ArrowLeftRight, roles: ["admin"] },
+          { title: "Relatórios", url: "/financeiro/relatorios", icon: PieChart, roles: ["admin", "socio"] },
+          { title: "Histórico do Cliente", url: "/financeiro/clientes", icon: UserSearch, roles: ["admin", "vendedor", "socio"] },
+        ],
+      },
       { title: "Time & Performance", url: "/equipe", icon: UserCog, roles: ["admin"] },
       { title: "Portal de Sócios", url: "/socios", icon: Briefcase, roles: ["admin", "socio"] },
     ],

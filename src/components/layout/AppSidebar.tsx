@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Users, ShoppingBag, Truck, DollarSign,
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
-  Megaphone, BarChart3, CalendarDays, Kanban, CalendarCheck, CalendarClock, UserCircle, ScrollText,
+  Megaphone, BarChart3, CalendarDays, Kanban, CalendarClock, UserCircle, ScrollText,
   FileBarChart,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -45,16 +45,6 @@ const navGroups: { label: string; items: NavEntry[] }[] = [
         children: [
           { title: "Leads", url: "/marketing/leads", icon: Users, roles: ["admin", "vendedor"] },
           { title: "Meta Ads", url: "/marketing/meta-ads", icon: BarChart3, roles: ["admin"] },
-        ],
-      },
-      {
-        title: "Agendamento",
-        icon: CalendarDays,
-        roles: ["admin", "vendedor"],
-        children: [
-          { title: "Comercial", url: "/agendamento/comercial", icon: Kanban, roles: ["admin", "vendedor"] },
-          { title: "Calendário Visitas", url: "/agendamento/visitas", icon: CalendarCheck, roles: ["admin", "vendedor"] },
-          { title: "Prova & Entregas", url: "/agendamento/agenda", icon: CalendarClock, roles: ["admin", "vendedor"] },
         ],
       },
     ],

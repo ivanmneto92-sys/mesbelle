@@ -1,7 +1,7 @@
 // === CRM Funnel (funil de captação — página /crm) ===
 export type CaptacaoStatus = "novo_lead" | "em_atendimento" | "prova_agendada" | "no_show";
 
-// === Funil de Agendamento Comercial (página /agendamento/comercial) ===
+// === Funil de Agendamento Comercial (página /comercial/kanban) ===
 export type AgendamentoStatus =
   | "agendado"
   | "compareceu_alugou"

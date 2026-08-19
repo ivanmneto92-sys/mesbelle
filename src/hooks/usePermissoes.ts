@@ -150,6 +150,10 @@ export const routePermissionMap: Record<string, keyof RolePermissoes> = {
   "/acervo": "acervo",
   "/logistica": "logistica",
   "/financeiro": "financeiro",
+  "/financeiro/dre": "financeiro",
+  "/financeiro/fluxo": "financeiro",
+  "/financeiro/relatorios": "financeiro",
+  "/financeiro/clientes": "financeiro",
   "/equipe": "equipe",
   "/socios": "socios",
 };

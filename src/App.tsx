@@ -18,7 +18,10 @@ import ComercialContratos from "./pages/comercial/ComercialContratos";
 import ComercialKanban from "./pages/comercial/ComercialKanban";
 import Acervo from "./pages/Acervo";
 import Logistica from "./pages/Logistica";
-import Financeiro from "./pages/Financeiro";
+import FinanceiroDRE from "./pages/financeiro/FinanceiroDRE";
+import FinanceiroFluxo from "./pages/financeiro/FinanceiroFluxo";
+import FinanceiroRelatorios from "./pages/financeiro/FinanceiroRelatorios";
+import FinanceiroHistorico from "./pages/financeiro/FinanceiroHistorico";
 import Equipe from "./pages/Equipe";
 import Socios from "./pages/Socios";
 import Configuracoes from "./pages/Configuracoes";
@@ -42,7 +45,10 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/comercial/kanban": ["admin", "vendedor"],
   "/acervo": ["admin", "vendedor"],
   "/logistica": ["admin", "vendedor"],
-  "/financeiro": ["admin"],
+  "/financeiro/dre": ["admin", "socio"],
+  "/financeiro/fluxo": ["admin"],
+  "/financeiro/relatorios": ["admin", "socio"],
+  "/financeiro/clientes": ["admin", "vendedor", "socio"],
   "/equipe": ["admin"],
   "/socios": ["admin", "socio"],
   "/configuracoes": ["admin"],
@@ -97,7 +103,11 @@ const AppRoutes = () => {
       <Route path="/comercial/kanban" element={<ProtectedRoute path="/comercial/kanban"><ComercialKanban /></ProtectedRoute>} />
       <Route path="/acervo" element={<ProtectedRoute path="/acervo"><Acervo /></ProtectedRoute>} />
       <Route path="/logistica" element={<ProtectedRoute path="/logistica"><Logistica /></ProtectedRoute>} />
-      <Route path="/financeiro" element={<ProtectedRoute path="/financeiro"><Financeiro /></ProtectedRoute>} />
+      <Route path="/financeiro" element={<Navigate to="/financeiro/dre" replace />} />
+      <Route path="/financeiro/dre" element={<ProtectedRoute path="/financeiro/dre"><FinanceiroDRE /></ProtectedRoute>} />
+      <Route path="/financeiro/fluxo" element={<ProtectedRoute path="/financeiro/fluxo"><FinanceiroFluxo /></ProtectedRoute>} />
+      <Route path="/financeiro/relatorios" element={<ProtectedRoute path="/financeiro/relatorios"><FinanceiroRelatorios /></ProtectedRoute>} />
+      <Route path="/financeiro/clientes" element={<ProtectedRoute path="/financeiro/clientes"><FinanceiroHistorico /></ProtectedRoute>} />
       <Route path="/equipe" element={<ProtectedRoute path="/equipe"><Equipe /></ProtectedRoute>} />
       <Route path="/socios" element={<ProtectedRoute path="/socios"><Socios /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute path="/configuracoes"><Configuracoes /></ProtectedRoute>} />

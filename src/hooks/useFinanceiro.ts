@@ -1,104 +1,96 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Transacao, ConfigImpostos, TipoTransacao, CategoriaTransacao, StatusTransacao } from "@/types/financeiro";
+import { Transacao, TipoTransacao, StatusTransacao, TipoCusto } from "@/types/financeiro";
 import type { DateRange } from "@/hooks/useDateRange";
 
-const defaultImpostos: ConfigImpostos = {
-  simplesNacional: 6, iss: 5, debito: 1.5, creditoVista: 3.2, creditoParcelado: 4.8,
+type TxRow = {
+  id: string;
+  tipo: string;
+  data: string;
+  descricao: string;
+  categoria: string;
+  valor: number;
+  status: string;
+  tipo_custo: string | null;
+  lead_id: string | null;
+  observacoes: string | null;
 };
 
-type TxRow = { id: string; tipo: string; data: string; descricao: string; categoria: string; valor: number; status: string };
-const rowToTx = (r: TxRow): Transacao => ({
-  id: r.id, tipo: r.tipo as TipoTransacao, data: r.data, descricao: r.descricao,
-  categoria: r.categoria as CategoriaTransacao, valor: Number(r.valor), status: r.status as StatusTransacao,
+export const rowToTransacao = (r: TxRow): Transacao => ({
+  id: r.id,
+  tipo: r.tipo as TipoTransacao,
+  data: r.data,
+  descricao: r.descricao,
+  categoria: r.categoria,
+  valor: Number(r.valor),
+  status: r.status as StatusTransacao,
+  tipoCusto: (r.tipo_custo as TipoCusto | null) ?? null,
+  leadId: r.lead_id ?? null,
+  observacoes: r.observacoes ?? null,
 });
 
+const transacaoToRow = (t: Partial<Omit<Transacao, "id">>) => {
+  const row: Record<string, unknown> = {};
+  if (t.tipo !== undefined) row.tipo = t.tipo;
+  if (t.data !== undefined) row.data = t.data;
+  if (t.descricao !== undefined) row.descricao = t.descricao;
+  if (t.categoria !== undefined) row.categoria = t.categoria;
+  if (t.valor !== undefined) row.valor = t.valor;
+  if (t.status !== undefined) row.status = t.status;
+  if (t.tipoCusto !== undefined) row.tipo_custo = t.tipoCusto;
+  if (t.leadId !== undefined) row.lead_id = t.leadId;
+  if (t.observacoes !== undefined) row.observacoes = t.observacoes;
+  return row;
+};
+
 export function useFinanceiro(range?: DateRange) {
-  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
-  const [impostos, setImpostos] = useState<ConfigImpostos>(defaultImpostos);
+  const qc = useQueryClient();
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      let txQuery = supabase.from("transacoes_financeiras").select("*").order("data", { ascending: false });
-      if (range) txQuery = txQuery.gte("data", range.from).lte("data", range.to);
-      const [txRes, cfRes] = await Promise.all([
-        txQuery,
-        supabase.from("config_financeiro").select("*").eq("id", 1).maybeSingle(),
-      ]);
-      if (!active) return;
-      if (txRes.data) setTransacoes((txRes.data as TxRow[]).map(rowToTx));
-      if (cfRes.data) {
-        const c = cfRes.data as { simples_nacional: number; iss: number; debito: number; credito_vista: number; credito_parcelado: number };
-        setImpostos({
-          simplesNacional: Number(c.simples_nacional), iss: Number(c.iss), debito: Number(c.debito),
-          creditoVista: Number(c.credito_vista), creditoParcelado: Number(c.credito_parcelado),
-        });
-      }
-    })();
-    return () => { active = false; };
-  }, [range]);
+  const { data: transacoes = [], isLoading } = useQuery({
+    queryKey: ["transacoes", range?.from, range?.to],
+    queryFn: async () => {
+      let q = supabase.from("transacoes_financeiras").select("*").order("data", { ascending: false });
+      if (range?.from) q = q.gte("data", range.from);
+      if (range?.to) q = q.lte("data", range.to);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []).map(rowToTransacao);
+    },
+  });
 
-  const addTransacao = useCallback(async (t: Omit<Transacao, "id">) => {
-    const insertRow = { tipo: t.tipo, data: t.data, descricao: t.descricao, categoria: t.categoria, valor: t.valor, status: t.status };
-    const { data } = await supabase.from("transacoes_financeiras").insert(insertRow).select().single();
-    if (data) setTransacoes(prev => [rowToTx(data as TxRow), ...prev].sort((a, b) => b.data.localeCompare(a.data)));
-  }, []);
+  const criar = useMutation({
+    mutationFn: async (nova: Omit<Transacao, "id">) => {
+      const { error } = await supabase.from("transacoes_financeiras").insert(transacaoToRow(nova) as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transacoes"] }),
+  });
 
-  const addMany = useCallback(async (items: Omit<Transacao, "id">[]) => {
-    if (items.length === 0) return;
-    const rows = items.map(t => ({ tipo: t.tipo, data: t.data, descricao: t.descricao, categoria: t.categoria, valor: t.valor, status: t.status }));
-    const { data } = await supabase.from("transacoes_financeiras").insert(rows).select();
-    if (data) setTransacoes(prev => [...(data as TxRow[]).map(rowToTx), ...prev].sort((a, b) => b.data.localeCompare(a.data)));
-  }, []);
+  const criarMuitas = useMutation({
+    mutationFn: async (itens: Omit<Transacao, "id">[]) => {
+      if (itens.length === 0) return;
+      const rows = itens.map((t) => transacaoToRow(t));
+      const { error } = await supabase.from("transacoes_financeiras").insert(rows as never);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transacoes"] }),
+  });
 
-  const removeTransacao = useCallback(async (id: string) => {
-    setTransacoes(prev => prev.filter(t => t.id !== id));
-    await supabase.from("transacoes_financeiras").delete().eq("id", id);
-  }, []);
+  const atualizar = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Omit<Transacao, "id">> & { id: string }) => {
+      const { error } = await supabase.from("transacoes_financeiras").update(transacaoToRow(updates) as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transacoes"] }),
+  });
 
-  const now = new Date();
-  const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const deletar = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("transacoes_financeiras").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["transacoes"] }),
+  });
 
-  const resumoMes = useMemo(() => {
-    const doMes = transacoes.filter(t => t.data.startsWith(mesAtual));
-    const receitas = doMes.filter(t => t.tipo === "entrada").reduce((s, t) => s + t.valor, 0);
-    const despesas = doMes.filter(t => t.tipo === "saida").reduce((s, t) => s + t.valor, 0);
-    return { receitas, despesas, lucro: receitas - despesas };
-  }, [transacoes, mesAtual]);
-
-  const gastosPorCategoria = useMemo(() => {
-    const doMes = transacoes.filter(t => t.data.startsWith(mesAtual) && t.tipo === "saida");
-    const map: Record<string, number> = {};
-    doMes.forEach(t => { map[t.categoria] = (map[t.categoria] || 0) + t.valor; });
-    return Object.entries(map).map(([cat, valor]) => ({ cat, valor })).sort((a, b) => b.valor - a.valor);
-  }, [transacoes, mesAtual]);
-
-  const dreData = useMemo(() => {
-    const months: Record<string, { receita: number; despesa: number }> = {};
-    transacoes.forEach(t => {
-      const m = t.data.slice(0, 7);
-      if (!months[m]) months[m] = { receita: 0, despesa: 0 };
-      if (t.tipo === "entrada") months[m].receita += t.valor;
-      else months[m].despesa += t.valor;
-    });
-    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    return Object.entries(months)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6)
-      .map(([key, v]) => ({
-        mes: meses[parseInt(key.split("-")[1]) - 1],
-        receita: v.receita, despesa: v.despesa, lucro: v.receita - v.despesa,
-      }));
-  }, [transacoes]);
-
-  const updateImpostos = useCallback(async (cfg: ConfigImpostos) => {
-    setImpostos(cfg);
-    await supabase.from("config_financeiro").update({
-      simples_nacional: cfg.simplesNacional, iss: cfg.iss, debito: cfg.debito,
-      credito_vista: cfg.creditoVista, credito_parcelado: cfg.creditoParcelado,
-    }).eq("id", 1);
-  }, []);
-
-  return { transacoes, addTransacao, addMany, removeTransacao, resumoMes, gastosPorCategoria, dreData, impostos, updateImpostos };
+  return { transacoes, isLoading, criar, criarMuitas, atualizar, deletar };
 }

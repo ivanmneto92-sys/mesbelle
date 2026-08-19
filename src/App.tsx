@@ -11,6 +11,9 @@ import RedefinirSenha from "./pages/RedefinirSenha";
 import Dashboard from "./pages/Dashboard";
 import CRM from "./pages/CRM";
 import ComercialVendas from "./pages/ComercialVendas";
+import Negociacoes from "./pages/comercial/Negociacoes";
+import Contratos from "./pages/comercial/Contratos";
+import Metricas from "./pages/comercial/Metricas";
 import Acervo from "./pages/Acervo";
 import Logistica from "./pages/Logistica";
 import Financeiro from "./pages/Financeiro";
@@ -84,7 +87,12 @@ const AppRoutes = () => {
       <Route path="/avaliacao" element={<AvaliacaoPublica />} />
       <Route path="/" element={<ProtectedRoute path="/"><Dashboard /></ProtectedRoute>} />
       <Route path="/crm" element={<ProtectedRoute path="/crm"><CRM /></ProtectedRoute>} />
-      <Route path="/comercial" element={<ProtectedRoute path="/comercial"><ComercialVendas /></ProtectedRoute>} />
+      <Route path="/comercial" element={<ProtectedRoute path="/comercial"><ComercialVendas /></ProtectedRoute>}>
+        <Route index element={<Navigate to="/comercial/negociacoes" replace />} />
+        <Route path="negociacoes" element={<Negociacoes />} />
+        <Route path="contratos" element={<Contratos />} />
+        <Route path="metricas" element={<Metricas />} />
+      </Route>
       <Route path="/acervo" element={<ProtectedRoute path="/acervo"><Acervo /></ProtectedRoute>} />
       <Route path="/logistica" element={<ProtectedRoute path="/logistica"><Logistica /></ProtectedRoute>} />
       <Route path="/financeiro" element={<ProtectedRoute path="/financeiro"><Financeiro /></ProtectedRoute>} />

@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Users, ShoppingBag, Truck, DollarSign,
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
   Megaphone, BarChart3, CalendarDays, Kanban, CalendarCheck, CalendarClock, UserCircle, ScrollText,
+  FileBarChart,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -63,12 +64,15 @@ const navGroups: { label: string; items: NavEntry[] }[] = [
     items: [
       {
         title: "Comercial",
-        icon: Handshake,
-        roles: ["admin", "vendedor"],
+        icon: ShoppingBag,
+        roles: ["admin", "vendedor", "socio"],
         children: [
-          { title: "Negociações", url: "/comercial/negociacoes", icon: Handshake, roles: ["admin", "vendedor"] },
+          { title: "Relatório Comercial", url: "/comercial/relatorio", icon: FileBarChart, roles: ["admin", "vendedor", "socio"] },
+          { title: "Relatório Agendamento", url: "/comercial/relatorio-agendamento", icon: BarChart3, roles: ["admin", "vendedor"] },
+          { title: "Agendamento", url: "/comercial/agendamento", icon: CalendarClock, roles: ["admin", "vendedor"] },
+          { title: "Calendário", url: "/comercial/calendario", icon: CalendarDays, roles: ["admin", "vendedor"] },
           { title: "Contratos", url: "/comercial/contratos", icon: ScrollText, roles: ["admin", "vendedor"] },
-          { title: "Métricas", url: "/comercial/metricas", icon: BarChart3, roles: ["admin", "vendedor"] },
+          { title: "Kanban", url: "/comercial/kanban", icon: Kanban, roles: ["admin", "vendedor"] },
         ],
       },
     ],

@@ -25,12 +25,21 @@ export function clearAppStorage() {
   });
 }
 
+// Autoria: usada para preencher criado_por/atendido_por (leads) e vendedor_id
+// (negocios/contratos) — a RLS exige isso para que um vendedor consiga inserir
+// e depois ler os próprios registros.
+async function currentUserId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
 // ============= DB row → domain mappers =============
 type LeadRow = {
   id: string; nome: string; telefone: string; email: string; cpf: string; endereco: string;
   tipo_evento: string; data_evento: string; status_funil: string; notas_internas: string;
   vendedor_responsavel: string; prova_data: string | null; prova_hora: string | null;
   enviado_comercial: boolean; criado_em: string;
+  criado_por: string | null; atendido_por: string | null;
 };
 const rowToLead = (r: LeadRow): Lead => ({
   id: r.id, nome: r.nome, telefone: r.telefone, email: r.email, cpf: r.cpf, endereco: r.endereco,
@@ -38,6 +47,7 @@ const rowToLead = (r: LeadRow): Lead => ({
   notasInternas: r.notas_internas, vendedorResponsavel: r.vendedor_responsavel,
   criadoEm: r.criado_em, provaData: r.prova_data ?? undefined, provaHora: r.prova_hora ?? undefined,
   enviadoComercial: r.enviado_comercial,
+  criadoPor: r.criado_por ?? null, atendidoPor: r.atendido_por ?? null,
 });
 const leadPatchToRow = (p: Partial<Lead>): Record<string, unknown> => {
   const out: Record<string, unknown> = {};
@@ -54,6 +64,8 @@ const leadPatchToRow = (p: Partial<Lead>): Record<string, unknown> => {
   if (p.provaData !== undefined) out.prova_data = p.provaData;
   if (p.provaHora !== undefined) out.prova_hora = p.provaHora;
   if (p.enviadoComercial !== undefined) out.enviado_comercial = p.enviadoComercial;
+  if (p.criadoPor !== undefined) out.criado_por = p.criadoPor;
+  if (p.atendidoPor !== undefined) out.atendido_por = p.atendidoPor;
   return out;
 };
 
@@ -70,6 +82,7 @@ type ContratoRow = {
   data_assinatura: string | null;
   ip_assinatura: string | null; user_agent_assinatura: string | null;
   signing_token: string | null; token_expires_at: string | null; email_cliente: string | null;
+  vendedor_id: string | null;
 };
 const rowToContrato = (r: ContratoRow): Contrato => ({
   id: r.id, numero: r.numero, leadId: r.lead_id, negocioId: r.negocio_id ?? undefined,
@@ -82,19 +95,20 @@ const rowToContrato = (r: ContratoRow): Contrato => ({
   signingToken: r.signing_token ?? undefined,
   tokenExpiresAt: r.token_expires_at ?? undefined,
   emailCliente: r.email_cliente ?? undefined,
+  vendedorId: r.vendedor_id ?? null,
 });
 
 type NegocioRow = {
   id: string; cliente_id: string; cliente_nome: string; cliente_cpf: string; vestido_nome: string | null;
   valor_negociado: number; desconto: number; metodo_pagamento: string; status_negociacao: string;
-  data_evento: string; criado_em: string;
+  data_evento: string; criado_em: string; vendedor_id: string | null;
 };
 const rowToNegocio = (r: NegocioRow): Negocio => ({
   id: r.id, clienteId: r.cliente_id, clienteNome: r.cliente_nome, clienteCpf: r.cliente_cpf,
   vestidoNome: r.vestido_nome ?? undefined, valorNegociado: Number(r.valor_negociado),
   desconto: Number(r.desconto), metodoPagamento: r.metodo_pagamento,
   statusNegociacao: r.status_negociacao as StatusNegociacao,
-  dataEvento: r.data_evento, criadoEm: r.criado_em,
+  dataEvento: r.data_evento, criadoEm: r.criado_em, vendedorId: r.vendedor_id ?? null,
 });
 
 export function useLeads(range?: DateRange) {
@@ -131,10 +145,13 @@ export function useLeads(range?: DateRange) {
 
   // === LEADS / CRM ===
   const addLead = useCallback(async (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => {
+    const userId = await currentUserId();
     const insertRow = {
       nome: lead.nome,
       ...leadPatchToRow(lead as Partial<Lead>),
       status_funil: "novo_lead",
+      criado_por: lead.criadoPor ?? userId,
+      atendido_por: lead.atendidoPor ?? userId,
     } as { nome: string } & Record<string, unknown>;
     const { data, error } = await supabase.from("leads").insert(insertRow as never).select().single();
     if (error || !data) return null;
@@ -214,10 +231,12 @@ export function useLeads(range?: DateRange) {
     const existing = negocios.find((n) => n.clienteId === leadId && n.statusNegociacao !== "cancelado");
     if (existing) return existing;
 
+    const vendedorId = await currentUserId();
     const insertRow = {
       cliente_id: lead.id, cliente_nome: lead.nome, cliente_cpf: lead.cpf,
       vestido_nome: vestidoNome || null, valor_negociado: 0, desconto: 0,
       metodo_pagamento: "", status_negociacao: "aberto", data_evento: lead.dataEvento,
+      vendedor_id: vendedorId,
     };
     const { data, error } = await supabase.from("negocios").insert(insertRow).select().single();
     if (error || !data) return;
@@ -257,10 +276,12 @@ export function useLeads(range?: DateRange) {
     const existing = contratos.find((c) => c.leadId === lead.id && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
     const numero = await gerarNumeroContrato();
+    const vendedorId = await currentUserId();
     const insertRow = {
       numero, lead_id: lead.id, nome_cliente: lead.nome, cpf_cliente: lead.cpf,
       data_evento: lead.dataEvento, valor_total: valorTotal, status_assinatura: "pendente",
       termos_texto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${lead.nome}\nCPF: ${lead.cpf}\nEvento: ${lead.tipoEvento}\nData do Evento: ${lead.dataEvento}\nValor Total: R$ ${valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\nTermos e condições de uso do vestido...`,
+      vendedor_id: vendedorId,
     };
     const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
     if (error || !data) return null;
@@ -280,11 +301,13 @@ export function useLeads(range?: DateRange) {
     }
     const valorFinal = negocio.valorNegociado - negocio.desconto;
     const numero = await gerarNumeroContrato();
+    const vendedorId = negocio.vendedorId ?? (await currentUserId());
     const insertRow = {
       numero, lead_id: negocio.clienteId, negocio_id: negocio.id,
       nome_cliente: negocio.clienteNome, cpf_cliente: negocio.clienteCpf,
       data_evento: negocio.dataEvento, valor_total: valorFinal, status_assinatura: "pendente",
       termos_texto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${negocio.clienteNome}\nCPF: ${negocio.clienteCpf}\nVestido: ${negocio.vestidoNome || "—"}\nData do Evento: ${negocio.dataEvento}\nValor: R$ ${valorFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nDesconto: R$ ${negocio.desconto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nPagamento: ${negocio.metodoPagamento}\n\nTermos e condições de uso do vestido...`,
+      vendedor_id: vendedorId,
     };
     const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
     if (error || !data) return null;

@@ -23,9 +23,12 @@ const RedefinirSenha = () => {
       }
     });
 
-    // Also check URL hash for recovery type
+    // Also check URL hash for recovery type.
+    // "invite" is included because o convite de funcionário (inviteUserByEmail)
+    // usa o mesmo formulário de definir senha, mas não dispara o evento
+    // PASSWORD_RECOVERY — só o hash identifica esse caso.
     const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
+    if (hash.includes("type=recovery") || hash.includes("type=invite")) {
       setIsRecovery(true);
     }
 

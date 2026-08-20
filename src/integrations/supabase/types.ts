@@ -183,6 +183,7 @@ export type Database = {
           updated_at: string
           user_agent_assinatura: string | null
           valor_total: number
+          vendedor_id: string | null
         }
         Insert: {
           assinatura_base64?: string | null
@@ -205,6 +206,7 @@ export type Database = {
           updated_at?: string
           user_agent_assinatura?: string | null
           valor_total?: number
+          vendedor_id?: string | null
         }
         Update: {
           assinatura_base64?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           updated_at?: string
           user_agent_assinatura?: string | null
           valor_total?: number
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -306,9 +309,11 @@ export type Database = {
       }
       leads: {
         Row: {
+          atendido_por: string | null
           cpf: string
           created_at: string
           criado_em: string
+          criado_por: string | null
           data_evento: string
           email: string
           endereco: string
@@ -325,9 +330,11 @@ export type Database = {
           vendedor_responsavel: string
         }
         Insert: {
+          atendido_por?: string | null
           cpf?: string
           created_at?: string
           criado_em?: string
+          criado_por?: string | null
           data_evento?: string
           email?: string
           endereco?: string
@@ -344,9 +351,11 @@ export type Database = {
           vendedor_responsavel?: string
         }
         Update: {
+          atendido_por?: string | null
           cpf?: string
           created_at?: string
           criado_em?: string
+          criado_por?: string | null
           data_evento?: string
           email?: string
           endereco?: string
@@ -422,6 +431,7 @@ export type Database = {
           status_negociacao: string
           updated_at: string
           valor_negociado: number
+          vendedor_id: string | null
           vestido_nome: string | null
         }
         Insert: {
@@ -437,6 +447,7 @@ export type Database = {
           status_negociacao?: string
           updated_at?: string
           valor_negociado?: number
+          vendedor_id?: string | null
           vestido_nome?: string | null
         }
         Update: {
@@ -452,6 +463,7 @@ export type Database = {
           status_negociacao?: string
           updated_at?: string
           valor_negociado?: number
+          vendedor_id?: string | null
           vestido_nome?: string | null
         }
         Relationships: [

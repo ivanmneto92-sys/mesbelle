@@ -4,7 +4,7 @@ import {
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
   Megaphone, BarChart3, CalendarDays, Kanban, CalendarClock, UserCircle, ScrollText,
   FileBarChart, Wallet, TrendingUp, ArrowLeftRight, PieChart, UserSearch,
-  Package2, LayoutGrid, Scissors,
+  Package2, LayoutGrid, Scissors, FileSignature,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -34,7 +34,7 @@ type NavEntry = LeafItem | ParentItem;
 
 const isParent = (item: NavEntry): item is ParentItem => "children" in item;
 
-const navGroups: { label: string; items: NavEntry[] }[] = [
+const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
   {
     label: "Operação",
     items: [
@@ -105,8 +105,40 @@ const navGroups: { label: string; items: NavEntry[] }[] = [
   {
     label: "Sistema",
     items: [
+      { title: "Funcionários", url: "/admin/funcionarios", icon: Users, roles: ["admin"] },
       { title: "Perfil", url: "/perfil", icon: UserCircle, roles: ["admin", "vendedor", "socio"] },
       { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ["admin"] },
+    ],
+  },
+];
+
+// Portal isolado do funcionário (role "vendedor") — conjunto de itens
+// totalmente separado do menu admin, sem acesso a nenhuma rota de gestão.
+const navGroupsFuncionario: { label: string; items: NavEntry[] }[] = [
+  {
+    label: "Minha Área",
+    items: [
+      { title: "Meu Painel", url: "/meu-painel", icon: LayoutDashboard, roles: ["vendedor"] },
+    ],
+  },
+  {
+    label: "Atendimento",
+    items: [
+      { title: "Meus Leads", url: "/meus-leads", icon: Users, roles: ["vendedor"] },
+      { title: "Agendamento", url: "/meu-agendamento", icon: CalendarClock, roles: ["vendedor"] },
+      { title: "Contratos", url: "/meu-contrato", icon: FileSignature, roles: ["vendedor"] },
+    ],
+  },
+  {
+    label: "Financeiro",
+    items: [
+      { title: "Minhas Métricas", url: "/minhas-metricas", icon: BarChart3, roles: ["vendedor"] },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { title: "Perfil", url: "/perfil", icon: UserCircle, roles: ["vendedor"] },
     ],
   },
 ];
@@ -121,6 +153,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { temPermissao } = usePermissoes();
+
+  const navGroups = user?.role === "vendedor" ? navGroupsFuncionario : navGroupsAdmin;
 
   const canSeeLeaf = (item: LeafItem) => {
     if (!user) return false;

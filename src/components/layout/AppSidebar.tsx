@@ -39,15 +39,6 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
     label: "Operação",
     items: [
       { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "vendedor", "socio"] },
-      {
-        title: "Marketing",
-        icon: Megaphone,
-        roles: ["admin", "vendedor"],
-        children: [
-          { title: "Leads", url: "/marketing/leads", icon: Users, roles: ["admin", "vendedor"] },
-          { title: "Meta Ads", url: "/marketing/meta-ads", icon: BarChart3, roles: ["admin"] },
-        ],
-      },
     ],
   },
   {
@@ -64,6 +55,15 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
           { title: "Calendário", url: "/comercial/calendario", icon: CalendarDays, roles: ["admin", "vendedor"] },
           { title: "Contratos", url: "/comercial/contratos", icon: ScrollText, roles: ["admin", "vendedor"] },
           { title: "Kanban", url: "/comercial/kanban", icon: Kanban, roles: ["admin", "vendedor"] },
+        ],
+      },
+      {
+        title: "Marketing",
+        icon: Megaphone,
+        roles: ["admin", "vendedor"],
+        children: [
+          { title: "Leads", url: "/marketing/leads", icon: Users, roles: ["admin", "vendedor"] },
+          { title: "Meta Ads", url: "/marketing/meta-ads", icon: BarChart3, roles: ["admin"] },
         ],
       },
     ],
@@ -85,7 +85,7 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
     ],
   },
   {
-    label: "Gestão",
+    label: "Financeiro",
     items: [
       {
         title: "Financeiro",

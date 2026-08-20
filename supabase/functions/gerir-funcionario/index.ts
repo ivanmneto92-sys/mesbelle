@@ -47,11 +47,34 @@ Deno.serve(async (req) => {
     } else if (action === "reenviar_convite") {
       const { data: userData, error: getErr } = await adminClient.auth.admin.getUserById(userId);
       if (getErr || !userData?.user?.email) return json({ error: getErr?.message ?? "Usuário não encontrado" }, 400);
-      const siteUrl = Deno.env.get("SITE_URL") ?? "https://mesbelle.vercel.app";
-      const { error } = await adminClient.auth.admin.inviteUserByEmail(userData.user.email, {
-        redirectTo: `${siteUrl}/redefinir-senha`,
-      });
-      if (error) return json({ error: error.message }, 400);
+      const siteUrl = Deno.env.get("SITE_URL");
+      if (!siteUrl) return json({ error: "SITE_URL não configurado nos secrets da Edge Function" }, 500);
+
+      const targetUser = userData.user;
+      const isConfirmed = !!targetUser.confirmed_at;
+      if (!isConfirmed) {
+        // Usuário ainda não aceitou o convite original — reenviar convite.
+        const { error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(targetUser.email!, {
+          redirectTo: `${siteUrl}/redefinir-senha`,
+        });
+        if (inviteErr) {
+          // inviteUserByEmail falha para e-mails já existentes no sistema (comum
+          // ao reenviar) — usa generateLink como fallback, que não tem essa restrição.
+          const { error: linkErr } = await adminClient.auth.admin.generateLink({
+            type: "magiclink",
+            email: targetUser.email!,
+            options: { redirectTo: `${siteUrl}/redefinir-senha` },
+          });
+          if (linkErr) return json({ error: linkErr.message }, 400);
+        }
+      } else {
+        // Usuário já confirmou — envia link de redefinição de senha no lugar,
+        // permitindo acesso mesmo sem lembrar a senha original.
+        const { error: resetErr } = await adminClient.auth.resetPasswordForEmail(targetUser.email!, {
+          redirectTo: `${siteUrl}/redefinir-senha`,
+        });
+        if (resetErr) return json({ error: resetErr.message }, 400);
+      }
     } else {
       return json({ error: "Ação inválida" }, 400);
     }

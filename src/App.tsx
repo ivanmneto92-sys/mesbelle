@@ -52,7 +52,7 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/comercial/calendario": ["admin"],
   "/comercial/contratos": ["admin"],
   "/comercial/kanban": ["admin"],
-  "/operacional/acervo": ["admin"],
+  "/operacional/acervo": ["admin", "vendedor"],
   "/operacional/producao": ["admin"],
   "/operacional/logistica": ["admin"],
   "/operacional/relatorio": ["admin", "socio"],
@@ -102,9 +102,13 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: 
 
   // Isolamento adicional: um vendedor nunca deve renderizar rotas de admin
   // (mesmo que ROUTE_ROLES não cubra o path) e vice-versa — o portal do
-  // funcionário é um ambiente totalmente separado.
+  // funcionário é um ambiente totalmente separado. Rotas que ROUTE_ROLES já
+  // libera explicitamente para vendedor (ex: /perfil, /operacional/acervo)
+  // são a exceção — o portal do funcionário pode incluir páginas do admin
+  // reaproveitadas, não só as rotas exclusivas em ROTAS_FUNCIONARIO.
   const emRotaFuncionario = ROTAS_FUNCIONARIO.some((r) => location.pathname.startsWith(r));
-  if (user.role === "vendedor" && location.pathname !== "/perfil" && !emRotaFuncionario) {
+  const rotaCompartilhadaComVendedor = path ? (ROUTE_ROLES[path]?.includes("vendedor") ?? false) : false;
+  if (user.role === "vendedor" && !rotaCompartilhadaComVendedor && !emRotaFuncionario) {
     return <Navigate to="/meu-painel" replace />;
   }
   if (user.role !== "vendedor" && emRotaFuncionario) {

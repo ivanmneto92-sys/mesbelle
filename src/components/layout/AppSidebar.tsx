@@ -137,6 +137,12 @@ const navGroupsFuncionario: { label: string; items: NavEntry[] }[] = [
     ],
   },
   {
+    label: "Acervo",
+    items: [
+      { title: "Acervo", url: "/operacional/acervo", icon: LayoutGrid, roles: ["vendedor"] },
+    ],
+  },
+  {
     label: "Financeiro",
     items: [
       { title: "Minhas Métricas", url: "/minhas-metricas", icon: BarChart3, roles: ["vendedor"] },

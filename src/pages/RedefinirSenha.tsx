@@ -16,21 +16,30 @@ const RedefinirSenha = () => {
   const [isRecovery, setIsRecovery] = useState(false);
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event
+    // Um link de convite (inviteUserByEmail) ou de recuperação dispara eventos
+    // diferentes: "PASSWORD_RECOVERY" só ocorre para type=recovery. Um convite
+    // (type=invite) faz o Supabase autenticar o usuário normalmente e disparar
+    // "SIGNED_IN" em vez disso — por isso os dois eventos habilitam o formulário.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
         setIsRecovery(true);
       }
     });
 
-    // Also check URL hash for recovery type.
-    // "invite" is included because o convite de funcionário (inviteUserByEmail)
-    // usa o mesmo formulário de definir senha, mas não dispara o evento
-    // PASSWORD_RECOVERY — só o hash identifica esse caso.
+    // Fallback 1: checar o hash da URL diretamente — só funciona se este efeito
+    // rodar antes do supabase-js processar e limpar o hash da URL.
     const hash = window.location.hash;
     if (hash.includes("type=recovery") || hash.includes("type=invite")) {
       setIsRecovery(true);
     }
+
+    // Fallback 2: se o hash já foi consumido antes deste efeito rodar (ou a
+    // página foi recarregada depois), mas já existe uma sessão válida, ainda
+    // assim mostramos o formulário — só chegamos nesta página via um link de
+    // convite/recuperação.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setIsRecovery(true);
+    });
 
     return () => subscription.unsubscribe();
   }, []);

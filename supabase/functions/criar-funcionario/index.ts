@@ -40,7 +40,9 @@ Deno.serve(async (req) => {
     const jaExiste = existentes?.users.find((u) => u.email === email);
     if (jaExiste) return json({ error: "Já existe um usuário com este e-mail" }, 409);
 
-    const siteUrl = Deno.env.get("SITE_URL") ?? "https://mesbelle.vercel.app";
+    const siteUrl = Deno.env.get("SITE_URL");
+    if (!siteUrl) return json({ error: "SITE_URL não configurado nos secrets da Edge Function" }, 500);
+
     const { data: invited, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
       data: { nome },
       redirectTo: `${siteUrl}/redefinir-senha`,
@@ -54,7 +56,20 @@ Deno.serve(async (req) => {
     });
     if (roleErr) return json({ error: roleErr.message }, 400);
 
-    return json({ success: true, userId: invited.user.id, message: "Convite enviado para " + email });
+    return json({
+      success: true,
+      userId: invited.user.id,
+      message: "Convite enviado para " + email,
+      funcionario: {
+        id: invited.user.id,
+        email: invited.user.email,
+        nome,
+        criadoEm: invited.user.created_at,
+        ultimoLogin: null,
+        confirmado: false,
+        bloqueado: false,
+      },
+    });
   } catch (err) {
     return json({ error: err instanceof Error ? err.message : "Erro interno" }, 500);
   }

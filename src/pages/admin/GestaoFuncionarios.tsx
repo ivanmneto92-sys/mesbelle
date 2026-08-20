@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Users, Info } from "lucide-react";
+import { Plus, Users, Info, Loader2 } from "lucide-react";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 
 const GestaoFuncionarios = () => {
@@ -18,8 +18,11 @@ const GestaoFuncionarios = () => {
   const [novoEmail, setNovoEmail] = useState("");
 
   const handleCriar = () => {
-    criar.mutate({ nome: novoNome, email: novoEmail });
+    if (!novoNome.trim() || !novoEmail.trim()) return;
+    // Fecha o dialog imediatamente — a atualização otimista do hook já
+    // insere o novo funcionário na tabela sem esperar a resposta da API.
     setNovoOpen(false);
+    criar.mutate({ nome: novoNome.trim(), email: novoEmail.trim() });
     setNovoNome("");
     setNovoEmail("");
   };
@@ -131,8 +134,14 @@ const GestaoFuncionarios = () => {
               <Label>E-mail *</Label>
               <Input type="email" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} placeholder="maria@mesbelle.com" />
             </div>
-            <Button onClick={handleCriar} disabled={!novoNome || !novoEmail || criar.isPending}>
-              {criar.isPending ? "Enviando convite..." : "Enviar convite"}
+            <Button onClick={handleCriar} disabled={!novoNome || !novoEmail || criar.isPending} className="w-full">
+              {criar.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando convite...
+                </>
+              ) : (
+                "Enviar convite"
+              )}
             </Button>
           </div>
         </DialogContent>

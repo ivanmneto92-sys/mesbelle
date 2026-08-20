@@ -1,7 +1,7 @@
 import { writeFileSync } from "fs";
 import { resolve } from "path";
 
-const BASE_URL = "https://mesbelle.lovable.app";
+const BASE_URL = "https://crm.mesbelle.com.br";
 
 interface SitemapEntry {
   path: string;

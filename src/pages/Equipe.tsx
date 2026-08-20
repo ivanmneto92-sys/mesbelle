@@ -367,7 +367,7 @@ const Equipe = () => {
           <div className="mt-4 space-y-4">
             <div className="mx-auto w-48 h-48 bg-muted rounded-xl flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent("https://mesbelle.lovable.app/avaliacao")}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent("https://crm.mesbelle.com.br/avaliacao")}`}
                 alt="QR Code Avaliação"
                 className="w-44 h-44 rounded-lg"
               />
@@ -377,7 +377,7 @@ const Equipe = () => {
               Ela poderá avaliar a vendedora de 1 a 5 estrelas.
             </p>
             <Button variant="outline" className="w-full" onClick={() => {
-              window.open(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent("https://mesbelle.lovable.app/avaliacao")}`, "_blank");
+              window.open(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent("https://crm.mesbelle.com.br/avaliacao")}`, "_blank");
             }}>
               Baixar QR Code (alta resolução)
             </Button>

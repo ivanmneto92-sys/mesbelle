@@ -6,7 +6,7 @@ interface SEOProps {
   path?: string;
 }
 
-const BASE_URL = "https://mesbelle.lovable.app";
+const BASE_URL = "https://crm.mesbelle.com.br";
 
 export function SEO({ title, description, path }: SEOProps) {
   const url = path ? `${BASE_URL}${path}` : undefined;

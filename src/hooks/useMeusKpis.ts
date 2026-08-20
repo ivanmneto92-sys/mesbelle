@@ -10,6 +10,11 @@ export interface MeusKpis {
   negociosFechados: number;
   faturamentoGerado: number;
   projecaoGanho: number; // placeholder — regra de comissão a definir
+  // ── Métricas comerciais em destaque no painel ──────────────────────
+  totalAgendamentos: number; // agendamentos do funcionário no período
+  totalFechamentos: number; // negócios aprovados
+  previaComissao: number; // placeholder — regra de comissão a definir
+  totalFaturamento: number; // soma de valorNegociado - desconto dos negócios aprovados
 }
 
 export function useMeusKpis(range: DateRange): MeusKpis {
@@ -49,5 +54,9 @@ export function useMeusKpis(range: DateRange): MeusKpis {
     negociosFechados: negociosFechados.length,
     faturamentoGerado,
     projecaoGanho: 0,
+    totalAgendamentos: agendamentos.length,
+    totalFechamentos: negociosFechados.length,
+    previaComissao: 0,
+    totalFaturamento: faturamentoGerado,
   };
 }

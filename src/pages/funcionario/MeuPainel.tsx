@@ -60,6 +60,29 @@ const MeuPainel = () => {
           <DateRangePicker value={range} onChange={setRange} />
         </div>
 
+        <div className="rounded-xl border bg-muted/30 p-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Métricas Comerciais · {range.from} – {range.to}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <PainelKpiCard label="Total de Agendamentos" value={kpis.totalAgendamentos} icon={CalendarCheck2} color="blue" />
+            <PainelKpiCard label="Total de Fechamentos" value={kpis.totalFechamentos} icon={CheckCircle} color="green" />
+            <PainelKpiCard
+              label="Total de Faturamento"
+              value={formatBRL(kpis.totalFaturamento)}
+              icon={Wallet}
+              color={kpis.totalFaturamento > 0 ? "green" : "default"}
+            />
+            <PainelKpiCard
+              label="Prévia de Comissão"
+              value={kpis.previaComissao > 0 ? formatBRL(kpis.previaComissao) : "—"}
+              sub="Regra a configurar"
+              icon={Gift}
+              color="default"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <PainelKpiCard label="Meus Leads" value={kpis.totalMeusLeads} icon={Users} color="default" />
           <PainelKpiCard label="Agendamentos" value={kpis.meusAgendamentos} icon={CalendarCheck2} color="blue" />

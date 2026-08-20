@@ -196,8 +196,9 @@ export function AppSidebar() {
   });
 
   const handleLogout = () => {
+    const destino = user?.role === "vendedor" ? "/portal" : "/login";
     logout();
-    navigate("/login");
+    navigate(destino);
   };
 
   return (

@@ -12,7 +12,7 @@ export interface Funcionario {
   bloqueado: boolean;
 }
 
-export type FuncionarioAction = "desativar" | "reativar" | "reenviar_convite";
+export type FuncionarioAction = "desativar" | "reativar" | "reenviar_convite" | "excluir";
 
 interface CriarFuncionarioResult {
   success: true;
@@ -98,12 +98,16 @@ export function useFuncionarios() {
   const gerir = useMutation({
     mutationFn: ({ userId, action }: { userId: string; action: FuncionarioAction }) =>
       invocarFuncao("gerir-funcionario", { userId, action }),
-    onSuccess: (_data, { action }) => {
+    onSuccess: (_data, { action, userId }) => {
+      if (action === "excluir") {
+        qc.setQueryData<Funcionario[]>(["funcionarios"], (old) => (old ?? []).filter((f) => f.id !== userId));
+      }
       qc.invalidateQueries({ queryKey: ["funcionarios"] });
       const msgs: Record<FuncionarioAction, string> = {
         desativar: "Funcionário desativado.",
         reativar: "Funcionário reativado.",
         reenviar_convite: "Convite reenviado com sucesso!",
+        excluir: "Funcionário excluído permanentemente.",
       };
       toast.success(msgs[action]);
     },

@@ -8,14 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Users, Info, Loader2 } from "lucide-react";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Users, Info, Loader2, Trash2 } from "lucide-react";
+import { useFuncionarios, type Funcionario } from "@/hooks/useFuncionarios";
 
 const GestaoFuncionarios = () => {
   const { funcionarios, isLoading, criar, gerir } = useFuncionarios();
   const [novoOpen, setNovoOpen] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [novoEmail, setNovoEmail] = useState("");
+  const [excluirAlvo, setExcluirAlvo] = useState<Funcionario | null>(null);
 
   const handleCriar = () => {
     if (!novoNome.trim() || !novoEmail.trim()) return;
@@ -86,6 +91,12 @@ const GestaoFuncionarios = () => {
                             Reativar
                           </Button>
                         )}
+                        <Button
+                          size="sm" variant="ghost" className="text-xs h-7 w-7 p-0 text-destructive hover:bg-destructive hover:text-white"
+                          onClick={() => setExcluirAlvo(f)} aria-label="Excluir funcionário"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -109,9 +120,10 @@ const GestaoFuncionarios = () => {
             </p>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
               <li>Ao adicionar um funcionário, ele recebe um e-mail com um link para definir a própria senha.</li>
-              <li>Após definir a senha, ele acessa o portal de funcionários — ambiente completamente separado do admin.</li>
+              <li>O funcionário sempre entra por <strong>crm.mesbelle.com.br/portal</strong> — um link separado do login do admin (crm.mesbelle.com.br/login). Cada um só consegue entrar pelo link certo.</li>
               <li>Funcionários veem apenas os próprios leads, agendamentos e métricas.</li>
               <li>Você pode desativar o acesso a qualquer momento; o funcionário não consegue mais entrar.</li>
+              <li>Excluir remove o acesso permanentemente; os leads/negócios já feitos por ele continuam no sistema, sem vendedor responsável.</li>
             </ul>
           </CardContent>
         </Card>
@@ -146,6 +158,31 @@ const GestaoFuncionarios = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!excluirAlvo} onOpenChange={(open) => !open && setExcluirAlvo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir funcionário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso remove permanentemente o acesso de <strong>{excluirAlvo?.nome}</strong> ({excluirAlvo?.email}) ao sistema.
+              Leads, agendamentos e contratos que já eram dele não são apagados — ficam sem vendedor responsável e
+              passam a aparecer para toda a equipe. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (excluirAlvo) gerir.mutate({ userId: excluirAlvo.id, action: "excluir" });
+                setExcluirAlvo(null);
+              }}
+            >
+              Excluir permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

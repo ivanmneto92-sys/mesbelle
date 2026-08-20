@@ -7,6 +7,7 @@ import { AuthProvider, useAuth, UserRole } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Login from "./pages/Login";
+import PortalLogin from "./pages/PortalLogin";
 import RedefinirSenha from "./pages/RedefinirSenha";
 import Dashboard from "./pages/Dashboard";
 import CRM from "./pages/CRM";
@@ -90,7 +91,10 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: 
     );
   }
 
-  if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
+  if (!isAuthenticated || !user) {
+    const isRotaFuncionario = ROTAS_FUNCIONARIO.some((r) => location.pathname.startsWith(r));
+    return <Navigate to={isRotaFuncionario ? "/portal" : "/login"} replace />;
+  }
 
   if (path && ROUTE_ROLES[path] && !ROUTE_ROLES[path].includes(user.role)) {
     return <Navigate to="/inicio" replace />;
@@ -130,6 +134,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={loading ? null : (isAuthenticated ? <Navigate to="/inicio" replace /> : <Login />)} />
+      <Route path="/portal" element={loading ? null : (isAuthenticated ? <Navigate to="/inicio" replace /> : <PortalLogin />)} />
       <Route path="/redefinir-senha" element={<RedefinirSenha />} />
       <Route path="/assinar/:token" element={<AssinaturaPublica />} />
       <Route path="/avaliacao" element={<AvaliacaoPublica />} />

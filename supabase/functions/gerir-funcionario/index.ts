@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { enviarEmail, templateBase, botaoCTA } from "../_shared/resend.ts";
 
 type Action = "desativar" | "reativar" | "reenviar_convite" | "excluir";
 
@@ -59,30 +60,55 @@ Deno.serve(async (req) => {
       if (!siteUrl) return json({ error: "SITE_URL não configurado nos secrets da Edge Function" }, 500);
 
       const targetUser = userData.user;
+      const email = targetUser.email!;
+      const nome = String(targetUser.user_metadata?.nome ?? email.split("@")[0]);
+      const primeiroNome = nome.split(" ")[0];
       const isConfirmed = !!targetUser.confirmed_at;
-      if (!isConfirmed) {
-        // Usuário ainda não aceitou o convite original — reenviar convite.
-        const { error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(targetUser.email!, {
-          redirectTo: `${siteUrl}/redefinir-senha`,
-        });
-        if (inviteErr) {
-          // inviteUserByEmail falha para e-mails já existentes no sistema (comum
-          // ao reenviar) — usa generateLink como fallback, que não tem essa restrição.
-          const { error: linkErr } = await adminClient.auth.admin.generateLink({
-            type: "magiclink",
-            email: targetUser.email!,
-            options: { redirectTo: `${siteUrl}/redefinir-senha` },
-          });
-          if (linkErr) return json({ error: linkErr.message }, 400);
-        }
-      } else {
-        // Usuário já confirmou — envia link de redefinição de senha no lugar,
-        // permitindo acesso mesmo sem lembrar a senha original.
-        const { error: resetErr } = await adminClient.auth.resetPasswordForEmail(targetUser.email!, {
-          redirectTo: `${siteUrl}/redefinir-senha`,
-        });
-        if (resetErr) return json({ error: resetErr.message }, 400);
+
+      // generateLink nunca envia e-mail por conta própria — o envio abaixo é
+      // sempre feito via Resend, nunca pelo mailer nativo do Supabase.
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: isConfirmed ? "recovery" : "invite",
+        email,
+        options: { redirectTo: `${siteUrl}/redefinir-senha` },
+      });
+      if (linkErr || !linkData?.properties?.action_link) {
+        return json({ error: linkErr?.message ?? "Falha ao gerar link" }, 400);
       }
+
+      const html = isConfirmed
+        ? templateBase(`
+            <h2 style="color:#4a1535;font-size:22px;margin:0 0 16px;">
+              Olá, ${primeiroNome}!
+            </h2>
+            <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px;">
+              Recebemos uma solicitação para redefinir a sua senha de acesso à MesBelle.
+              Clique no botão abaixo para criar uma nova senha:
+            </p>
+            ${botaoCTA("Redefinir senha →", linkData.properties.action_link)}
+            <p style="color:#9ca3af;font-size:13px;margin:24px 0 0;line-height:1.6;">
+              Este link expira em <strong>1 hora</strong>. Se você não solicitou isso, pode ignorar este e-mail com segurança.
+            </p>
+          `)
+        : templateBase(`
+            <h2 style="color:#4a1535;font-size:22px;margin:0 0 16px;">
+              Olá, ${primeiroNome}! 👗
+            </h2>
+            <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px;">
+              Este é um lembrete do seu convite para a equipe da <strong>MesBelle Atelier</strong>.
+              Clique no botão abaixo para criar sua senha e acessar:
+            </p>
+            ${botaoCTA("Aceitar convite e criar senha →", linkData.properties.action_link)}
+            <p style="color:#9ca3af;font-size:13px;margin:24px 0 0;line-height:1.6;">
+              Este link expira em <strong>24 horas</strong>. Se você não esperava este e-mail, pode ignorá-lo com segurança.
+            </p>
+          `);
+
+      await enviarEmail({
+        para: email,
+        assunto: isConfirmed ? "Redefinir sua senha — MesBelle" : `${primeiroNome}, seu convite para a MesBelle`,
+        html,
+      });
     } else {
       return json({ error: "Ação inválida" }, 400);
     }

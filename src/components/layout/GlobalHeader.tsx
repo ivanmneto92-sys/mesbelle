@@ -43,14 +43,14 @@ function useLogisticaAlerts() {
             icon: AlertTriangle,
             text: `${item.vestido_nome} — ${days} dia(s) de atraso`,
             color: "text-destructive",
-            href: "/logistica",
+            href: "/operacional/logistica",
           });
         } else if (item.status_logistica === "para_enviar" && item.data_saida === today) {
           next.push({
             icon: Send,
             text: `${item.vestido_nome} — envio agendado para hoje`,
             color: "text-info",
-            href: "/logistica",
+            href: "/operacional/logistica",
           });
         }
       });

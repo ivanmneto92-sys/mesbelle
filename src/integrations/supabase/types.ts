@@ -717,43 +717,55 @@ export type Database = {
       }
       vestidos: {
         Row: {
+          categoria_peca: string
           comprimento: string
           cor: string
           created_at: string
+          descricao: string | null
           id: string
           imagem_url: string
           is_consignado: boolean
           nome: string
           preco_aluguel: number
           preco_venda: number
+          qtd_total_locacoes: number
+          sku: string | null
           status: string
           tamanho: string
           updated_at: string
         }
         Insert: {
+          categoria_peca?: string
           comprimento?: string
           cor?: string
           created_at?: string
+          descricao?: string | null
           id?: string
           imagem_url?: string
           is_consignado?: boolean
           nome: string
           preco_aluguel?: number
           preco_venda?: number
+          qtd_total_locacoes?: number
+          sku?: string | null
           status?: string
           tamanho?: string
           updated_at?: string
         }
         Update: {
+          categoria_peca?: string
           comprimento?: string
           cor?: string
           created_at?: string
+          descricao?: string | null
           id?: string
           imagem_url?: string
           is_consignado?: boolean
           nome?: string
           preco_aluguel?: number
           preco_venda?: number
+          qtd_total_locacoes?: number
+          sku?: string | null
           status?: string
           tamanho?: string
           updated_at?: string

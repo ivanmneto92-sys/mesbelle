@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Vestido, VestidoStatus, STATUS_LABELS } from "@/types/acervo";
+import { Vestido, VestidoStatus, STATUS_LABELS, CategoriaPeca, CATEGORIA_LABELS } from "@/types/acervo";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { VestidoCard } from "./VestidoCard";
@@ -20,14 +21,17 @@ interface Props {
 export function CatalogoTab({ vestidos, onUpdate, onDelete, onAddReserva, getReservas }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [catFilter, setCatFilter] = useState<CategoriaPeca | "todas">("todas");
   const [selectedVestido, setSelectedVestido] = useState<Vestido | null>(null);
   const [agendaVestido, setAgendaVestido] = useState<Vestido | null>(null);
 
   const filtered = vestidos.filter((v) => {
     const matchSearch = v.nome.toLowerCase().includes(search.toLowerCase()) ||
-      v.cor.toLowerCase().includes(search.toLowerCase());
+      v.cor.toLowerCase().includes(search.toLowerCase()) ||
+      (v.sku?.toLowerCase().includes(search.toLowerCase()) ?? false);
     const matchStatus = statusFilter === "todos" || v.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchCat = catFilter === "todas" || v.categoriaPeca === catFilter;
+    return matchSearch && matchStatus && matchCat;
   });
 
   return (
@@ -36,7 +40,7 @@ export function CatalogoTab({ vestidos, onUpdate, onDelete, onAddReserva, getRes
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar vestido, cor..."
+            placeholder="Buscar por nome, cor ou SKU..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -53,6 +57,17 @@ export function CatalogoTab({ vestidos, onUpdate, onDelete, onAddReserva, getRes
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        <Button size="sm" variant={catFilter === "todas" ? "secondary" : "ghost"} onClick={() => setCatFilter("todas")}>
+          Todos
+        </Button>
+        {(Object.keys(CATEGORIA_LABELS) as CategoriaPeca[]).map((c) => (
+          <Button key={c} size="sm" variant={catFilter === c ? "secondary" : "ghost"} onClick={() => setCatFilter(c)}>
+            {CATEGORIA_LABELS[c]}
+          </Button>
+        ))}
       </div>
 
       {filtered.length === 0 ? (

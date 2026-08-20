@@ -35,7 +35,7 @@ const Dashboard = () => {
   const shortcuts = [
     { label: "Novo Lead", icon: UserPlus, to: "/crm", roles: ["admin", "vendedor"], primary: false },
     { label: "Nova Venda", icon: Handshake, to: "/comercial", roles: ["admin", "vendedor"], primary: true },
-    { label: "Logística", icon: Truck, to: "/logistica", roles: ["admin", "vendedor"], primary: false },
+    { label: "Logística", icon: Truck, to: "/operacional/logistica", roles: ["admin", "vendedor"], primary: false },
   ].filter((s) => user && s.roles.includes(user.role));
 
   const fatTrend = kpis.faturamentoOntem > 0

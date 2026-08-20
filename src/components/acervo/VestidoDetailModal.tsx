@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Vestido, VestidoStatus, STATUS_LABELS } from "@/types/acervo";
+import { CategoriaPeca, CATEGORIA_LABELS, Vestido, VestidoStatus, STATUS_LABELS } from "@/types/acervo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 
@@ -17,19 +19,22 @@ interface Props {
 
 export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete }: Props) {
   const [nome, setNome] = useState(vestido.nome);
+  const [categoriaPeca, setCategoriaPeca] = useState<CategoriaPeca>(vestido.categoriaPeca);
   const [cor, setCor] = useState(vestido.cor);
   const [tamanho, setTamanho] = useState(vestido.tamanho);
   const [comprimento, setComprimento] = useState(vestido.comprimento);
   const [precoAluguel, setPrecoAluguel] = useState(String(vestido.precoAluguel));
   const [precoVenda, setPrecoVenda] = useState(String(vestido.precoVenda));
+  const [descricao, setDescricao] = useState(vestido.descricao ?? "");
   const [status, setStatus] = useState<VestidoStatus>(vestido.status);
   const [imagemUrl, setImagemUrl] = useState(vestido.imagemUrl);
 
   const handleSave = () => {
     onUpdate({
-      nome, cor, tamanho, comprimento, status, imagemUrl,
+      nome, categoriaPeca, cor, tamanho, comprimento, status, imagemUrl,
       precoAluguel: Number(precoAluguel) || 0,
       precoVenda: Number(precoVenda) || 0,
+      descricao: descricao || null,
     });
     onClose();
   };
@@ -47,6 +52,12 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-serif">Detalhes do Vestido</DialogTitle>
+          {vestido.sku && (
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="font-mono text-xs">{vestido.sku}</Badge>
+              <span className="text-xs text-muted-foreground">SKU da peça</span>
+            </div>
+          )}
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
@@ -63,6 +74,17 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
             <div className="col-span-2">
               <Label className="text-xs text-muted-foreground">Nome</Label>
               <Input value={nome} onChange={(e) => setNome(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Categoria</Label>
+              <Select value={categoriaPeca} onValueChange={(v) => setCategoriaPeca(v as CategoriaPeca)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(CATEGORIA_LABELS) as CategoriaPeca[]).map((c) => (
+                    <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Cor</Label>
@@ -105,6 +127,11 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
               <Label className="text-xs text-muted-foreground">Preço Venda (R$)</Label>
               <Input type="number" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} className="mt-1" />
             </div>
+          </div>
+
+          <div>
+            <Label className="text-xs text-muted-foreground">Descrição</Label>
+            <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} className="mt-1" />
           </div>
 
           <div className="flex gap-2 pt-2">

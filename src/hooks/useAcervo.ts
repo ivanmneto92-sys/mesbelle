@@ -10,18 +10,21 @@ import type { DateRange } from "@/hooks/useDateRange";
 export const ACERVO_STORAGE_KEYS = ["mesbelle_vestidos", "mesbelle_reservas", "mesbelle_producoes", "mesbelle_etapas"];
 
 type VestidoRow = {
-  id: string; nome: string; cor: string; tamanho: string; comprimento: string;
+  id: string; nome: string; sku: string | null; categoria_peca: string; cor: string; tamanho: string; comprimento: string;
   preco_aluguel: number; preco_venda: number; status: string;
-  is_consignado: boolean; imagem_url: string;
+  is_consignado: boolean; imagem_url: string; descricao: string | null; qtd_total_locacoes: number;
 };
 const rowToVestido = (r: VestidoRow): Vestido => ({
-  id: r.id, nome: r.nome, cor: r.cor, tamanho: r.tamanho, comprimento: r.comprimento,
+  id: r.id, nome: r.nome, sku: r.sku ?? null, categoriaPeca: (r.categoria_peca as Vestido["categoriaPeca"]) ?? "vestido",
+  cor: r.cor, tamanho: r.tamanho, comprimento: r.comprimento,
   precoAluguel: Number(r.preco_aluguel), precoVenda: Number(r.preco_venda),
   status: r.status as VestidoStatus, isConsignado: r.is_consignado, imagemUrl: r.imagem_url,
+  descricao: r.descricao ?? null, qtdTotalLocacoes: Number(r.qtd_total_locacoes ?? 0),
 });
 const vestidoToRow = (v: Partial<Vestido>): Record<string, unknown> => {
   const o: Record<string, unknown> = {};
   if (v.nome !== undefined) o.nome = v.nome;
+  if (v.categoriaPeca !== undefined) o.categoria_peca = v.categoriaPeca;
   if (v.cor !== undefined) o.cor = v.cor;
   if (v.tamanho !== undefined) o.tamanho = v.tamanho;
   if (v.comprimento !== undefined) o.comprimento = v.comprimento;
@@ -30,6 +33,7 @@ const vestidoToRow = (v: Partial<Vestido>): Record<string, unknown> => {
   if (v.status !== undefined) o.status = v.status;
   if (v.isConsignado !== undefined) o.is_consignado = v.isConsignado;
   if (v.imagemUrl !== undefined) o.imagem_url = v.imagemUrl;
+  if (v.descricao !== undefined) o.descricao = v.descricao;
   return o;
 };
 

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Vestido } from "@/types/acervo";
+import { CategoriaPeca, CATEGORIA_LABELS, Vestido } from "@/types/acervo";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { vestidoSchema, firstZodError } from "@/lib/schemas";
@@ -17,11 +18,13 @@ interface Props {
 
 export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
   const [nome, setNome] = useState("");
+  const [categoriaPeca, setCategoriaPeca] = useState<CategoriaPeca>("vestido");
   const [cor, setCor] = useState("");
   const [tamanho, setTamanho] = useState("M");
   const [comprimento, setComprimento] = useState("Longo");
   const [precoAluguel, setPrecoAluguel] = useState("");
   const [precoVenda, setPrecoVenda] = useState("");
+  const [descricao, setDescricao] = useState("");
   const [isConsignado, setIsConsignado] = useState(false);
   const [imagemUrl, setImagemUrl] = useState("");
 
@@ -54,14 +57,18 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
       return;
     }
     onSave({
-      ...(parsed.data as Omit<Vestido, "id" | "status" | "imagemUrl">),
+      ...(parsed.data as Omit<Vestido, "id" | "status" | "imagemUrl" | "sku" | "categoriaPeca" | "descricao" | "qtdTotalLocacoes">),
       status: "disponivel",
       imagemUrl: parsed.data.imagemUrl || "/placeholder.svg",
+      sku: null,
+      categoriaPeca,
+      descricao: descricao || null,
+      qtdTotalLocacoes: 0,
     });
     toast.success("Vestido cadastrado");
     // reset
-    setNome(""); setCor(""); setTamanho("M"); setComprimento("Longo");
-    setPrecoAluguel(""); setPrecoVenda(""); setIsConsignado(false); setImagemUrl("");
+    setNome(""); setCategoriaPeca("vestido"); setCor(""); setTamanho("M"); setComprimento("Longo");
+    setPrecoAluguel(""); setPrecoVenda(""); setDescricao(""); setIsConsignado(false); setImagemUrl("");
     onClose();
   };
 
@@ -76,6 +83,21 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
           <div>
             <Label>Nome do Vestido</Label>
             <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Sereia Bordado Pedraria" className="mt-1" />
+          </div>
+
+          <div>
+            <Label>Categoria</Label>
+            <Select value={categoriaPeca} onValueChange={(v) => setCategoriaPeca(v as CategoriaPeca)}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(Object.keys(CATEGORIA_LABELS) as CategoriaPeca[]).map((c) => (
+                  <SelectItem key={c} value={c}>{CATEGORIA_LABELS[c]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              O SKU será gerado automaticamente ao salvar (ex: <span className="font-mono">MB-VES-0042</span>)
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -123,6 +145,11 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
                 <img src={imagemUrl} alt="Preview" className="w-full h-full object-cover" />
               </div>
             )}
+          </div>
+
+          <div>
+            <Label>Descrição</Label>
+            <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} placeholder="Detalhes adicionais da peça..." className="mt-1" />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-3">

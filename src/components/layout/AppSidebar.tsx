@@ -98,16 +98,23 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
           { title: "Histórico do Cliente", url: "/financeiro/clientes", icon: UserSearch, roles: ["admin", "vendedor", "socio"] },
         ],
       },
-      { title: "Time & Performance", url: "/equipe", icon: UserCog, roles: ["admin"] },
-      { title: "Portal de Sócios", url: "/socios", icon: Briefcase, roles: ["admin", "socio"] },
     ],
   },
   {
     label: "Sistema",
     items: [
-      { title: "Funcionários", url: "/admin/funcionarios", icon: Users, roles: ["admin"] },
       { title: "Perfil", url: "/perfil", icon: UserCircle, roles: ["admin", "vendedor", "socio"] },
-      { title: "Configurações", url: "/configuracoes", icon: Settings, roles: ["admin"] },
+      {
+        title: "Configurações",
+        icon: Settings,
+        roles: ["admin"],
+        children: [
+          { title: "Geral", url: "/configuracoes", icon: Settings, roles: ["admin"] },
+          { title: "Time & Performance", url: "/equipe", icon: UserCog, roles: ["admin"] },
+          { title: "Portal de Sócios", url: "/socios", icon: Briefcase, roles: ["admin", "socio"] },
+          { title: "Funcionários", url: "/admin/funcionarios", icon: Users, roles: ["admin"] },
+        ],
+      },
     ],
   },
 ];

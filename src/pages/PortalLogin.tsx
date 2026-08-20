@@ -20,9 +20,9 @@ const PortalLogin = () => {
     setIsLoading(true);
 
     if (mode === "forgot") {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
-      });
+      // Roteado por uma Edge Function (envia via Resend) em vez de
+      // supabase.auth.resetPasswordForEmail, que usaria o mailer nativo do Supabase.
+      const { error } = await supabase.functions.invoke("solicitar-redefinicao-senha", { body: { email } });
       if (error) {
         toast.error("Erro ao enviar e-mail de recuperação");
       } else {

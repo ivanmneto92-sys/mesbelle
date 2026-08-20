@@ -51,6 +51,8 @@ export interface Lead {
   provaData?: string;
   provaHora?: string;
   enviadoComercial?: boolean;
+  criadoPor?: string | null;
+  atendidoPor?: string | null;
 }
 
 export interface MedidasCliente {
@@ -78,6 +80,7 @@ export interface Negocio {
   statusNegociacao: StatusNegociacao;
   dataEvento: string;
   criadoEm: string;
+  vendedorId?: string | null;
 }
 
 // === Contrato ===
@@ -102,6 +105,7 @@ export interface Contrato {
   signingToken?: string;
   tokenExpiresAt?: string;
   emailCliente?: string;
+  vendedorId?: string | null;
 }
 
 // Legacy compat — kept for old kanban (removed)

@@ -82,10 +82,18 @@ export function GlobalHeader() {
 
   const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
 
-  const quickActions = [
-    { label: "Lead", icon: UserPlus, to: "/crm", roles: ["admin", "vendedor"] as const },
-    { label: "Venda", icon: Handshake, to: "/comercial", roles: ["admin", "vendedor"] as const },
-  ].filter((a) => user && (a.roles as readonly string[]).includes(user.role));
+  const quickActions =
+    user?.role === "vendedor"
+      ? [
+          { label: "Lead", icon: UserPlus, to: "/meus-leads" },
+          { label: "Contrato", icon: Handshake, to: "/meu-contrato" },
+        ]
+      : user?.role === "admin"
+      ? [
+          { label: "Lead", icon: UserPlus, to: "/crm" },
+          { label: "Venda", icon: Handshake, to: "/comercial" },
+        ]
+      : [];
 
   return (
     <>

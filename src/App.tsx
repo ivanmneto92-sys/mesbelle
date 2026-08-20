@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +30,12 @@ import Configuracoes from "./pages/Configuracoes";
 import Perfil from "./pages/Perfil";
 import MarketingLeads from "./pages/marketing/MarketingLeads";
 import MetaAds from "./pages/marketing/MetaAds";
+import GestaoFuncionarios from "./pages/admin/GestaoFuncionarios";
+import MeuPainel from "./pages/funcionario/MeuPainel";
+import MeusLeads from "./pages/funcionario/MeusLeads";
+import MeuAgendamento from "./pages/funcionario/MeuAgendamento";
+import MeuContrato from "./pages/funcionario/MeuContrato";
+import MinhasMetricas from "./pages/funcionario/MinhasMetricas";
 import NotFound from "./pages/NotFound";
 import AssinaturaPublica from "./pages/AssinaturaPublica";
 import AvaliacaoPublica from "./pages/AvaliacaoPublica";
@@ -37,32 +43,44 @@ import AvaliacaoPublica from "./pages/AvaliacaoPublica";
 const queryClient = new QueryClient();
 
 const ROUTE_ROLES: Record<string, UserRole[]> = {
-  "/": ["admin", "vendedor", "socio"],
-  "/crm": ["admin", "vendedor"],
-  "/comercial/relatorio": ["admin", "vendedor", "socio"],
-  "/comercial/relatorio-agendamento": ["admin", "vendedor"],
-  "/comercial/agendamento": ["admin", "vendedor"],
-  "/comercial/calendario": ["admin", "vendedor"],
-  "/comercial/contratos": ["admin", "vendedor"],
-  "/comercial/kanban": ["admin", "vendedor"],
-  "/operacional/acervo": ["admin", "vendedor"],
+  "/": ["admin", "socio"],
+  "/crm": ["admin"],
+  "/comercial/relatorio": ["admin", "socio"],
+  "/comercial/relatorio-agendamento": ["admin"],
+  "/comercial/agendamento": ["admin"],
+  "/comercial/calendario": ["admin"],
+  "/comercial/contratos": ["admin"],
+  "/comercial/kanban": ["admin"],
+  "/operacional/acervo": ["admin"],
   "/operacional/producao": ["admin"],
-  "/operacional/logistica": ["admin", "vendedor"],
+  "/operacional/logistica": ["admin"],
   "/operacional/relatorio": ["admin", "socio"],
   "/financeiro/dre": ["admin", "socio"],
   "/financeiro/fluxo": ["admin"],
   "/financeiro/relatorios": ["admin", "socio"],
-  "/financeiro/clientes": ["admin", "vendedor", "socio"],
+  "/financeiro/clientes": ["admin", "socio"],
   "/equipe": ["admin"],
   "/socios": ["admin", "socio"],
   "/configuracoes": ["admin"],
   "/perfil": ["admin", "vendedor", "socio"],
-  "/marketing/leads": ["admin", "vendedor"],
+  "/marketing/leads": ["admin"],
   "/marketing/meta-ads": ["admin"],
+  // Gestão de funcionários — somente admin
+  "/admin/funcionarios": ["admin"],
+  // Portal isolado do funcionário — somente vendedor
+  "/meu-painel": ["vendedor"],
+  "/meus-leads": ["vendedor"],
+  "/meu-agendamento": ["vendedor"],
+  "/meu-contrato": ["vendedor"],
+  "/minhas-metricas": ["vendedor"],
 };
+
+// Rotas do portal isolado do funcionário (além de /perfil, comum a todos os roles).
+const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/meu-agendamento", "/meu-contrato", "/minhas-metricas"];
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
   const { isAuthenticated, user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -75,7 +93,18 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: 
   if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
 
   if (path && ROUTE_ROLES[path] && !ROUTE_ROLES[path].includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/inicio" replace />;
+  }
+
+  // Isolamento adicional: um vendedor nunca deve renderizar rotas de admin
+  // (mesmo que ROUTE_ROLES não cubra o path) e vice-versa — o portal do
+  // funcionário é um ambiente totalmente separado.
+  const emRotaFuncionario = ROTAS_FUNCIONARIO.some((r) => location.pathname.startsWith(r));
+  if (user.role === "vendedor" && location.pathname !== "/perfil" && !emRotaFuncionario) {
+    return <Navigate to="/meu-painel" replace />;
+  }
+  if (user.role !== "vendedor" && emRotaFuncionario) {
+    return <Navigate to="/inicio" replace />;
   }
 
   return (
@@ -87,15 +116,24 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: 
   );
 };
 
+const RoleRedirect = () => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === "vendedor") return <Navigate to="/meu-painel" replace />;
+  if (user.role === "socio") return <Navigate to="/socios" replace />;
+  return <Navigate to="/" replace />;
+};
+
 const AppRoutes = () => {
   const { isAuthenticated, loading } = useAuth();
 
   return (
     <Routes>
-      <Route path="/login" element={loading ? null : (isAuthenticated ? <Navigate to="/" replace /> : <Login />)} />
+      <Route path="/login" element={loading ? null : (isAuthenticated ? <Navigate to="/inicio" replace /> : <Login />)} />
       <Route path="/redefinir-senha" element={<RedefinirSenha />} />
       <Route path="/assinar/:token" element={<AssinaturaPublica />} />
       <Route path="/avaliacao" element={<AvaliacaoPublica />} />
+      <Route path="/inicio" element={<RoleRedirect />} />
       <Route path="/" element={<ProtectedRoute path="/"><Dashboard /></ProtectedRoute>} />
       <Route path="/crm" element={<ProtectedRoute path="/crm"><CRM /></ProtectedRoute>} />
       <Route path="/comercial" element={<Navigate to="/comercial/relatorio" replace />} />
@@ -122,6 +160,12 @@ const AppRoutes = () => {
       <Route path="/perfil" element={<ProtectedRoute path="/perfil"><Perfil /></ProtectedRoute>} />
       <Route path="/marketing/leads" element={<ProtectedRoute path="/marketing/leads"><MarketingLeads /></ProtectedRoute>} />
       <Route path="/marketing/meta-ads" element={<ProtectedRoute path="/marketing/meta-ads"><MetaAds /></ProtectedRoute>} />
+      <Route path="/admin/funcionarios" element={<ProtectedRoute path="/admin/funcionarios"><GestaoFuncionarios /></ProtectedRoute>} />
+      <Route path="/meu-painel" element={<ProtectedRoute path="/meu-painel"><MeuPainel /></ProtectedRoute>} />
+      <Route path="/meus-leads" element={<ProtectedRoute path="/meus-leads"><MeusLeads /></ProtectedRoute>} />
+      <Route path="/meu-agendamento" element={<ProtectedRoute path="/meu-agendamento"><MeuAgendamento /></ProtectedRoute>} />
+      <Route path="/meu-contrato" element={<ProtectedRoute path="/meu-contrato"><MeuContrato /></ProtectedRoute>} />
+      <Route path="/minhas-metricas" element={<ProtectedRoute path="/minhas-metricas"><MinhasMetricas /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

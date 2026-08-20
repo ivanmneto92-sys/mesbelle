@@ -36,20 +36,29 @@ type CmdItem = {
 };
 
 const items: CmdItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, url: "/", roles: ["admin", "vendedor", "socio"], group: "Navegar" },
-  { label: "CRM — Leads", icon: Users, url: "/crm", roles: ["admin", "vendedor"], group: "Navegar" },
-  { label: "Comercial", icon: Handshake, url: "/comercial", roles: ["admin", "vendedor"], group: "Navegar" },
-  { label: "Acervo", icon: ShoppingBag, url: "/operacional/acervo", roles: ["admin", "vendedor"], group: "Navegar" },
-  { label: "Logística", icon: Truck, url: "/operacional/logistica", roles: ["admin", "vendedor"], group: "Navegar" },
+  { label: "Dashboard", icon: LayoutDashboard, url: "/", roles: ["admin", "socio"], group: "Navegar" },
+  { label: "CRM — Leads", icon: Users, url: "/crm", roles: ["admin"], group: "Navegar" },
+  { label: "Comercial", icon: Handshake, url: "/comercial", roles: ["admin"], group: "Navegar" },
+  { label: "Acervo", icon: ShoppingBag, url: "/operacional/acervo", roles: ["admin"], group: "Navegar" },
+  { label: "Logística", icon: Truck, url: "/operacional/logistica", roles: ["admin"], group: "Navegar" },
   { label: "Financeiro", icon: DollarSign, url: "/financeiro", roles: ["admin"], group: "Navegar" },
   { label: "Time & Performance", icon: UserCog, url: "/equipe", roles: ["admin"], group: "Navegar" },
   { label: "Portal de Sócios", icon: Briefcase, url: "/socios", roles: ["admin", "socio"], group: "Navegar" },
   { label: "Configurações", icon: Settings, url: "/configuracoes", roles: ["admin"], group: "Navegar" },
 
-  { label: "Novo lead", hint: "Cadastrar cliente", icon: UserPlus, url: "/crm?new=lead", roles: ["admin", "vendedor"], group: "Ações rápidas" },
-  { label: "Nova negociação", hint: "Iniciar venda", icon: Handshake, url: "/comercial?tab=negociacoes", roles: ["admin", "vendedor"], group: "Ações rápidas" },
-  { label: "Gerar contrato", hint: "Para assinatura", icon: FileSignature, url: "/comercial?tab=contratos", roles: ["admin", "vendedor"], group: "Ações rápidas" },
-  { label: "Registrar retirada", hint: "Logística", icon: Package, url: "/operacional/logistica", roles: ["admin", "vendedor"], group: "Ações rápidas" },
+  { label: "Meu Painel", icon: LayoutDashboard, url: "/meu-painel", roles: ["vendedor"], group: "Navegar" },
+  { label: "Meus Leads", icon: Users, url: "/meus-leads", roles: ["vendedor"], group: "Navegar" },
+  { label: "Agendamento", icon: Handshake, url: "/meu-agendamento", roles: ["vendedor"], group: "Navegar" },
+  { label: "Contratos", icon: FileSignature, url: "/meu-contrato", roles: ["vendedor"], group: "Navegar" },
+  { label: "Minhas Métricas", icon: DollarSign, url: "/minhas-metricas", roles: ["vendedor"], group: "Navegar" },
+
+  { label: "Novo lead", hint: "Cadastrar cliente", icon: UserPlus, url: "/crm?new=lead", roles: ["admin"], group: "Ações rápidas" },
+  { label: "Nova negociação", hint: "Iniciar venda", icon: Handshake, url: "/comercial?tab=negociacoes", roles: ["admin"], group: "Ações rápidas" },
+  { label: "Gerar contrato", hint: "Para assinatura", icon: FileSignature, url: "/comercial?tab=contratos", roles: ["admin"], group: "Ações rápidas" },
+  { label: "Registrar retirada", hint: "Logística", icon: Package, url: "/operacional/logistica", roles: ["admin"], group: "Ações rápidas" },
+
+  { label: "Novo lead", hint: "Cadastrar cliente", icon: UserPlus, url: "/meus-leads", roles: ["vendedor"], group: "Ações rápidas" },
+  { label: "Gerar contrato", hint: "Para assinatura", icon: FileSignature, url: "/meu-contrato", roles: ["vendedor"], group: "Ações rápidas" },
 ];
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void; }

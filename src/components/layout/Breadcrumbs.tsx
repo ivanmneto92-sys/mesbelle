@@ -27,6 +27,12 @@ const ROUTE_LABELS: Record<string, string> = {
   "/marketing/leads": "Leads",
   "/marketing/meta-ads": "Meta Ads",
   "/perfil": "Meu Perfil",
+  "/admin/funcionarios": "Funcionários",
+  "/meu-painel": "Meu Painel",
+  "/meus-leads": "Meus Leads",
+  "/meu-agendamento": "Agendamento",
+  "/meu-contrato": "Gerar Contrato",
+  "/minhas-metricas": "Minhas Métricas",
 };
 
 export function Breadcrumbs() {

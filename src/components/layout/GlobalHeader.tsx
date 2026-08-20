@@ -76,8 +76,9 @@ export function GlobalHeader() {
   const alertCount = alerts.length;
 
   const handleLogout = () => {
+    const destino = user?.role === "vendedor" ? "/portal" : "/login";
     logout();
-    navigate("/login");
+    navigate(destino);
   };
 
   const isMac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);

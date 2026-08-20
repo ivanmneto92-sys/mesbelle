@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-type Action = "desativar" | "reativar" | "reenviar_convite";
+type Action = "desativar" | "reativar" | "reenviar_convite" | "excluir";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -44,6 +44,14 @@ Deno.serve(async (req) => {
     } else if (action === "reativar") {
       const { error } = await adminClient.auth.admin.updateUserById(userId, { ban_duration: "none" });
       if (error) return json({ error: error.message }, 400);
+    } else if (action === "excluir") {
+      if (userId === caller.id) return json({ error: "Você não pode excluir a si mesmo" }, 400);
+      // Leads/negócios/contratos referenciados por este funcionário viram
+      // ON DELETE SET NULL (migração funcionario_delete_fk_set_null) — a
+      // exclusão nunca falha por FK, os registros só ficam sem dono.
+      const { error: deleteErr } = await adminClient.auth.admin.deleteUser(userId);
+      if (deleteErr) return json({ error: deleteErr.message }, 400);
+      await adminClient.from("user_roles").delete().eq("user_id", userId);
     } else if (action === "reenviar_convite") {
       const { data: userData, error: getErr } = await adminClient.auth.admin.getUserById(userId);
       if (getErr || !userData?.user?.email) return json({ error: getErr?.message ?? "Usuário não encontrado" }, 400);

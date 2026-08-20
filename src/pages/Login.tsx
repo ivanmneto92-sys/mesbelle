@@ -35,11 +35,29 @@ const Login = () => {
     }
 
     const success = await login(email, password);
-    if (success) {
-      toast.success("Bem-vinda ao Més Belle!");
-    } else {
+    if (!success) {
       toast.error("Credenciais inválidas");
+      setIsLoading(false);
+      return;
     }
+
+    // Este link é da área de administração — um funcionário (vendedor) que
+    // entrar por aqui é deslogado e orientado a usar o portal dedicado.
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user?.id ?? "")
+      .maybeSingle();
+
+    if (roleRow?.role === "vendedor") {
+      await supabase.auth.signOut();
+      toast.error("Esta é a área de administração. Funcionários devem entrar em crm.mesbelle.com.br/portal.");
+      setIsLoading(false);
+      return;
+    }
+
+    toast.success("Bem-vinda ao Més Belle!");
     setIsLoading(false);
   };
 

@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { enviarEmail, templateBase, botaoCTA } from "../_shared/resend.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -43,28 +44,70 @@ Deno.serve(async (req) => {
     const siteUrl = Deno.env.get("SITE_URL");
     if (!siteUrl) return json({ error: "SITE_URL não configurado nos secrets da Edge Function" }, 500);
 
-    const { data: invited, error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: { nome },
-      redirectTo: `${siteUrl}/redefinir-senha`,
+    // generateLink (em vez de inviteUserByEmail) cria o usuário e devolve o
+    // link sem disparar o e-mail padrão do Supabase — o convite é enviado
+    // logo abaixo via Resend, com o visual da MesBelle.
+    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: {
+        data: { nome },
+        redirectTo: `${siteUrl}/redefinir-senha`,
+      },
     });
-    if (inviteErr || !invited?.user) return json({ error: inviteErr?.message ?? "Falha ao enviar convite" }, 400);
+    if (linkErr || !linkData?.user) return json({ error: linkErr?.message ?? "Falha ao gerar convite" }, 400);
 
     // O profile já é criado pelo trigger handle_new_user (usando o nome dos metadados acima).
     const { error: roleErr } = await adminClient.from("user_roles").insert({
-      user_id: invited.user.id,
+      user_id: linkData.user.id,
       role: "vendedor",
     });
     if (roleErr) return json({ error: roleErr.message }, 400);
 
+    // O e-mail é complementar: a conta e o papel já foram criados acima, então
+    // uma falha aqui não derruba a requisição — o admin ainda pode reenviar o
+    // convite depois pela tela de Funcionários.
+    const primeiroNome = String(nome).split(" ")[0];
+    let emailEnviado = true;
+    try {
+      await enviarEmail({
+        para: email,
+        assunto: `${primeiroNome}, você foi convidada para a MesBelle ✨`,
+        html: templateBase(`
+          <h2 style="color:#4a1535;font-size:22px;margin:0 0 16px;">
+            Olá, ${primeiroNome}! 👗
+          </h2>
+          <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 12px;">
+            Você foi adicionada à equipe da <strong>MesBelle Atelier</strong> como
+            consultora de vendas.
+          </p>
+          <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px;">
+            Clique no botão abaixo para criar sua senha e começar a usar a plataforma:
+          </p>
+          ${botaoCTA("Aceitar convite e criar senha →", linkData.properties.action_link)}
+          <p style="color:#9ca3af;font-size:13px;margin:24px 0 0;line-height:1.6;">
+            Este link expira em <strong>24 horas</strong>. Após criar sua senha, você
+            poderá acessar normalmente sempre que precisar.<br><br>
+            Se você não esperava este e-mail, pode ignorá-lo com segurança.
+          </p>
+        `),
+      });
+    } catch (emailErr) {
+      console.error("[criar-funcionario] falha ao enviar e-mail via Resend:", emailErr);
+      emailEnviado = false;
+    }
+
     return json({
       success: true,
-      userId: invited.user.id,
-      message: "Convite enviado para " + email,
+      userId: linkData.user.id,
+      message: emailEnviado
+        ? "Convite enviado para " + email
+        : "Funcionário criado, mas o e-mail de convite falhou — use \"Reenviar convite\" na tela de Funcionários.",
       funcionario: {
-        id: invited.user.id,
-        email: invited.user.email,
+        id: linkData.user.id,
+        email: linkData.user.email,
         nome,
-        criadoEm: invited.user.created_at,
+        criadoEm: linkData.user.created_at,
         ultimoLogin: null,
         confirmado: false,
         bloqueado: false,

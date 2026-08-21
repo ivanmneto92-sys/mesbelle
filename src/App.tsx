@@ -34,6 +34,7 @@ import MetaAds from "./pages/marketing/MetaAds";
 import GestaoFuncionarios from "./pages/admin/GestaoFuncionarios";
 import MeuPainel from "./pages/funcionario/MeuPainel";
 import MeusLeads from "./pages/funcionario/MeusLeads";
+import MinhaVenda from "./pages/funcionario/MinhaVenda";
 import MeuAgendamento from "./pages/funcionario/MeuAgendamento";
 import MeuContrato from "./pages/funcionario/MeuContrato";
 import MinhasMetricas from "./pages/funcionario/MinhasMetricas";
@@ -71,13 +72,14 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   // Portal isolado do funcionário — somente vendedor
   "/meu-painel": ["vendedor"],
   "/meus-leads": ["vendedor"],
+  "/minha-venda": ["vendedor"],
   "/meu-agendamento": ["vendedor"],
   "/meu-contrato": ["vendedor"],
   "/minhas-metricas": ["vendedor"],
 };
 
 // Rotas do portal isolado do funcionário (além de /perfil, comum a todos os roles).
-const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/meu-agendamento", "/meu-contrato", "/minhas-metricas"];
+const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-venda", "/meu-agendamento", "/meu-contrato", "/minhas-metricas"];
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -172,6 +174,7 @@ const AppRoutes = () => {
       <Route path="/admin/funcionarios" element={<ProtectedRoute path="/admin/funcionarios"><GestaoFuncionarios /></ProtectedRoute>} />
       <Route path="/meu-painel" element={<ProtectedRoute path="/meu-painel"><MeuPainel /></ProtectedRoute>} />
       <Route path="/meus-leads" element={<ProtectedRoute path="/meus-leads"><MeusLeads /></ProtectedRoute>} />
+      <Route path="/minha-venda" element={<ProtectedRoute path="/minha-venda"><MinhaVenda /></ProtectedRoute>} />
       <Route path="/meu-agendamento" element={<ProtectedRoute path="/meu-agendamento"><MeuAgendamento /></ProtectedRoute>} />
       <Route path="/meu-contrato" element={<ProtectedRoute path="/meu-contrato"><MeuContrato /></ProtectedRoute>} />
       <Route path="/minhas-metricas" element={<ProtectedRoute path="/minhas-metricas"><MinhasMetricas /></ProtectedRoute>} />

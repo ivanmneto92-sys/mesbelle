@@ -9,7 +9,7 @@ import { CalendarioSemana } from "@/components/agenda/CalendarioSemana";
 import { CalendarioMes } from "@/components/agenda/CalendarioMes";
 import { KanbanAgendamentos } from "@/components/agenda/KanbanAgendamentos";
 import { NovoAgendamentoDialog } from "@/components/agenda/NovoAgendamentoDialog";
-import { useAgenda, useAgendaDia, useAgendaSemana, useAgendaMes } from "@/hooks/useAgenda";
+import { useAgendaDia, useAgendaSemana, useAgendaMes, useAgendaKanban } from "@/hooks/useAgenda";
 import { useAuth } from "@/contexts/AuthContext";
 import { Agendamento, TIPO_CONFIG } from "@/types/agenda";
 
@@ -30,8 +30,10 @@ const MinhaAgenda = () => {
   const { data: agMes } = useAgendaMes(dataReferencia, user?.id);
   const agendamentos = (view === "dia" ? agDia : view === "semana" ? agSemana : agMes) ?? [];
 
-  // Kanban não navega por período — mostra uma janela ampla fixa (próximos 60 dias).
-  const { data: agKanban } = useAgenda(new Date(), addDays(new Date(), 60), user?.id);
+  // Kanban não navega por período nem filtra por funcionária — mostra todos os
+  // agendamentos acessíveis (a RLS já decide o que cada papel pode ver), numa
+  // janela ampla fixa (90 dias atrás até 90 dias à frente).
+  const { data: agKanban } = useAgendaKanban();
 
   const navAnterior = () => {
     setDataReferencia((prev) =>

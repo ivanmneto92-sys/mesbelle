@@ -14,6 +14,82 @@ export type Database = {
   }
   public: {
     Tables: {
+      agendamentos: {
+        Row: {
+          atualizado_em: string
+          cliente_email: string | null
+          cliente_nome: string
+          cliente_telefone: string | null
+          criado_em: string
+          criado_por: string | null
+          data_hora: string
+          duracao_minutos: number
+          funcionaria_id: string | null
+          id: string
+          negocio_id: string | null
+          observacoes: string | null
+          reserva_id: string | null
+          tipo: string
+          vestido_id: string | null
+        }
+        Insert: {
+          atualizado_em?: string
+          cliente_email?: string | null
+          cliente_nome: string
+          cliente_telefone?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          data_hora: string
+          duracao_minutos?: number
+          funcionaria_id?: string | null
+          id?: string
+          negocio_id?: string | null
+          observacoes?: string | null
+          reserva_id?: string | null
+          tipo: string
+          vestido_id?: string | null
+        }
+        Update: {
+          atualizado_em?: string
+          cliente_email?: string | null
+          cliente_nome?: string
+          cliente_telefone?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          data_hora?: string
+          duracao_minutos?: number
+          funcionaria_id?: string | null
+          id?: string
+          negocio_id?: string | null
+          observacoes?: string | null
+          reserva_id?: string | null
+          tipo?: string
+          vestido_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_agenda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_vestido_id_fkey"
+            columns: ["vestido_id"]
+            isOneToOne: false
+            referencedRelation: "vestidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alugueis_logistica: {
         Row: {
           cliente_nome: string
@@ -428,6 +504,8 @@ export type Database = {
           desconto: number
           id: string
           metodo_pagamento: string
+          observacoes: string | null
+          parcelas: number
           status_negociacao: string
           updated_at: string
           valor_negociado: number
@@ -444,6 +522,8 @@ export type Database = {
           desconto?: number
           id?: string
           metodo_pagamento?: string
+          observacoes?: string | null
+          parcelas?: number
           status_negociacao?: string
           updated_at?: string
           valor_negociado?: number
@@ -460,6 +540,8 @@ export type Database = {
           desconto?: number
           id?: string
           metodo_pagamento?: string
+          observacoes?: string | null
+          parcelas?: number
           status_negociacao?: string
           updated_at?: string
           valor_negociado?: number
@@ -581,6 +663,7 @@ export type Database = {
           data_fim: string
           data_inicio: string
           id: string
+          negocio_id: string | null
           status_reserva: string
           vestido_id: string
         }
@@ -589,6 +672,7 @@ export type Database = {
           data_fim: string
           data_inicio: string
           id?: string
+          negocio_id?: string | null
           status_reserva?: string
           vestido_id: string
         }
@@ -597,10 +681,19 @@ export type Database = {
           data_fim?: string
           data_inicio?: string
           id?: string
+          negocio_id?: string | null
           status_reserva?: string
           vestido_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reservas_agenda_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       socios_empresa: {
         Row: {

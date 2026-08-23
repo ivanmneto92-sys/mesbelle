@@ -61,6 +61,7 @@ export function useCriarVenda() {
         data_inicio: item.dataRetirada,
         data_fim: item.dataDevolucao,
         status_reserva: "aluguel",
+        negocio_id: negocio.id,
       }));
 
       const { error: resErr } = await supabase.from("reservas_agenda").insert(reservas);

@@ -67,6 +67,20 @@ export function useCriarVenda() {
       const { error: resErr } = await supabase.from("reservas_agenda").insert(reservas);
       if (resErr) throw new Error("Erro ao reservar as peças: " + resErr.message);
 
+      // Alimenta a tela de Logística (Operacional → Logística) — sem isto a
+      // tabela alugueis_logistica nunca recebia uma linha sequer, e a tela
+      // ficava sempre vazia mesmo com vendas reais acontecendo.
+      const entregas = itens.map((item) => ({
+        vestido_nome: item.nome,
+        cliente_nome: lead.nome,
+        cliente_telefone: lead.telefone,
+        endereco_entrega: lead.endereco,
+        data_saida: item.dataRetirada,
+        data_retorno: item.dataDevolucao,
+      }));
+      const { error: logErr } = await supabase.from("alugueis_logistica").insert(entregas);
+      if (logErr) throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
+
       const vestidoIds = itens.map((i) => i.vestidoId);
       await supabase.from("vestidos").update({ status: "alugado" }).in("id", vestidoIds);
 

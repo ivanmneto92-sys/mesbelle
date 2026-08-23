@@ -101,6 +101,38 @@ export function useAcervo(range?: DateRange) {
     return () => { active = false; };
   }, [range]);
 
+  // Realtime — sem isto, uma peça/produção cadastrada por um funcionário só
+  // aparecia pra quem já estivesse com a tela de Acervo/Produção aberta
+  // depois de um F5 manual (mesma causa raiz já corrigida em useLeads.ts).
+  useEffect(() => {
+    const channel = supabase
+      .channel(`acervo_${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "vestidos" }, async () => {
+        const { data } = await supabase.from("vestidos").select("*").order("nome");
+        if (data) setVestidos((data as VestidoRow[]).map(rowToVestido));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "reservas_agenda" }, async () => {
+        const { data } = await supabase.from("reservas_agenda").select("*");
+        if (data) setReservas((data as ReservaRow[]).map(rowToReserva));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "producoes" }, async () => {
+        let producoesQuery = supabase.from("producoes").select("*").order("created_at", { ascending: false });
+        if (range) {
+          producoesQuery = producoesQuery
+            .gte("created_at", `${range.from}T00:00:00`)
+            .lte("created_at", `${range.to}T23:59:59`);
+        }
+        const { data } = await producoesQuery;
+        if (data) setProducoes((data as ProducaoRow[]).map(rowToProducao));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "etapas_producao" }, async () => {
+        const { data } = await supabase.from("etapas_producao").select("*").order("ordem");
+        if (data) setEtapas((data as EtapaRow[]).map(rowToEtapa));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [range]);
+
   // --- Vestidos ---
   const addVestido = useCallback(async (v: Omit<Vestido, "id">) => {
     const { data } = await supabase.from("vestidos").insert(vestidoToRow(v) as never).select().single();

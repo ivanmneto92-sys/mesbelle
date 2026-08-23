@@ -87,6 +87,44 @@ export function useEquipe(range?: DateRange) {
     return () => { active = false; };
   }, [range]);
 
+  // Realtime — sem isto, um negócio fechado ou uma avaliação recebida por um
+  // funcionário só refletia nas "vendas do mês"/score aqui depois de um F5
+  // manual (mesma causa raiz já corrigida em useLeads.ts).
+  useEffect(() => {
+    const recarregarVendas = async () => {
+      const { data } = await supabase.from("negocios").select("vendedor_id, valor_negociado, desconto, criado_em").eq("status_negociacao", "aprovado");
+      const negocios = (data ?? []) as NegocioRow[];
+      const vendasMap = new Map<string, { quantidade: number; valorTotal: number }>();
+      negocios.forEach((n) => {
+        if (!n.vendedor_id || !n.criado_em) return;
+        const mes = n.criado_em.slice(0, 7);
+        const key = `${n.vendedor_id}|${mes}`;
+        const atual = vendasMap.get(key) ?? { quantidade: 0, valorTotal: 0 };
+        atual.quantidade += 1;
+        atual.valorTotal += Number(n.valor_negociado) - Number(n.desconto);
+        vendasMap.set(key, atual);
+      });
+      setVendas([...vendasMap.entries()].map(([key, v]) => {
+        const [funcionarioId, mes] = key.split("|");
+        return { funcionarioId, mes, quantidade: v.quantidade, valorTotal: v.valorTotal };
+      }));
+    };
+
+    const channel = supabase
+      .channel(`equipe_${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, recarregarVendas)
+      .on("postgres_changes", { event: "*", schema: "public", table: "avaliacoes_clientes" }, async () => {
+        let avaliacoesQuery = supabase.from("avaliacoes_clientes").select("*");
+        if (range) avaliacoesQuery = avaliacoesQuery.gte("data", range.from).lte("data", range.to);
+        const { data } = await avaliacoesQuery;
+        if (data) setAvaliacoes((data as AvalRow[]).map(r => ({
+          id: r.id, funcionarioId: r.funcionario_id, data: r.data, nota: r.nota, comentario: r.comentario ?? undefined,
+        })));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [range]);
+
   const updateFuncionario = useCallback(async (id: string, updates: Partial<Funcionario>) => {
     setFuncionarios(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
     const patch: Record<string, unknown> = {};

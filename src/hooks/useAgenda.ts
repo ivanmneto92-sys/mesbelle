@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,7 +102,17 @@ export function useAgendaMes(data: Date, funcionariaId?: string | null) {
  * funcionaria_id atribuída não deve ficar invisível).
  */
 export function useAgendaKanban() {
-  return useAgenda(subDays(new Date(), 90), addDays(new Date(), 90));
+  // Ancorado no início do dia de hoje — se recalculássemos com `new Date()`
+  // diretamente, a queryKey (que inclui os limites em ISO) mudaria a cada
+  // render, e a query nunca "assentaria": toda vez que os dados chegassem, o
+  // componente re-renderizaria, geraria uma chave nova (agora com milissegundos
+  // diferentes) e a tela voltaria a mostrar vazia enquanto a nova busca corria.
+  const inicioDeHoje = startOfDay(new Date()).getTime();
+  const { dataInicio, dataFim } = useMemo(() => {
+    const hoje = new Date(inicioDeHoje);
+    return { dataInicio: subDays(hoje, 90), dataFim: addDays(hoje, 90) };
+  }, [inicioDeHoje]);
+  return useAgenda(dataInicio, dataFim);
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────

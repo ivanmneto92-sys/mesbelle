@@ -50,7 +50,7 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
         roles: ["admin", "vendedor", "socio"],
         children: [
           { title: "Relatório Comercial", url: "/comercial/relatorio", icon: FileBarChart, roles: ["admin", "vendedor", "socio"] },
-          { title: "Relatório Agendamento", url: "/comercial/relatorio-agendamento", icon: BarChart3, roles: ["admin", "vendedor"] },
+          { title: "Relatório Agendamento", url: "/comercial/relatorio-agendamento", icon: BarChart3, roles: ["admin"] },
           { title: "Calendário", url: "/comercial/calendario", icon: CalendarDays, roles: ["admin", "vendedor"] },
           { title: "Contratos", url: "/comercial/contratos", icon: ScrollText, roles: ["admin", "vendedor"] },
         ],

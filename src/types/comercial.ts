@@ -26,14 +26,6 @@ export const CRM_KANBAN_COLUMNS: CrmKanbanColumn[] = [
   { id: "no_show", title: "No-Show", colorClass: "bg-destructive/20 text-destructive border-destructive/30" },
 ];
 
-export const AGENDAMENTO_KANBAN_COLUMNS: CrmKanbanColumn[] = [
-  { id: "agendado", title: "Agendado", colorClass: "bg-info/20 text-info border-info/30" },
-  { id: "compareceu_alugou", title: "Compareceu e Alugou", colorClass: "bg-success/20 text-success border-success/30" },
-  { id: "compareceu_nao_alugou", title: "Compareceu e Não Alugou", colorClass: "bg-warning/20 text-warning border-warning/30" },
-  { id: "reagendada", title: "Reagendada", colorClass: "bg-accent/20 text-accent-foreground border-accent-foreground/30" },
-  { id: "cancelada", title: "Cancelada", colorClass: "bg-destructive/20 text-destructive border-destructive/30" },
-];
-
 // === Lead / Cliente ===
 export interface Lead {
   id: string;

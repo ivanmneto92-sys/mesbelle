@@ -13,10 +13,8 @@ import Dashboard from "./pages/Dashboard";
 import CRM from "./pages/CRM";
 import ComercialRelatorio from "./pages/comercial/ComercialRelatorio";
 import ComercialRelatorioAgendamento from "./pages/comercial/ComercialRelatorioAgendamento";
-import ComercialAgendamento from "./pages/comercial/ComercialAgendamento";
 import Agenda from "./pages/admin/Agenda";
 import ComercialContratos from "./pages/comercial/ComercialContratos";
-import ComercialKanban from "./pages/comercial/ComercialKanban";
 import OperacionalAcervo from "./pages/operacional/OperacionalAcervo";
 import OperacionalProducao from "./pages/operacional/OperacionalProducao";
 import OperacionalLogistica from "./pages/operacional/OperacionalLogistica";
@@ -49,10 +47,8 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/crm": ["admin"],
   "/comercial/relatorio": ["admin", "socio"],
   "/comercial/relatorio-agendamento": ["admin"],
-  "/comercial/agendamento": ["admin"],
   "/comercial/calendario": ["admin"],
   "/comercial/contratos": ["admin"],
-  "/comercial/kanban": ["admin"],
   "/operacional/acervo": ["admin", "vendedor"],
   "/operacional/producao": ["admin"],
   "/operacional/logistica": ["admin"],
@@ -150,10 +146,8 @@ const AppRoutes = () => {
       <Route path="/comercial" element={<Navigate to="/comercial/relatorio" replace />} />
       <Route path="/comercial/relatorio" element={<ProtectedRoute path="/comercial/relatorio"><ComercialRelatorio /></ProtectedRoute>} />
       <Route path="/comercial/relatorio-agendamento" element={<ProtectedRoute path="/comercial/relatorio-agendamento"><ComercialRelatorioAgendamento /></ProtectedRoute>} />
-      <Route path="/comercial/agendamento" element={<ProtectedRoute path="/comercial/agendamento"><ComercialAgendamento /></ProtectedRoute>} />
       <Route path="/comercial/calendario" element={<ProtectedRoute path="/comercial/calendario"><Agenda /></ProtectedRoute>} />
       <Route path="/comercial/contratos" element={<ProtectedRoute path="/comercial/contratos"><ComercialContratos /></ProtectedRoute>} />
-      <Route path="/comercial/kanban" element={<ProtectedRoute path="/comercial/kanban"><ComercialKanban /></ProtectedRoute>} />
       <Route path="/acervo" element={<Navigate to="/operacional/acervo" replace />} />
       <Route path="/logistica" element={<Navigate to="/operacional/logistica" replace />} />
       <Route path="/operacional/acervo" element={<ProtectedRoute path="/operacional/acervo"><OperacionalAcervo /></ProtectedRoute>} />

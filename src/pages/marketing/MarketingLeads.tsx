@@ -14,8 +14,6 @@ import { Lead, CrmFunnelStatus, CRM_KANBAN_COLUMNS } from "@/types/comercial";
 import { NewLeadModal } from "@/components/crm/NewLeadModal";
 import { ClienteDetailPanel } from "@/components/crm/ClienteDetailPanel";
 
-const MARKETING_STATUSES: CrmFunnelStatus[] = ["novo_lead", "em_atendimento"];
-
 const MarketingLeads = () => {
   const { leads, addLead, updateLead, updateMedidas, getMedidas } = useLeads();
   const { range, setRange } = useDateRange();
@@ -25,18 +23,17 @@ const MarketingLeads = () => {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const leadsMarketing = useMemo(
-    () => leads.filter((l) => MARKETING_STATUSES.includes(l.statusFunil)),
-    [leads]
-  );
-
+  // Esta é a única tela chamada "Leads" no menu — precisa mostrar todos os
+  // leads cadastrados, não só os que ainda estão no estágio inicial de
+  // captação. Um lead que já avançou no funil (ex: "Prova Agendada") sumia
+  // daqui antes, dando a impressão de que o cadastro nunca tinha chegado.
   const leadsFiltrados = useMemo(() => {
-    return leadsMarketing.filter((l) => {
+    return leads.filter((l) => {
       if (l.criadoEm < range.from || l.criadoEm > range.to) return false;
       if (statusFiltro !== "todos" && l.statusFunil !== statusFiltro) return false;
       return true;
     });
-  }, [leadsMarketing, range, statusFiltro]);
+  }, [leads, range, statusFiltro]);
 
   const selectedLead = useMemo(() => {
     if (!selectedLeadId) return null;
@@ -52,12 +49,12 @@ const MarketingLeads = () => {
 
   return (
     <>
-      <SEO title="Marketing — Leads — Més Belle" description="Origem e primeiro contato dos leads captados." path="/marketing/leads" />
+      <SEO title="Marketing — Leads — Més Belle" description="Todos os leads captados e seu andamento no funil." path="/marketing/leads" />
       <div className="space-y-6">
         <PageHeader
           icon={Users}
           title="Leads"
-          description="Leads recém-captados, antes de entrarem no funil comercial"
+          description="Todos os leads cadastrados, em qualquer estágio do funil"
           actions={
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <DateRangePicker value={range} onChange={setRange} />
@@ -67,8 +64,9 @@ const MarketingLeads = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos os status</SelectItem>
-                  <SelectItem value="novo_lead">Novo Lead</SelectItem>
-                  <SelectItem value="em_atendimento">Em Atendimento</SelectItem>
+                  {CRM_KANBAN_COLUMNS.map((col) => (
+                    <SelectItem key={col.id} value={col.id}>{col.title}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button size="sm" onClick={() => setNewLeadOpen(true)}>

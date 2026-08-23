@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { SEO } from "@/components/SEO";
-import { CalendarCheck2, CalendarDays, Kanban } from "lucide-react";
+import { CalendarCheck2, Kanban } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import ComercialAgendamento from "@/pages/comercial/ComercialAgendamento";
-import ComercialCalendario from "@/pages/comercial/ComercialCalendario";
 import ComercialKanban from "@/pages/comercial/ComercialKanban";
 
-type Aba = "form" | "calendario" | "kanban";
+type Aba = "form" | "kanban";
 
 const MeuAgendamento = () => {
   const [aba, setAba] = useState<Aba>("form");
@@ -22,16 +21,12 @@ const MeuAgendamento = () => {
           <Button variant={aba === "form" ? "default" : "outline"} size="sm" onClick={() => setAba("form")}>
             <CalendarCheck2 className="h-4 w-4 mr-1.5" /> Agendamentos
           </Button>
-          <Button variant={aba === "calendario" ? "default" : "outline"} size="sm" onClick={() => setAba("calendario")}>
-            <CalendarDays className="h-4 w-4 mr-1.5" /> Calendário
-          </Button>
           <Button variant={aba === "kanban" ? "default" : "outline"} size="sm" onClick={() => setAba("kanban")}>
             <Kanban className="h-4 w-4 mr-1.5" /> Kanban
           </Button>
         </div>
 
         {aba === "form" && <ComercialAgendamento />}
-        {aba === "calendario" && <ComercialCalendario />}
         {aba === "kanban" && <ComercialKanban />}
       </div>
     </>

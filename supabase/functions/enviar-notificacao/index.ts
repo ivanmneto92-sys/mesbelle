@@ -1,5 +1,12 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { enviarEmail, templateBase, botaoCTA } from "../_shared/resend.ts";
+
+function escapeHtml(valor: unknown): string {
+  return String(valor ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
+  );
+}
 
 // Tipos de notificação disponíveis.
 type TipoNotificacao =
@@ -57,6 +64,14 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) return json({ error: "Não autorizado" }, 401);
 
+    const callerClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user: caller }, error: authErr } = await callerClient.auth.getUser();
+    if (authErr || !caller) return json({ error: "Não autorizado" }, 401);
+
     const { tipo, dados } = (await req.json()) as NotificacaoBody;
     if (!tipo || !dados) return json({ error: "tipo e dados são obrigatórios" }, 400);
 
@@ -65,100 +80,100 @@ Deno.serve(async (req) => {
 
     switch (tipo) {
       case "contrato_assinado":
-        assunto = `Contrato assinado — ${dados.nomeCliente}`;
+        assunto = `Contrato assinado — ${escapeHtml(dados.nomeCliente)}`;
         html = templateBase(`
           <h2 style="color:#4a1535;font-size:20px;margin:0 0 16px;">
             ✅ Contrato assinado com sucesso!
           </h2>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px;">
-            O contrato de locação de <strong>${dados.nomePeca}</strong> foi assinado por
-            <strong>${dados.nomeCliente}</strong>.
+            O contrato de locação de <strong>${escapeHtml(dados.nomePeca)}</strong> foi assinado por
+            <strong>${escapeHtml(dados.nomeCliente)}</strong>.
           </p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
             <tr style="background:#f9f5f1;">
               <td style="padding:10px 12px;color:#6b7280;">Cliente</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.nomeCliente}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.nomeCliente)}</td>
             </tr>
             <tr>
               <td style="padding:10px 12px;color:#6b7280;">Peça</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.nomePeca}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.nomePeca)}</td>
             </tr>
             <tr style="background:#f9f5f1;">
               <td style="padding:10px 12px;color:#6b7280;">Data do evento</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.dataEvento}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.dataEvento)}</td>
             </tr>
             <tr>
               <td style="padding:10px 12px;color:#6b7280;">Valor</td>
-              <td style="padding:10px 12px;font-weight:600;color:#4a1535;">${dados.valor}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#4a1535;">${escapeHtml(dados.valor)}</td>
             </tr>
           </table>
           <p style="color:#9ca3af;font-size:13px;margin:16px 0 0;">
-            Assinado em: ${dados.dataAssinatura ?? new Date().toLocaleDateString("pt-BR")}
+            Assinado em: ${escapeHtml(dados.dataAssinatura ?? new Date().toLocaleDateString("pt-BR"))}
           </p>
         `);
         break;
 
       case "agendamento_confirmado":
-        assunto = `Agendamento confirmado — ${dados.nomeCliente}`;
+        assunto = `Agendamento confirmado — ${escapeHtml(dados.nomeCliente)}`;
         html = templateBase(`
           <h2 style="color:#4a1535;font-size:20px;margin:0 0 16px;">
             📅 Agendamento confirmado!
           </h2>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px;">
-            Um novo agendamento foi registrado para <strong>${dados.nomeCliente}</strong>.
+            Um novo agendamento foi registrado para <strong>${escapeHtml(dados.nomeCliente)}</strong>.
           </p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
             <tr style="background:#f9f5f1;">
               <td style="padding:10px 12px;color:#6b7280;">Tipo</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.tipoAgendamento}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.tipoAgendamento)}</td>
             </tr>
             <tr>
               <td style="padding:10px 12px;color:#6b7280;">Data</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.data}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.data)}</td>
             </tr>
             <tr style="background:#f9f5f1;">
               <td style="padding:10px 12px;color:#6b7280;">Horário</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.hora}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.hora)}</td>
             </tr>
             <tr>
               <td style="padding:10px 12px;color:#6b7280;">Consultora</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.nomeConsultora ?? "—"}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.nomeConsultora ?? "—")}</td>
             </tr>
           </table>
         `);
         break;
 
       case "retirada_amanha":
-        assunto = `Lembrete: retirada amanhã — ${dados.nomeCliente}`;
+        assunto = `Lembrete: retirada amanhã — ${escapeHtml(dados.nomeCliente)}`;
         html = templateBase(`
           <h2 style="color:#4a1535;font-size:20px;margin:0 0 16px;">
             👗 Lembrete: retirada amanhã
           </h2>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px;">
-            A cliente <strong>${dados.nomeCliente}</strong> tem retirada agendada para amanhã.
+            A cliente <strong>${escapeHtml(dados.nomeCliente)}</strong> tem retirada agendada para amanhã.
           </p>
           <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
             <tr style="background:#f9f5f1;">
               <td style="padding:10px 12px;color:#6b7280;">Peça</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.nomePeca}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.nomePeca)}</td>
             </tr>
             <tr>
               <td style="padding:10px 12px;color:#6b7280;">Data do evento</td>
-              <td style="padding:10px 12px;font-weight:600;color:#111827;">${dados.dataEvento}</td>
+              <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dados.dataEvento)}</td>
             </tr>
           </table>
         `);
         break;
 
       case "devolucao_hoje":
-        assunto = `Devolução hoje — ${dados.nomeCliente}`;
+        assunto = `Devolução hoje — ${escapeHtml(dados.nomeCliente)}`;
         html = templateBase(`
           <h2 style="color:#4a1535;font-size:20px;margin:0 0 16px;">
             📦 Devolução prevista para hoje
           </h2>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px;">
-            A cliente <strong>${dados.nomeCliente}</strong> deve devolver
-            <strong>${dados.nomePeca}</strong> hoje.
+            A cliente <strong>${escapeHtml(dados.nomeCliente)}</strong> deve devolver
+            <strong>${escapeHtml(dados.nomePeca)}</strong> hoje.
           </p>
           <p style="color:#ef4444;font-size:14px;background:#fef2f2;
                     padding:12px 16px;border-radius:8px;margin:0;">

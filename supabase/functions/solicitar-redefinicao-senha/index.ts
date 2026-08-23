@@ -26,6 +26,18 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Rate limit: no máximo 3 pedidos por e-mail por hora, para não virar
+    // um jeito de floodar a caixa de entrada de alguém ou esgotar a cota do Resend.
+    const umaHoraAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: tentativas } = await adminClient
+      .from("password_reset_attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("email", email)
+      .gte("criado_em", umaHoraAtras);
+    if ((tentativas ?? 0) >= 3) return respostaGenerica();
+
+    await adminClient.from("password_reset_attempts").insert({ email });
+
     const { data: existentes } = await adminClient.auth.admin.listUsers();
     const usuario = existentes?.users.find((u) => u.email === email);
     if (!usuario) return respostaGenerica();

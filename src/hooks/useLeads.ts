@@ -143,6 +143,35 @@ export function useLeads(range?: DateRange) {
     return () => { active = false; };
   }, [range]);
 
+  // Realtime — sem isto, um lead/negócio criado por uma funcionária só
+  // aparecia pra quem já tinha a tela de CRM aberta depois de recarregar a
+  // página manualmente (o fetch acima só roda uma vez, ao montar ou trocar
+  // o período). Reaplica o mesmo filtro de período do fetch inicial.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`leads_${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, async () => {
+        let leadsQuery = supabase.from("leads").select("*").order("created_at", { ascending: false });
+        if (range) leadsQuery = leadsQuery.gte("criado_em", range.from).lte("criado_em", range.to);
+        const { data } = await leadsQuery;
+        if (data) setLeads((data as LeadRow[]).map(rowToLead));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "medidas" }, async () => {
+        const { data } = await supabase.from("medidas").select("*");
+        if (data) setMedidas((data as MedidaRow[]).map(rowToMedida));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "contratos" }, async () => {
+        const { data } = await supabase.from("contratos").select("*").order("created_at", { ascending: false });
+        if (data) setContratos((data as ContratoRow[]).map(rowToContrato));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, async () => {
+        const { data } = await supabase.from("negocios").select("*").order("created_at", { ascending: false });
+        if (data) setNegocios((data as NegocioRow[]).map(rowToNegocio));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [range]);
+
   // === LEADS / CRM ===
   const addLead = useCallback(async (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => {
     const userId = await currentUserId();

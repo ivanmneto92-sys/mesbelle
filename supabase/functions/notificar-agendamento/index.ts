@@ -39,6 +39,7 @@ interface AgendamentoPayload {
   data_hora: string;
   duracao_minutos: number;
   cliente_nome: string;
+  cliente_email: string | null;
   cliente_telefone: string | null;
   observacoes: string | null;
   vestido_id: string | null;
@@ -142,6 +143,60 @@ Deno.serve(async (req) => {
       `;
       return templateBase(conteudo);
     };
+
+    const montarHtmlCliente = () => {
+      const conteudo = `
+        <p style="font-size: 16px; color: #374151; margin: 0 0 24px;">
+          Olá, <strong>${ag.cliente_nome}</strong>! Seu agendamento com a Més Belle foi confirmado. 🎉
+        </p>
+        <div style="
+          border-left: 4px solid ${corTipo};
+          background: ${corTipo}11;
+          border-radius: 0 8px 8px 0;
+          padding: 16px 20px;
+          margin-bottom: 24px;
+        ">
+          <div style="
+            display: inline-block;
+            background: ${corTipo};
+            color: white;
+            border-radius: 6px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 10px;
+          ">${emoji} ${label}</div>
+          <table cellpadding="0" cellspacing="0" style="width: 100%;">
+            <tr>
+              <td style="padding: 3px 0; font-size: 14px; color: #6B7280; width: 120px;">Data e hora</td>
+              <td style="padding: 3px 0; font-size: 14px; font-weight: 600; color: #111827; text-transform: capitalize;">${dataHoraFormatada}</td>
+            </tr>
+            <tr>
+              <td style="padding: 3px 0; font-size: 14px; color: #6B7280;">Duração prevista</td>
+              <td style="padding: 3px 0; font-size: 14px; color: #111827;">${ag.duracao_minutos} minutos</td>
+            </tr>
+            ${vestidoNome ? `
+            <tr>
+              <td style="padding: 3px 0; font-size: 14px; color: #6B7280;">Vestido</td>
+              <td style="padding: 3px 0; font-size: 14px; color: #111827;">${vestidoNome}</td>
+            </tr>` : ""}
+          </table>
+        </div>
+        <p style="font-size: 14px; color: #6B7280; margin: 0;">
+          Qualquer dúvida ou necessidade de reagendar, é só chamar a gente. Até breve! 💕
+        </p>
+      `;
+      return templateBase(conteudo);
+    };
+
+    // ── Enviar para a cliente ───────────────────────────────────────────────
+    if (ag.cliente_email) {
+      await enviarEmail({
+        para: ag.cliente_email,
+        assunto: `${emoji} Agendamento confirmado: ${label} — Més Belle`,
+        html: montarHtmlCliente(),
+      });
+    }
 
     // ── Enviar para a funcionária responsável ──────────────────────────────
     if (ag.funcionaria_id) {

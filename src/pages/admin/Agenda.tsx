@@ -180,6 +180,7 @@ export default function Agenda() {
           dataHoraInicial={dataHoraSelecionada}
           agendamentoEditar={agendamentoEditar}
           funcionarias={funcionarios.map((f) => ({ id: f.id, nome: f.nome }))}
+          onSalvo={(data) => { setDataReferencia(data); setView("dia"); }}
         />
       </div>
     </>

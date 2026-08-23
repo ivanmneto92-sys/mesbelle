@@ -22,10 +22,11 @@ interface Props {
   agendamentoEditar?: Agendamento; // para editar existente
   funcionarias?: FuncionariaOpcao[]; // só passado no calendário admin
   funcionariaIdFixo?: string; // portal do funcionário: todo novo agendamento nasce atribuído a ela
+  onSalvo?: (dataHora: Date) => void; // navega o calendário até a data salva
 }
 
 export function NovoAgendamentoDialog({
-  aberto, onFechar, dataHoraInicial, agendamentoEditar, funcionarias, funcionariaIdFixo,
+  aberto, onFechar, dataHoraInicial, agendamentoEditar, funcionarias, funcionariaIdFixo, onSalvo,
 }: Props) {
   const criar = useCriarAgendamento();
   const editar = useEditarAgendamento();
@@ -82,6 +83,7 @@ export function NovoAgendamentoDialog({
     } else {
       await criar.mutateAsync(payload);
     }
+    onSalvo?.(new Date(dataHora));
     onFechar();
   };
 

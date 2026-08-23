@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { Agendamento, NovoAgendamento, TipoAgendamento } from "@/types/agenda";
+import { Agendamento, NovoAgendamento, TipoAgendamento, StatusAgendamento } from "@/types/agenda";
 import { toast } from "sonner";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -19,6 +19,7 @@ interface AgendamentoRow {
   vestido_id: string | null;
   funcionaria_id: string | null;
   observacoes: string | null;
+  status: string;
   criado_em: string;
   vestidos: { nome: string } | null;
 }
@@ -37,6 +38,7 @@ function mapRow(row: AgendamentoRow): Agendamento {
     vestidoId: row.vestido_id,
     funcionariaId: row.funcionaria_id,
     observacoes: row.observacoes,
+    status: (row.status as StatusAgendamento) ?? "agendado",
     criadoEm: row.criado_em,
     vestidoNome: row.vestidos?.nome ?? null,
   };
@@ -66,6 +68,12 @@ export function useAgenda(dataInicio: Date, dataFim: Date, funcionariaId?: strin
       if (error) throw error;
       return (data ?? []).map((row) => mapRow(row as AgendamentoRow));
     },
+    // Mantém a agenda sincronizada entre abas/usuários diferentes (ex: admin
+    // cria um evento enquanto a funcionária está com a dela aberta) sem
+    // precisar de WebSockets — só re-busca quando a aba está em foco.
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    staleTime: 20_000,
   });
 }
 
@@ -143,6 +151,32 @@ export function useEditarAgendamento() {
       toast.success("Agendamento atualizado!");
     },
     onError: (e: Error) => toast.error(e.message || "Erro ao atualizar"),
+  });
+}
+
+export function useMoverKanban() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: StatusAgendamento }) => {
+      const { error } = await supabase.from("agendamentos").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    // Atualização otimista — o card se move imediatamente, sem esperar o servidor.
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["agenda"] });
+      const snapshot = qc.getQueriesData<Agendamento[]>({ queryKey: ["agenda"] });
+      qc.setQueriesData<Agendamento[]>({ queryKey: ["agenda"] }, (old) =>
+        (old ?? []).map((ag) => (ag.id === id ? { ...ag, status } : ag)),
+      );
+      return { snapshot };
+    },
+    onError: (e: Error, _vars, ctx) => {
+      ctx?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data));
+      toast.error(e.message || "Erro ao mover card. Tente novamente.");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["agenda"] });
+    },
   });
 }
 

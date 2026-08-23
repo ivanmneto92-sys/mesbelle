@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { leadSchema, firstZodError } from "@/lib/schemas";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NewLeadModalProps {
   open: boolean;
@@ -16,11 +17,19 @@ interface NewLeadModalProps {
 
 const tiposEvento = ["Casamento", "Formatura", "Gala", "Debutante", "Festa", "Outro"];
 
+const formInicial = (vendedorResponsavel: string) => ({
+  nome: "", telefone: "", email: "", cpf: "", endereco: "",
+  tipoEvento: "", dataEvento: "", notasInternas: "", vendedorResponsavel,
+});
+
 export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
-  const [form, setForm] = useState({
-    nome: "", telefone: "", email: "", cpf: "", endereco: "",
-    tipoEvento: "", dataEvento: "", notasInternas: "", vendedorResponsavel: "Juliana Costa",
-  });
+  const { user } = useAuth();
+  // "Vendedor responsável" é preenchido com quem está logado no momento do
+  // cadastro — antes vinha fixo como "Juliana Costa" (nome de exemplo dos
+  // dados de demonstração original), então todo lead criado por qualquer
+  // pessoa aparecia atribuído à mesma vendedora, independente de quem
+  // realmente cadastrou.
+  const [form, setForm] = useState(formInicial(user?.name ?? ""));
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -33,7 +42,7 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
     try {
       await onSave(parsed.data as Omit<Lead, "id" | "criadoEm" | "statusFunil">);
       toast.success("Lead cadastrado com sucesso!");
-      setForm({ nome: "", telefone: "", email: "", cpf: "", endereco: "", tipoEvento: "", dataEvento: "", notasInternas: "", vendedorResponsavel: "Juliana Costa" });
+      setForm(formInicial(user?.name ?? ""));
       onClose();
     } catch {
       toast.error("Erro ao salvar lead");

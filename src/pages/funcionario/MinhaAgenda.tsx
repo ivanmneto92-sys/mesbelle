@@ -149,6 +149,7 @@ const MinhaAgenda = () => {
           dataHoraInicial={dataHoraSelecionada}
           agendamentoEditar={agendamentoEditar}
           funcionariaIdFixo={user?.id}
+          onSalvo={(data) => { setDataReferencia(data); setView("dia"); }}
         />
       </div>
     </>

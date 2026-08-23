@@ -26,9 +26,11 @@ export type Database = {
           duracao_minutos: number
           funcionaria_id: string | null
           id: string
+          lead_id: string | null
           negocio_id: string | null
           observacoes: string | null
           reserva_id: string | null
+          status: string
           tipo: string
           vestido_id: string | null
         }
@@ -43,9 +45,11 @@ export type Database = {
           duracao_minutos?: number
           funcionaria_id?: string | null
           id?: string
+          lead_id?: string | null
           negocio_id?: string | null
           observacoes?: string | null
           reserva_id?: string | null
+          status?: string
           tipo: string
           vestido_id?: string | null
         }
@@ -60,13 +64,22 @@ export type Database = {
           duracao_minutos?: number
           funcionaria_id?: string | null
           id?: string
+          lead_id?: string | null
           negocio_id?: string | null
           observacoes?: string | null
           reserva_id?: string | null
+          status?: string
           tipo?: string
           vestido_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "agendamentos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agendamentos_negocio_id_fkey"
             columns: ["negocio_id"]
@@ -733,6 +746,7 @@ export type Database = {
           descricao: string
           id: string
           lead_id: string | null
+          negocio_id: string | null
           observacoes: string | null
           status: string
           tipo: string
@@ -746,6 +760,7 @@ export type Database = {
           descricao?: string
           id?: string
           lead_id?: string | null
+          negocio_id?: string | null
           observacoes?: string | null
           status?: string
           tipo: string
@@ -759,6 +774,7 @@ export type Database = {
           descricao?: string
           id?: string
           lead_id?: string | null
+          negocio_id?: string | null
           observacoes?: string | null
           status?: string
           tipo?: string
@@ -771,6 +787,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_financeiras_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
         ]
@@ -790,33 +813,6 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
-        }
-        Relationships: []
-      }
-      vendas_funcionarios: {
-        Row: {
-          created_at: string
-          funcionario_id: string
-          id: string
-          mes: string
-          quantidade: number
-          valor_total: number
-        }
-        Insert: {
-          created_at?: string
-          funcionario_id: string
-          id?: string
-          mes: string
-          quantidade?: number
-          valor_total?: number
-        }
-        Update: {
-          created_at?: string
-          funcionario_id?: string
-          id?: string
-          mes?: string
-          quantidade?: number
-          valor_total?: number
         }
         Relationships: []
       }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Users, ShoppingBag, Truck,
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
-  Megaphone, BarChart3, CalendarDays, Kanban, UserCircle, ScrollText,
+  Megaphone, BarChart3, CalendarDays, UserCircle, ScrollText,
   FileBarChart, Wallet, TrendingUp, ArrowLeftRight, PieChart, UserSearch,
   Package2, LayoutGrid, Scissors, FileSignature,
 } from "lucide-react";
@@ -53,7 +53,6 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
           { title: "Relatório Agendamento", url: "/comercial/relatorio-agendamento", icon: BarChart3, roles: ["admin", "vendedor"] },
           { title: "Calendário", url: "/comercial/calendario", icon: CalendarDays, roles: ["admin", "vendedor"] },
           { title: "Contratos", url: "/comercial/contratos", icon: ScrollText, roles: ["admin", "vendedor"] },
-          { title: "Kanban", url: "/comercial/kanban", icon: Kanban, roles: ["admin", "vendedor"] },
         ],
       },
       {

@@ -16,6 +16,7 @@ interface AgendamentoRow {
   cliente_email: string | null;
   cliente_telefone: string | null;
   negocio_id: string | null;
+  lead_id: string | null;
   reserva_id: string | null;
   vestido_id: string | null;
   funcionaria_id: string | null;
@@ -35,6 +36,7 @@ function mapRow(row: AgendamentoRow): Agendamento {
     clienteEmail: row.cliente_email,
     clienteTelefone: row.cliente_telefone,
     negocioId: row.negocio_id,
+    leadId: row.lead_id,
     reservaId: row.reserva_id,
     vestidoId: row.vestido_id,
     funcionariaId: row.funcionaria_id,
@@ -132,6 +134,7 @@ export function useCriarAgendamento() {
           cliente_email: payload.clienteEmail ?? null,
           cliente_telefone: payload.clienteTelefone ?? null,
           negocio_id: payload.negocioId ?? null,
+          lead_id: payload.leadId ?? null,
           reserva_id: payload.reservaId ?? null,
           vestido_id: payload.vestidoId ?? null,
           funcionaria_id: payload.funcionariaId ?? null,
@@ -162,6 +165,7 @@ export function useEditarAgendamento() {
       if (payload.clienteNome) update.cliente_nome = payload.clienteNome;
       if (payload.clienteEmail !== undefined) update.cliente_email = payload.clienteEmail || null;
       if (payload.clienteTelefone !== undefined) update.cliente_telefone = payload.clienteTelefone || null;
+      if (payload.leadId !== undefined) update.lead_id = payload.leadId || null;
       if (payload.funcionariaId !== undefined) update.funcionaria_id = payload.funcionariaId || null;
       if (payload.observacoes !== undefined) update.observacoes = payload.observacoes || null;
 

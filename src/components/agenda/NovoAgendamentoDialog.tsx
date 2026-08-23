@@ -6,9 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2 } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Trash2, Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Agendamento, NovoAgendamento, TipoAgendamento, TIPO_CONFIG } from "@/types/agenda";
 import { useCriarAgendamento, useEditarAgendamento, useExcluirAgendamento } from "@/hooks/useAgenda";
+import { useLeadsBusca } from "@/hooks/useLeadsBusca";
 
 interface FuncionariaOpcao {
   id: string;
@@ -31,6 +35,7 @@ export function NovoAgendamentoDialog({
   const criar = useCriarAgendamento();
   const editar = useEditarAgendamento();
   const excluir = useExcluirAgendamento();
+  const { data: leads } = useLeadsBusca();
 
   const modoEditar = !!agendamentoEditar;
 
@@ -42,6 +47,8 @@ export function NovoAgendamentoDialog({
   const [telefone, setTelefone] = useState("");
   const [funcionariaId, setFuncionariaId] = useState("");
   const [obs, setObs] = useState("");
+  const [leadId, setLeadId] = useState<string | null>(null);
+  const [leadPopoverAberto, setLeadPopoverAberto] = useState(false);
 
   useEffect(() => {
     if (agendamentoEditar) {
@@ -53,6 +60,7 @@ export function NovoAgendamentoDialog({
       setTelefone(agendamentoEditar.clienteTelefone ?? "");
       setFuncionariaId(agendamentoEditar.funcionariaId ?? "");
       setObs(agendamentoEditar.observacoes ?? "");
+      setLeadId(agendamentoEditar.leadId ?? null);
     } else if (dataHoraInicial) {
       setDataHora(format(dataHoraInicial, "yyyy-MM-dd'T'HH:mm"));
       setTipo("visita");
@@ -62,10 +70,21 @@ export function NovoAgendamentoDialog({
       setTelefone("");
       setFuncionariaId(funcionariaIdFixo ?? "");
       setObs("");
+      setLeadId(null);
     }
   }, [agendamentoEditar, dataHoraInicial, aberto, funcionariaIdFixo]);
 
   const valido = cliente.trim().length > 0 && dataHora.length > 0;
+
+  const handleSelecionarLead = (lead: { id: string; nome: string; telefone: string; email: string } | null) => {
+    setLeadId(lead?.id ?? null);
+    if (lead) {
+      setCliente(lead.nome);
+      setTelefone(lead.telefone);
+      setEmail(lead.email);
+    }
+    setLeadPopoverAberto(false);
+  };
 
   const handleSalvar = async () => {
     const payload: NovoAgendamento = {
@@ -77,6 +96,7 @@ export function NovoAgendamentoDialog({
       clienteTelefone: telefone.trim() || undefined,
       funcionariaId: funcionariaId || undefined,
       observacoes: obs.trim() || undefined,
+      leadId: leadId ?? undefined,
     };
     if (modoEditar) {
       await editar.mutateAsync({ id: agendamentoEditar.id, ...payload });
@@ -134,6 +154,56 @@ export function NovoAgendamentoDialog({
                 onChange={(e) => setDuracao(Number(e.target.value))}
               />
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Cliente (Lead cadastrado)</Label>
+            <div className="flex items-center gap-2">
+              <Popover open={leadPopoverAberto} onOpenChange={setLeadPopoverAberto}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={leadPopoverAberto}
+                    className="w-full justify-between font-normal"
+                  >
+                    {leadId ? leads?.find((l) => l.id === leadId)?.nome ?? "Lead selecionado" : "Buscar lead cadastrado..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar por nome..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum lead encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {(leads ?? []).map((lead) => (
+                          <CommandItem
+                            key={lead.id}
+                            value={lead.nome}
+                            onSelect={() => handleSelecionarLead(lead)}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", leadId === lead.id ? "opacity-100" : "opacity-0")} />
+                            <div className="flex flex-col">
+                              <span>{lead.nome}</span>
+                              {lead.telefone && <span className="text-xs text-muted-foreground">{lead.telefone}</span>}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {leadId && (
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={() => handleSelecionarLead(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Selecionar um lead preenche nome, e-mail e telefone abaixo. Também dá pra preencher manualmente para um cliente avulso.
+            </p>
           </div>
 
           <div className="space-y-1">

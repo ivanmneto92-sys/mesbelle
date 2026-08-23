@@ -32,6 +32,7 @@ export interface Agendamento {
   clienteEmail: string | null;
   clienteTelefone: string | null;
   negocioId: string | null;
+  leadId: string | null;
   reservaId: string | null;
   vestidoId: string | null;
   funcionariaId: string | null;
@@ -51,6 +52,7 @@ export interface NovoAgendamento {
   clienteEmail?: string;
   clienteTelefone?: string;
   negocioId?: string;
+  leadId?: string;
   reservaId?: string;
   vestidoId?: string;
   funcionariaId?: string;

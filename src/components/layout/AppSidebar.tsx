@@ -134,6 +134,7 @@ const navGroupsFuncionario: { label: string; items: NavEntry[] }[] = [
       { title: "Meus Leads", url: "/meus-leads", icon: Users, roles: ["vendedor"] },
       { title: "Nova Venda", url: "/minha-venda", icon: ShoppingBag, roles: ["vendedor"] },
       { title: "Agendamento", url: "/meu-agendamento", icon: CalendarClock, roles: ["vendedor"] },
+      { title: "Minha Agenda", url: "/minha-agenda", icon: CalendarDays, roles: ["vendedor"] },
       { title: "Contratos", url: "/meu-contrato", icon: FileSignature, roles: ["vendedor"] },
     ],
   },

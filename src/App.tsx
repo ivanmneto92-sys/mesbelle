@@ -14,7 +14,7 @@ import CRM from "./pages/CRM";
 import ComercialRelatorio from "./pages/comercial/ComercialRelatorio";
 import ComercialRelatorioAgendamento from "./pages/comercial/ComercialRelatorioAgendamento";
 import ComercialAgendamento from "./pages/comercial/ComercialAgendamento";
-import ComercialCalendario from "./pages/comercial/ComercialCalendario";
+import Agenda from "./pages/admin/Agenda";
 import ComercialContratos from "./pages/comercial/ComercialContratos";
 import ComercialKanban from "./pages/comercial/ComercialKanban";
 import OperacionalAcervo from "./pages/operacional/OperacionalAcervo";
@@ -36,6 +36,7 @@ import MeuPainel from "./pages/funcionario/MeuPainel";
 import MeusLeads from "./pages/funcionario/MeusLeads";
 import MinhaVenda from "./pages/funcionario/MinhaVenda";
 import MeuAgendamento from "./pages/funcionario/MeuAgendamento";
+import MinhaAgenda from "./pages/funcionario/MinhaAgenda";
 import MeuContrato from "./pages/funcionario/MeuContrato";
 import MinhasMetricas from "./pages/funcionario/MinhasMetricas";
 import NotFound from "./pages/NotFound";
@@ -74,12 +75,13 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/meus-leads": ["vendedor"],
   "/minha-venda": ["vendedor"],
   "/meu-agendamento": ["vendedor"],
+  "/minha-agenda": ["vendedor"],
   "/meu-contrato": ["vendedor"],
   "/minhas-metricas": ["vendedor"],
 };
 
 // Rotas do portal isolado do funcionário (além de /perfil, comum a todos os roles).
-const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-venda", "/meu-agendamento", "/meu-contrato", "/minhas-metricas"];
+const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-venda", "/meu-agendamento", "/minha-agenda", "/meu-contrato", "/minhas-metricas"];
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -151,7 +153,7 @@ const AppRoutes = () => {
       <Route path="/comercial/relatorio" element={<ProtectedRoute path="/comercial/relatorio"><ComercialRelatorio /></ProtectedRoute>} />
       <Route path="/comercial/relatorio-agendamento" element={<ProtectedRoute path="/comercial/relatorio-agendamento"><ComercialRelatorioAgendamento /></ProtectedRoute>} />
       <Route path="/comercial/agendamento" element={<ProtectedRoute path="/comercial/agendamento"><ComercialAgendamento /></ProtectedRoute>} />
-      <Route path="/comercial/calendario" element={<ProtectedRoute path="/comercial/calendario"><ComercialCalendario /></ProtectedRoute>} />
+      <Route path="/comercial/calendario" element={<ProtectedRoute path="/comercial/calendario"><Agenda /></ProtectedRoute>} />
       <Route path="/comercial/contratos" element={<ProtectedRoute path="/comercial/contratos"><ComercialContratos /></ProtectedRoute>} />
       <Route path="/comercial/kanban" element={<ProtectedRoute path="/comercial/kanban"><ComercialKanban /></ProtectedRoute>} />
       <Route path="/acervo" element={<Navigate to="/operacional/acervo" replace />} />
@@ -176,6 +178,7 @@ const AppRoutes = () => {
       <Route path="/meus-leads" element={<ProtectedRoute path="/meus-leads"><MeusLeads /></ProtectedRoute>} />
       <Route path="/minha-venda" element={<ProtectedRoute path="/minha-venda"><MinhaVenda /></ProtectedRoute>} />
       <Route path="/meu-agendamento" element={<ProtectedRoute path="/meu-agendamento"><MeuAgendamento /></ProtectedRoute>} />
+      <Route path="/minha-agenda" element={<ProtectedRoute path="/minha-agenda"><MinhaAgenda /></ProtectedRoute>} />
       <Route path="/meu-contrato" element={<ProtectedRoute path="/meu-contrato"><MeuContrato /></ProtectedRoute>} />
       <Route path="/minhas-metricas" element={<ProtectedRoute path="/minhas-metricas"><MinhasMetricas /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />

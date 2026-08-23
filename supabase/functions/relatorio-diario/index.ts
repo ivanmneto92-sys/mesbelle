@@ -153,16 +153,32 @@ Deno.serve(async (req) => {
       funcionaria_nome: e.funcionaria_id ? nomesMap[e.funcionaria_id] ?? null : null,
     }));
 
+    // Cada destinatário é enviado de forma independente — a falha de um
+    // e-mail (endereço rejeitado pelo Resend, etc.) não deve impedir o
+    // relatório de chegar aos demais.
+    const erros: string[] = [];
+    const enviarComLog = async (descricao: string, para: string, assunto: string, html: string) => {
+      try {
+        await enviarEmail({ para, assunto, html });
+        console.log(`[relatorio-diario] ${descricao} enviado: ${para}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[relatorio-diario] falha ao enviar ${descricao} (${para}): ${msg}`);
+        erros.push(`${descricao}: ${msg}`);
+      }
+    };
+
     // ── Enviar para os admins ──────────────────────────────────────────────
     const { data: adminRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
     for (const ar of adminRoles ?? []) {
       const { data: adminUser } = await supabaseAdmin.auth.admin.getUserById(ar.user_id);
       if (!adminUser?.user?.email) continue;
-      await enviarEmail({
-        para: adminUser.user.email,
-        assunto: `📅 Agenda do dia — ${dataFormatadaCapitalizada}`,
-        html: montarCorpoRelatorio(eventos, "Relatório completo do dia", dataFormatadaCapitalizada, `${siteUrl}/comercial/calendario`),
-      });
+      await enviarComLog(
+        "relatório do admin",
+        adminUser.user.email,
+        `📅 Agenda do dia — ${dataFormatadaCapitalizada}`,
+        montarCorpoRelatorio(eventos, "Relatório completo do dia", dataFormatadaCapitalizada, `${siteUrl}/comercial/calendario`),
+      );
     }
 
     // ── Enviar para cada funcionária (apenas os dela) ──────────────────────
@@ -175,20 +191,21 @@ Deno.serve(async (req) => {
       if (!funcUser?.user?.email) continue;
       const nomeFunc = String(funcUser.user.user_metadata?.nome ?? "Funcionária");
 
-      await enviarEmail({
-        para: funcUser.user.email,
-        assunto: `📅 Seus agendamentos de hoje — ${dataFormatadaCapitalizada}`,
-        html: montarCorpoRelatorio(
+      await enviarComLog(
+        "relatório da funcionária",
+        funcUser.user.email,
+        `📅 Seus agendamentos de hoje — ${dataFormatadaCapitalizada}`,
+        montarCorpoRelatorio(
           eventosDaFuncionaria,
           `Olá, ${nomeFunc}! Estes são seus agendamentos de hoje`,
           dataFormatadaCapitalizada,
           `${siteUrl}/minha-agenda`,
         ),
-      });
+      );
     }
 
-    console.log(`[relatorio-diario] Enviado. ${eventos.length} eventos no dia.`);
-    return json({ success: true, totalEventos: eventos.length });
+    console.log(`[relatorio-diario] Concluído. ${eventos.length} eventos no dia. Erros: ${erros.length}`);
+    return json({ success: erros.length === 0, totalEventos: eventos.length, erros: erros.length > 0 ? erros : undefined });
   } catch (err) {
     console.error("[relatorio-diario] erro:", err);
     return json({ error: err instanceof Error ? err.message : "Erro interno" }, 500);

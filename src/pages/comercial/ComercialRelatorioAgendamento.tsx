@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useAgendamentos } from "@/hooks/useAgendamentos";
+import { useAgenda } from "@/hooks/useAgenda";
+import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useDateRange } from "@/hooks/useDateRange";
-import { AGENDAMENTO_KANBAN_COLUMNS } from "@/types/comercial";
+import { STATUS_KANBAN, COLUNAS_KANBAN, TIPO_CONFIG } from "@/types/agenda";
 
 function KpiTile({ label, value, sub, icon: Icon }: { label: string; value: string; sub?: string; icon: typeof BarChart3 }) {
   return (
@@ -25,39 +26,45 @@ function KpiTile({ label, value, sub, icon: Icon }: { label: string; value: stri
 }
 
 const ComercialRelatorioAgendamento = () => {
-  const { agendamentos } = useAgendamentos();
   const { range, setRange } = useDateRange();
-
-  const noPeriodo = useMemo(
-    () => agendamentos.filter((l) => l.provaData && l.provaData >= range.from && l.provaData <= range.to),
-    [agendamentos, range]
+  const { funcionarios } = useFuncionarios();
+  const nomesFuncionarias = useMemo(
+    () => Object.fromEntries(funcionarios.map((f) => [f.id, f.nome])),
+    [funcionarios],
   );
 
+  // range.from/range.to são datas locais "YYYY-MM-DD" — ancoradas em início/fim
+  // do dia local para casar com como o resto da Agenda constrói os limites
+  // (ver CalendarioDia/Semana/Mes), evitando o deslocamento de fuso que
+  // `new Date("YYYY-MM-DD")` sozinho causaria (interpretado como UTC).
+  const dataInicio = new Date(`${range.from}T00:00:00`);
+  const dataFim = new Date(`${range.to}T23:59:59`);
+  const { data: agendamentos } = useAgenda(dataInicio, dataFim);
+  const noPeriodo = useMemo(() => agendamentos ?? [], [agendamentos]);
+
   const chartData = useMemo(
-    () => AGENDAMENTO_KANBAN_COLUMNS.map((col) => ({
-      name: col.title,
-      total: noPeriodo.filter((l) => l.statusFunil === col.id).length,
+    () => COLUNAS_KANBAN.map((status) => ({
+      name: STATUS_KANBAN[status].label,
+      total: noPeriodo.filter((ag) => ag.status === status).length,
     })),
-    [noPeriodo]
+    [noPeriodo],
   );
 
   const total = noPeriodo.length;
-  const compareceram = noPeriodo.filter((l) => l.statusFunil === "compareceu_alugou" || l.statusFunil === "compareceu_nao_alugou").length;
-  const alugaram = noPeriodo.filter((l) => l.statusFunil === "compareceu_alugou").length;
-  const canceladas = noPeriodo.filter((l) => l.statusFunil === "cancelada" || l.statusFunil === "reagendada").length;
+  const compareceram = noPeriodo.filter((ag) => ag.status === "compareceu_alugou" || ag.status === "compareceu_nao_alugou").length;
+  const alugaram = noPeriodo.filter((ag) => ag.status === "compareceu_alugou").length;
+  const canceladas = noPeriodo.filter((ag) => ag.status === "cancelada" || ag.status === "reagendada").length;
   const taxaComparecimento = total > 0 ? Math.round((compareceram / total) * 100) : 0;
   const taxaConversao = compareceram > 0 ? Math.round((alugaram / compareceram) * 100) : 0;
 
-  const statusMeta = (status: string) => AGENDAMENTO_KANBAN_COLUMNS.find((c) => c.id === status);
-
   return (
     <>
-      <SEO title="Relatório de Agendamento — Comercial — Més Belle" description="Indicadores e histórico de agendamentos comerciais." path="/comercial/relatorio-agendamento" />
+      <SEO title="Relatório de Agendamento — Comercial — Més Belle" description="Indicadores e histórico de agendamentos da Agenda." path="/comercial/relatorio-agendamento" />
       <div className="space-y-6">
         <PageHeader
           icon={BarChart3}
           title="Relatório de Agendamento"
-          description="Indicadores de visitas agendadas, comparecimento e conversão"
+          description="Indicadores de visitas, provas, retiradas e devoluções agendadas na Agenda"
           actions={<DateRangePicker value={range} onChange={setRange} />}
         />
 
@@ -99,24 +106,33 @@ const ComercialRelatorioAgendamento = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Funcionária</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {noPeriodo.map((l) => {
-                    const meta = statusMeta(l.statusFunil);
+                  {noPeriodo.map((ag) => {
+                    const statusCfg = STATUS_KANBAN[ag.status];
+                    const tipoCfg = TIPO_CONFIG[ag.tipo];
                     return (
-                      <TableRow key={l.id}>
-                        <TableCell className="font-medium">{l.nome}</TableCell>
+                      <TableRow key={ag.id}>
+                        <TableCell className="font-medium">{ag.clienteNome}</TableCell>
+                        <TableCell>{tipoCfg?.label ?? ag.tipo}</TableCell>
                         <TableCell>
-                          {l.provaData ? new Date(l.provaData + "T00:00:00").toLocaleDateString("pt-BR") : "—"}
-                          {l.provaHora ? ` às ${l.provaHora}` : ""}
+                          {new Date(ag.dataHora).toLocaleDateString("pt-BR")}
+                          {" às "}
+                          {new Date(ag.dataHora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </TableCell>
-                        <TableCell>{l.vendedorResponsavel || "—"}</TableCell>
+                        <TableCell>{ag.funcionariaId ? nomesFuncionarias[ag.funcionariaId] ?? "—" : "—"}</TableCell>
                         <TableCell>
-                          {meta && <Badge className={`${meta.colorClass} border font-medium text-xs`}>{meta.title}</Badge>}
+                          <Badge
+                            className="border font-medium text-xs"
+                            style={{ backgroundColor: statusCfg.corBg, color: statusCfg.cor, borderColor: statusCfg.cor }}
+                          >
+                            {statusCfg.label}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     );

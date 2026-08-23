@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Agendamento, NovoAgendamento, TipoAgendamento, StatusAgendamento } from "@/types/agenda";
 import { toast } from "sonner";
@@ -91,6 +91,17 @@ export function useAgendaSemana(data: Date, funcionariaId?: string | null) {
 
 export function useAgendaMes(data: Date, funcionariaId?: string | null) {
   return useAgenda(startOfMonth(data), endOfMonth(data), funcionariaId);
+}
+
+/**
+ * Para o Kanban — busca TODOS os agendamentos acessíveis ao usuário no
+ * intervalo de 90 dias atrás até 90 dias à frente, sem filtro de
+ * funcionária: a RLS do banco já garante que cada papel vê apenas o que
+ * lhe é permitido (funcionário vê tudo para poder colaborar; um card sem
+ * funcionaria_id atribuída não deve ficar invisível).
+ */
+export function useAgendaKanban() {
+  return useAgenda(subDays(new Date(), 90), addDays(new Date(), 90));
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────

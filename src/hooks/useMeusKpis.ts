@@ -1,4 +1,6 @@
 import { useLeads } from "./useLeads";
+import { useAgenda } from "./useAgenda";
+import { useAuth } from "@/contexts/AuthContext";
 import type { DateRange } from "./useDateRange";
 
 export interface MeusKpis {
@@ -18,15 +20,22 @@ export interface MeusKpis {
 }
 
 export function useMeusKpis(range: DateRange): MeusKpis {
+  const { user } = useAuth();
   const { leads, negocios } = useLeads();
+  // Agendamentos reais da Agenda (visita/prova/retirada/ajuste/devolucao) no
+  // período, filtrados para o funcionário logado — não mais leads.provaData,
+  // que só conhece "provas" que passaram pelo fluxo antigo do CRM.
+  const { data: agendamentosPeriodo } = useAgenda(
+    new Date(`${range.from}T00:00:00`),
+    new Date(`${range.to}T23:59:59`),
+    user?.id,
+  );
 
   const leadsPeriodo = leads.filter(
     (l) => l.criadoEm && l.criadoEm >= range.from && l.criadoEm <= range.to + "T23:59:59"
   );
 
-  const agendamentos = leadsPeriodo.filter(
-    (l) => l.provaData && l.provaData >= range.from && l.provaData <= range.to
-  );
+  const agendamentos = agendamentosPeriodo ?? [];
 
   const convertidos = leadsPeriodo.filter((l) =>
     ["compareceu_alugou"].includes(l.statusFunil ?? "")

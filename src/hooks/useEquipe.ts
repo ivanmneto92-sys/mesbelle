@@ -10,15 +10,30 @@ const mesesRecentes = Array.from({ length: 4 }, (_, i) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 });
 
-type FuncRow = { id: string; nome: string; cargo: string; tipo_contrato: string; percentual_comissao: number; ativo: boolean; telefone: string | null; email: string | null };
-type VendaRow = { funcionario_id: string; mes: string; quantidade: number; valor_total: number };
 type AvalRow = { id: string; funcionario_id: string; data: string; nota: number; comentario: string | null };
+type NegocioRow = { vendedor_id: string | null; valor_negociado: number; desconto: number; criado_em: string };
 
-const rowToFunc = (r: FuncRow): Funcionario => ({
-  id: r.id, nome: r.nome, cargo: r.cargo, tipoContrato: r.tipo_contrato as TipoContrato,
-  percentualComissao: Number(r.percentual_comissao), ativo: r.ativo,
-  telefone: r.telefone ?? undefined, email: r.email ?? undefined,
-});
+interface EquipeApiRow {
+  id: string; nome: string; cargo: string; tipoContrato: TipoContrato;
+  percentualComissao: number; ativo: boolean; telefone: string; email: string;
+}
+
+async function invocarEquipeAdmin<T>(body: object): Promise<T> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke<T>("equipe-admin", {
+    body,
+    headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+  });
+  if (error) {
+    const context = (error as { context?: Response }).context;
+    if (context && typeof context.json === "function") {
+      const errBody = await context.clone().json().catch(() => null);
+      if (errBody?.error) throw new Error(errBody.error);
+    }
+    throw error;
+  }
+  return data as T;
+}
 
 export function useEquipe(range?: DateRange) {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
@@ -30,16 +45,41 @@ export function useEquipe(range?: DateRange) {
     (async () => {
       let avaliacoesQuery = supabase.from("avaliacoes_clientes").select("*");
       if (range) avaliacoesQuery = avaliacoesQuery.gte("data", range.from).lte("data", range.to);
-      const [fRes, vRes, aRes] = await Promise.all([
-        supabase.from("funcionarios").select("*").order("nome"),
-        supabase.from("vendas_funcionarios").select("*"),
+
+      const [equipeRes, negRes, aRes] = await Promise.all([
+        invocarEquipeAdmin<EquipeApiRow[]>({ action: "listar" }).catch(() => [] as EquipeApiRow[]),
+        // negocios.status_negociacao = "aprovado" é a venda de fato fechada —
+        // reservas_agenda/vestidos não carregam vendedor_id, só negocios.
+        supabase.from("negocios").select("vendedor_id, valor_negociado, desconto, criado_em").eq("status_negociacao", "aprovado"),
         avaliacoesQuery,
       ]);
       if (!active) return;
-      if (fRes.data) setFuncionarios((fRes.data as FuncRow[]).map(rowToFunc));
-      if (vRes.data) setVendas((vRes.data as VendaRow[]).map(r => ({
-        funcionarioId: r.funcionario_id, mes: r.mes, quantidade: r.quantidade, valorTotal: Number(r.valor_total),
+
+      setFuncionarios(equipeRes.map((r) => ({
+        id: r.id, nome: r.nome, cargo: r.cargo, tipoContrato: r.tipoContrato,
+        percentualComissao: Number(r.percentualComissao), ativo: r.ativo,
+        telefone: r.telefone || undefined, email: r.email || undefined,
       })));
+
+      // Agrega negócios aprovados por vendedor + mês, no mesmo formato que a
+      // UI espera (quantidade de vendas e valor líquido = valor_negociado -
+      // desconto, mesma convenção usada em useMeusKpis/useRelatorioOperacional).
+      const negocios = (negRes.data ?? []) as NegocioRow[];
+      const vendasMap = new Map<string, { quantidade: number; valorTotal: number }>();
+      negocios.forEach((n) => {
+        if (!n.vendedor_id || !n.criado_em) return;
+        const mes = n.criado_em.slice(0, 7);
+        const key = `${n.vendedor_id}|${mes}`;
+        const atual = vendasMap.get(key) ?? { quantidade: 0, valorTotal: 0 };
+        atual.quantidade += 1;
+        atual.valorTotal += Number(n.valor_negociado) - Number(n.desconto);
+        vendasMap.set(key, atual);
+      });
+      setVendas([...vendasMap.entries()].map(([key, v]) => {
+        const [funcionarioId, mes] = key.split("|");
+        return { funcionarioId, mes, quantidade: v.quantidade, valorTotal: v.valorTotal };
+      }));
+
       if (aRes.data) setAvaliacoes((aRes.data as AvalRow[]).map(r => ({
         id: r.id, funcionarioId: r.funcionario_id, data: r.data, nota: r.nota, comentario: r.comentario ?? undefined,
       })));
@@ -52,12 +92,11 @@ export function useEquipe(range?: DateRange) {
     const patch: Record<string, unknown> = {};
     if (updates.nome !== undefined) patch.nome = updates.nome;
     if (updates.cargo !== undefined) patch.cargo = updates.cargo;
-    if (updates.tipoContrato !== undefined) patch.tipo_contrato = updates.tipoContrato;
-    if (updates.percentualComissao !== undefined) patch.percentual_comissao = updates.percentualComissao;
+    if (updates.tipoContrato !== undefined) patch.tipoContrato = updates.tipoContrato;
+    if (updates.percentualComissao !== undefined) patch.percentualComissao = updates.percentualComissao;
     if (updates.ativo !== undefined) patch.ativo = updates.ativo;
     if (updates.telefone !== undefined) patch.telefone = updates.telefone;
-    if (updates.email !== undefined) patch.email = updates.email;
-    await supabase.from("funcionarios").update(patch as never).eq("id", id);
+    await invocarEquipeAdmin({ action: "atualizar", userId: id, patch });
   }, []);
 
   const getScoreMes = useCallback((funcId: string, mes: string) => {

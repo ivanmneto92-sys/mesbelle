@@ -101,8 +101,8 @@ const Equipe = () => {
       toast.success(`${parsed.data.nome} cadastrado(a) com sucesso! Um e-mail foi enviado para ${parsed.data.email} com instruções para definir a senha.`);
       setNewMemberOpen(false);
       setNewMember({ nome: "", email: "", role: "vendedor", cargo: "", tipo_contrato: "CLT", percentual_comissao: "", telefone: "" });
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao cadastrar membro");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao cadastrar membro");
     } finally {
       setCreatingMember(false);
     }

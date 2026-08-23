@@ -352,7 +352,11 @@ d("RLS — Contratos e fluxo público de assinatura por token", () => {
       .eq("id", contratoToSignId).single();
     expect(row?.status_assinatura).toBe("assinado");
     expect(row?.data_assinatura).toBeTruthy();
-    expect(row?.ip_assinatura).toBe("1.1.1.1");
+    // ip_assinatura vem do header real da requisição (cf-connecting-ip), não
+    // do parâmetro _ip enviado acima — que é ignorado de propósito, já que
+    // um client malicioso poderia forjar qualquer valor ali.
+    expect(row?.ip_assinatura).toBeTruthy();
+    expect(row?.ip_assinatura).not.toBe("1.1.1.1");
   });
 
   it("assinar_contrato_publico recusa segunda assinatura (ja_assinado)", async () => {

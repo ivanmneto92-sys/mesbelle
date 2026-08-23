@@ -344,14 +344,25 @@ Deno.serve(async (req) => {
     const emoji = TIPO_EMOJI[tipo] ?? "📅";
     const label = TIPO_LABEL[tipo] ?? tipo;
 
+    // Cada destinatário é enviado de forma independente — a falha de um
+    // (ex: e-mail da cliente inválido, ou rejeitado pelo Resend) não deve
+    // impedir os outros de saírem. Erros são coletados e relatados no fim,
+    // em vez de abortar a função na primeira exceção.
+    const erros: string[] = [];
+    const enviarComLog = async (descricao: string, para: string, assunto: string, html: string) => {
+      try {
+        await enviarEmail({ para, assunto, html });
+        console.log(`[notificar-agendamento] ${descricao} enviado: ${para}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[notificar-agendamento] falha ao enviar ${descricao} (${para}): ${msg}`);
+        erros.push(`${descricao}: ${msg}`);
+      }
+    };
+
     // ── 1. E-mail para a cliente ──────────────────────────────────────────
     if (ag.cliente_email) {
-      await enviarEmail({
-        para: ag.cliente_email,
-        assunto: `${emoji} Agendamento confirmado: ${label}`,
-        html: emailCliente(agEnriquecido, atelier),
-      });
-      console.log(`[notificar-agendamento] E-mail enviado à cliente: ${ag.cliente_email}`);
+      await enviarComLog("e-mail da cliente", ag.cliente_email, `${emoji} Agendamento confirmado: ${label}`, emailCliente(agEnriquecido, atelier));
     }
 
     // ── 2. E-mail para a funcionária responsável ──────────────────────────
@@ -359,11 +370,12 @@ Deno.serve(async (req) => {
       const { data: funcUser } = await supabaseAdmin.auth.admin.getUserById(ag.funcionaria_id);
       if (funcUser?.user?.email) {
         const nome = String(funcUser.user.user_metadata?.nome ?? "Funcionária");
-        await enviarEmail({
-          para: funcUser.user.email,
-          assunto: `${emoji} Novo agendamento: ${label} — ${ag.cliente_nome}`,
-          html: emailInterno(agEnriquecido, nome, atelier),
-        });
+        await enviarComLog(
+          "e-mail da funcionária",
+          funcUser.user.email,
+          `${emoji} Novo agendamento: ${label} — ${ag.cliente_nome}`,
+          emailInterno(agEnriquecido, nome, atelier),
+        );
       }
     }
 
@@ -374,15 +386,16 @@ Deno.serve(async (req) => {
       const { data: adminUser } = await supabaseAdmin.auth.admin.getUserById(ar.user_id);
       if (!adminUser?.user?.email) continue;
       const nomeAdmin = String(adminUser.user.user_metadata?.nome ?? "Admin");
-      await enviarEmail({
-        para: adminUser.user.email,
-        assunto: `${emoji} Novo agendamento: ${label} — ${ag.cliente_nome}`,
-        html: emailInterno(agEnriquecido, nomeAdmin, atelier),
-      });
+      await enviarComLog(
+        "e-mail do admin",
+        adminUser.user.email,
+        `${emoji} Novo agendamento: ${label} — ${ag.cliente_nome}`,
+        emailInterno(agEnriquecido, nomeAdmin, atelier),
+      );
     }
 
-    console.log(`[notificar-agendamento] E-mails enviados para agendamento ${ag.id}`);
-    return json({ success: true });
+    console.log(`[notificar-agendamento] Concluído para agendamento ${ag.id}. Erros: ${erros.length}`);
+    return json({ success: erros.length === 0, erros: erros.length > 0 ? erros : undefined });
   } catch (err) {
     console.error("[notificar-agendamento] erro:", err);
     return json({ error: err instanceof Error ? err.message : "Erro interno" }, 500);

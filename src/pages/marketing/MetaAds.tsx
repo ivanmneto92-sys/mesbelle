@@ -4,12 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart3, RefreshCw, AlertCircle, Wallet, Users, Target, MousePointerClick } from "lucide-react";
+import { BarChart3, RefreshCw, AlertCircle, Wallet, Users, Target, MousePointerClick, CalendarCheck, PercentCircle, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard } from "@/components/common/KpiCard";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useDateRange, getPreset } from "@/hooks/useDateRange";
 import { useMetaAds, type MetaCampanha } from "@/hooks/useMetaAds";
+import { useFunilConversao } from "@/hooks/useFunilConversao";
 import { MetaMediaSection } from "@/components/marketing/MetaMediaSection";
 import { formatBRL } from "@/lib/formatters";
 
@@ -65,6 +66,7 @@ function CampanhaRow({ c }: { c: MetaCampanha }) {
 const MetaAds = () => {
   const { range, setRange, setPreset } = useDateRange(getPreset("ultimos_30"));
   const { data, isLoading, isError, error, refetch, isFetching } = useMetaAds(range);
+  const { data: funil } = useFunilConversao(range);
 
   return (
     <>
@@ -142,6 +144,44 @@ const MetaAds = () => {
                 icon={MousePointerClick}
                 accent="info"
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard
+                  eyebrow="Volume de agendamento"
+                  value={funil ? formatNum(funil.volumeAgendamento) : "—"}
+                  hint="Agendamentos marcados no período (agenda do site)"
+                  icon={CalendarCheck}
+                  accent="primary"
+                />
+                <KpiCard
+                  eyebrow="Custo do agendamento"
+                  value={funil && funil.volumeAgendamento > 0 ? formatBRL(data.totais.gasto / funil.volumeAgendamento) : "—"}
+                  hint="Gasto Meta ÷ agendamentos do período"
+                  icon={Target}
+                  accent="warning"
+                />
+                <KpiCard
+                  eyebrow="Conversão do agendamento"
+                  value={funil && data.totais.resultados > 0 ? `${((funil.volumeAgendamento / data.totais.resultados) * 100).toFixed(1)}%` : "—"}
+                  hint="Agendamentos ÷ resultados do Meta"
+                  icon={PercentCircle}
+                  accent="success"
+                />
+                <KpiCard
+                  eyebrow="Custo de aquisição de cliente"
+                  value={funil && funil.totalClientes > 0 ? formatBRL(data.totais.gasto / funil.totalClientes) : "—"}
+                  hint={`${funil ? formatNum(funil.totalClientes) : "—"} cliente(s) fechado(s) no período`}
+                  icon={UserPlus}
+                  accent="info"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-pretty">
+                Esses 4 indicadores cruzam o gasto/resultados do Meta com dados reais do site (agenda e negócios fechados)
+                no mesmo período — hoje não há UTM/campanha vinculada a cada lead, então é uma leitura agregada do
+                período, não atribuição individual por anúncio.
+              </p>
             </div>
 
             <Card className="card-editorial">

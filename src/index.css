@@ -154,3 +154,28 @@
   .shadow-editorial { box-shadow: var(--shadow-card); }
   .shadow-editorial-lg { box-shadow: var(--shadow-elevated); }
 }
+
+/* Scrollbar transparente em todo o app — evita a barra sólida clara padrão
+   do navegador destoando de fundos escuros (ex: sidebar). O track some por
+   completo; o thumb usa um cinza neutro translúcido (não --foreground, que
+   é escuro no tema claro e ficaria invisível sobre a sidebar escura) só
+   como sugestão, mais visível no hover, pra não perder a affordance de
+   "isto rola". */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0 0% 50% / 0.3) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(0 0% 50% / 0.3);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(0 0% 50% / 0.5);
+}

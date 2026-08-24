@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +37,19 @@ const CRM = () => {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Atalho "Novo lead" do Cmd+K (/crm?new=lead) abre o modal direto ao chegar.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") === "lead") {
+      setNewLeadOpen(true);
+      setSearchParams((prev) => {
+        prev.delete("new");
+        return prev;
+      }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedLead = useMemo(() => {
     if (!selectedLeadId) return null;

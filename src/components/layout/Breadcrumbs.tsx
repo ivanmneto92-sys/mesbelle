@@ -7,10 +7,8 @@ const ROUTE_LABELS: Record<string, string> = {
   "/comercial": "Comercial",
   "/comercial/relatorio": "Relatório Comercial",
   "/comercial/relatorio-agendamento": "Relatório Agendamento",
-  "/comercial/agendamento": "Agendamento",
   "/comercial/calendario": "Calendário",
   "/comercial/contratos": "Contratos",
-  "/comercial/kanban": "Kanban",
   "/operacional/acervo": "Acervo",
   "/operacional/producao": "Produção",
   "/operacional/logistica": "Logística",
@@ -30,8 +28,9 @@ const ROUTE_LABELS: Record<string, string> = {
   "/admin/funcionarios": "Funcionários",
   "/meu-painel": "Meu Painel",
   "/meus-leads": "Meus Leads",
-  "/meu-agendamento": "Agendamento",
-  "/meu-contrato": "Gerar Contrato",
+  "/minha-venda": "Nova Venda",
+  "/minha-agenda": "Minha Agenda",
+  "/meu-contrato": "Contratos",
   "/minhas-metricas": "Minhas Métricas",
 };
 

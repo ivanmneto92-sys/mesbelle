@@ -10,6 +10,7 @@ import { KpiCard } from "@/components/common/KpiCard";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useDateRange, getPreset } from "@/hooks/useDateRange";
 import { useMetaAds, type MetaCampanha } from "@/hooks/useMetaAds";
+import { MetaMediaSection } from "@/components/marketing/MetaMediaSection";
 import { formatBRL } from "@/lib/formatters";
 
 const STATUS_CONTA: Record<number, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -177,6 +178,8 @@ const MetaAds = () => {
             <p className="text-xs text-muted-foreground text-right">
               Atualizado em {new Date(data.atualizadoEm).toLocaleString("pt-BR")} · Campanhas pausadas sem gasto no período ficam ocultas
             </p>
+
+            <MetaMediaSection range={range} />
           </>
         )}
       </div>

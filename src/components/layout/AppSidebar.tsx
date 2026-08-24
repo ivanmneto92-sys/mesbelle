@@ -49,6 +49,7 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
         icon: ShoppingBag,
         roles: ["admin", "vendedor", "socio"],
         children: [
+          { title: "CRM (Funil de Leads)", url: "/crm", icon: Handshake, roles: ["admin"] },
           { title: "Relatório Comercial", url: "/comercial/relatorio", icon: FileBarChart, roles: ["admin", "vendedor", "socio"] },
           { title: "Relatório Agendamento", url: "/comercial/relatorio-agendamento", icon: BarChart3, roles: ["admin"] },
           { title: "Calendário", url: "/comercial/calendario", icon: CalendarDays, roles: ["admin", "vendedor"] },

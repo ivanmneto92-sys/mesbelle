@@ -8,6 +8,7 @@ export const CATEGORIA_LABELS: Record<string, string> = {
   receita_outros: "Outros (Receita)",
   comissao: "Comissão de Vendedora",
   imposto: "Impostos & Taxas",
+  taxa_cartao: "Taxa de Cartão",
   custo_producao: "Custo de Produção/Ajuste",
   devolucao: "Devolução / Reembolso",
   aluguel_atelier: "Aluguel do Ateliê",

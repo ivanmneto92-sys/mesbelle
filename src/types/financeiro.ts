@@ -30,6 +30,7 @@ export const CATEGORIAS: CategoriaOption[] = [
   // Despesas Variáveis
   { value: "comissao", label: "Comissão de Vendedora", tipo: "saida", tipoCusto: "variavel" },
   { value: "imposto", label: "Impostos & Taxas", tipo: "saida", tipoCusto: "variavel" },
+  { value: "taxa_cartao", label: "Taxa de Cartão", tipo: "saida", tipoCusto: "variavel" },
   { value: "custo_producao", label: "Custo de Produção/Ajuste", tipo: "saida", tipoCusto: "variavel" },
   { value: "devolucao", label: "Devolução / Reembolso", tipo: "saida", tipoCusto: "variavel" },
   // Despesas Fixas

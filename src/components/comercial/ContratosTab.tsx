@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,25 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Search, FileSignature, Eye, Printer, Link2 } from "lucide-react";
-import { Contrato, ContratoStatus, Negocio } from "@/types/comercial";
+import { Plus, Search, FileSignature, Eye, Printer, Link2, UserSearch } from "lucide-react";
+import { Contrato, ContratoStatus, Lead, Negocio } from "@/types/comercial";
+import { Vestido } from "@/types/acervo";
 import { SignaturePad } from "./SignaturePad";
 import { LinkAssinaturaDialog } from "./LinkAssinaturaDialog";
+import { GerarContratoDoLeadDialog } from "./GerarContratoDoLeadDialog";
 import { TrilhaAuditoria } from "./TrilhaAuditoria";
 import { toast } from "sonner";
 
 interface ContratosTabProps {
   contratos: Contrato[];
   negociosAprovados: Negocio[];
+  leads: Lead[];
+  vestidos: Vestido[];
   onGerarContratoFromNegocio: (negocio: Negocio) => (Contrato | undefined) | Promise<Contrato | null | undefined>;
+  onGerarContratoDoLead: (params: {
+    leadId: string; produtoDescricao: string; valor: number; metodoPagamento: string;
+    dadosComplementares?: { nome?: string; cpf?: string; telefone?: string; email?: string };
+  }) => Promise<Contrato | null>;
   onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
   onAssinar: (contratoId: string, assinaturaBase64: string) => void;
   onGerarLink: (contratoId: string, validadeHoras: number) => Promise<string | null>;
@@ -27,12 +35,18 @@ interface ContratosTabProps {
   onAutoOpenHandled?: () => void;
 }
 
-export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFromNegocio, onUpdateStatus, onAssinar, onGerarLink, autoOpenContratoId, onAutoOpenHandled }: ContratosTabProps) {
+export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, onGerarContratoFromNegocio, onGerarContratoDoLead, onUpdateStatus, onAssinar, onGerarLink, autoOpenContratoId, onAutoOpenHandled }: ContratosTabProps) {
   const [busca, setBusca] = useState("");
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
+  const [novoDoLeadOpen, setNovoDoLeadOpen] = useState(false);
   const [selectedNegocioId, setSelectedNegocioId] = useState("");
   const [previewContrato, setPreviewContrato] = useState<Contrato | null>(null);
   const [linkContrato, setLinkContrato] = useState<Contrato | null>(null);
+
+  const leadsSemContrato = useMemo(
+    () => leads.filter((l) => !contratos.some((c) => c.leadId === l.id && c.statusAssinatura !== "cancelado")),
+    [leads, contratos]
+  );
 
   // Auto-abre o preview quando vier um contrato recém-criado por aprovação de negociação.
   useEffect(() => {
@@ -138,6 +152,9 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
                 <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
                 <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF ou nº" className="pl-8 w-[250px]" />
               </div>
+              <Button size="sm" variant="outline" onClick={() => setNovoDoLeadOpen(true)}>
+                <UserSearch className="h-4 w-4 mr-1" /> Gerar do Lead
+              </Button>
               <Button size="sm" onClick={() => setNovoContratoOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Gerar Contrato
               </Button>
@@ -306,6 +323,14 @@ export function ContratosTab({ contratos, negociosAprovados, onGerarContratoFrom
           )}
         </SheetContent>
       </Sheet>
+
+      <GerarContratoDoLeadDialog
+        open={novoDoLeadOpen}
+        onOpenChange={setNovoDoLeadOpen}
+        leads={leadsSemContrato}
+        vestidos={vestidos}
+        onGerar={onGerarContratoDoLead}
+      />
     </>
   );
 }

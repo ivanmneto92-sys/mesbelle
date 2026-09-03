@@ -4,13 +4,15 @@ import { SEO } from "@/components/SEO";
 import { ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useLeads } from "@/hooks/useLeads";
+import { useAcervo } from "@/hooks/useAcervo";
 import { ContratosTab } from "@/components/comercial/ContratosTab";
 
 const ComercialContratos = () => {
   const {
-    contratos, negocios,
-    addContratoFromNegocio, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
+    leads, contratos, negocios,
+    addContratoFromNegocio, gerarContratoDireto, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
   } = useLeads();
+  const { vestidos } = useAcervo();
   const location = useLocation();
   const [autoOpenContratoId, setAutoOpenContratoId] = useState<string | null>(
     (location.state as { autoOpenContratoId?: string } | null)?.autoOpenContratoId ?? null
@@ -26,7 +28,10 @@ const ComercialContratos = () => {
         <ContratosTab
           contratos={contratos}
           negociosAprovados={negociosAprovados}
+          leads={leads}
+          vestidos={vestidos}
           onGerarContratoFromNegocio={addContratoFromNegocio}
+          onGerarContratoDoLead={gerarContratoDireto}
           onUpdateStatus={updateContratoStatus}
           onAssinar={assinarContrato}
           onGerarLink={gerarLinkAssinatura}

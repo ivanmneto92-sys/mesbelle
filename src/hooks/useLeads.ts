@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negocio, StatusNegociacao } from "@/types/comercial";
 import type { DateRange } from "@/hooks/useDateRange";
 import { googleCalendar } from "@/hooks/useGoogleCalendar";
+import { gerarTermosContrato } from "@/lib/contratoTemplate";
 
 // ============= Legacy storage cleanup =============
 // Kept for compatibility — clears any residual data from the old localStorage-based system.
@@ -308,8 +309,13 @@ export function useLeads(range?: DateRange) {
     const vendedorId = await currentUserId();
     const insertRow = {
       numero, lead_id: lead.id, nome_cliente: lead.nome, cpf_cliente: lead.cpf,
+      email_cliente: lead.email ?? "",
       data_evento: lead.dataEvento, valor_total: valorTotal, status_assinatura: "pendente",
-      termos_texto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${lead.nome}\nCPF: ${lead.cpf}\nEvento: ${lead.tipoEvento}\nData do Evento: ${lead.dataEvento}\nValor Total: R$ ${valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\n\nTermos e condições de uso do vestido...`,
+      termos_texto: gerarTermosContrato({
+        nomeLocataria: lead.nome, cpf: lead.cpf, celular: lead.telefone, email: lead.email,
+        produtoDescricao: lead.tipoEvento || "—", valorLocacao: valorTotal,
+        formaPagamento: "—", dataEvento: lead.dataEvento,
+      }),
       vendedor_id: vendedorId,
     };
     const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
@@ -334,8 +340,15 @@ export function useLeads(range?: DateRange) {
     const insertRow = {
       numero, lead_id: negocio.clienteId, negocio_id: negocio.id,
       nome_cliente: negocio.clienteNome, cpf_cliente: negocio.clienteCpf,
+      email_cliente: lead.email ?? "",
       data_evento: negocio.dataEvento, valor_total: valorFinal, status_assinatura: "pendente",
-      termos_texto: `CONTRATO DE LOCAÇÃO DE VESTIDO\n\nContratante: ${negocio.clienteNome}\nCPF: ${negocio.clienteCpf}\nVestido: ${negocio.vestidoNome || "—"}\nData do Evento: ${negocio.dataEvento}\nValor: R$ ${valorFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nDesconto: R$ ${negocio.desconto.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nPagamento: ${negocio.metodoPagamento}\n\nTermos e condições de uso do vestido...`,
+      termos_texto: gerarTermosContrato({
+        nomeLocataria: negocio.clienteNome, cpf: negocio.clienteCpf, celular: lead.telefone, email: lead.email,
+        produtoDescricao: negocio.vestidoNome || "—", valorLocacao: valorFinal,
+        formaPagamento: negocio.metodoPagamento || "—",
+        observacoesPagamento: negocio.desconto > 0 ? `Desconto aplicado: ${negocio.desconto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : undefined,
+        dataEvento: negocio.dataEvento,
+      }),
       vendedor_id: vendedorId,
     };
     const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
@@ -344,6 +357,82 @@ export function useLeads(range?: DateRange) {
     setContratos((prev) => [newContrato, ...prev]);
     return newContrato;
   }, [leads, contratos, gerarNumeroContrato]);
+
+  // Gera o contrato direto de um lead: escolhe o produto do Acervo e o valor
+  // na hora, completa CPF/celular/e-mail se estiverem faltando no lead, cria
+  // (ou reaproveita) o negócio já aprovado — o que já dispara o financeiro
+  // automático (comissão/taxa/imposto) — e por fim o contrato.
+  const gerarContratoDireto = useCallback(async (params: {
+    leadId: string;
+    produtoDescricao: string;
+    valor: number;
+    metodoPagamento: string;
+    dadosComplementares?: { nome?: string; cpf?: string; telefone?: string; email?: string };
+  }): Promise<Contrato | null> => {
+    const lead = leads.find((l) => l.id === params.leadId);
+    if (!lead) return null;
+    if (params.valor <= 0) return null;
+
+    const extra = params.dadosComplementares ?? {};
+    const nome = extra.nome?.trim() || lead.nome;
+    const cpf = extra.cpf?.trim() || lead.cpf;
+    const telefone = extra.telefone?.trim() || lead.telefone;
+    const email = extra.email?.trim() || lead.email;
+    if (!nome || !cpf?.trim() || !telefone?.trim() || !email?.trim()) return null;
+
+    const leadPatch: Partial<Lead> = {};
+    if (extra.nome && extra.nome.trim() !== lead.nome) leadPatch.nome = nome;
+    if (extra.cpf && extra.cpf.trim() !== lead.cpf) leadPatch.cpf = cpf;
+    if (extra.telefone && extra.telefone.trim() !== lead.telefone) leadPatch.telefone = telefone;
+    if (extra.email && extra.email.trim() !== lead.email) leadPatch.email = email;
+    if (Object.keys(leadPatch).length > 0) await updateLead(lead.id, leadPatch);
+
+    const vendedorId = await currentUserId();
+    let negocio = negocios.find((n) => n.clienteId === lead.id && n.statusNegociacao !== "cancelado");
+    if (negocio) {
+      await supabase.from("negocios").update({
+        cliente_nome: nome, cliente_cpf: cpf, vestido_nome: params.produtoDescricao,
+        valor_negociado: params.valor, metodo_pagamento: params.metodoPagamento,
+        status_negociacao: "aprovado",
+      }).eq("id", negocio.id);
+      negocio = { ...negocio, clienteNome: nome, clienteCpf: cpf, vestidoNome: params.produtoDescricao, valorNegociado: params.valor, metodoPagamento: params.metodoPagamento, statusNegociacao: "aprovado" };
+      setNegocios((prev) => prev.map((n) => n.id === negocio!.id ? negocio! : n));
+    } else {
+      const insertRow = {
+        cliente_id: lead.id, cliente_nome: nome, cliente_cpf: cpf,
+        vestido_nome: params.produtoDescricao, valor_negociado: params.valor, desconto: 0,
+        metodo_pagamento: params.metodoPagamento, status_negociacao: "aprovado", data_evento: lead.dataEvento,
+        vendedor_id: vendedorId,
+      };
+      const { data, error } = await supabase.from("negocios").insert(insertRow).select().single();
+      if (error || !data) return null;
+      negocio = rowToNegocio(data as NegocioRow);
+      setNegocios((prev) => [negocio!, ...prev]);
+    }
+
+    if (!lead.enviadoComercial) {
+      setLeads((prev) => prev.map((l) => l.id === lead.id ? { ...l, enviadoComercial: true } : l));
+      await supabase.from("leads").update({ enviado_comercial: true }).eq("id", lead.id);
+    }
+
+    const numero = await gerarNumeroContrato();
+    const insertContrato = {
+      numero, lead_id: lead.id, negocio_id: negocio.id,
+      nome_cliente: nome, cpf_cliente: cpf, email_cliente: email,
+      data_evento: lead.dataEvento, valor_total: params.valor, status_assinatura: "pendente",
+      termos_texto: gerarTermosContrato({
+        nomeLocataria: nome, cpf, celular: telefone, email,
+        produtoDescricao: params.produtoDescricao, valorLocacao: params.valor,
+        formaPagamento: params.metodoPagamento, dataEvento: lead.dataEvento,
+      }),
+      vendedor_id: vendedorId,
+    };
+    const { data, error } = await supabase.from("contratos").insert(insertContrato).select().single();
+    if (error || !data) return null;
+    const newContrato = rowToContrato(data as ContratoRow);
+    setContratos((prev) => [newContrato, ...prev]);
+    return newContrato;
+  }, [leads, negocios, updateLead, gerarNumeroContrato]);
 
   const aprovarFechamento = useCallback(async (negocioId: string): Promise<{ contrato?: Contrato | null }> => {
     setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, statusNegociacao: "aprovado" as StatusNegociacao } : n));
@@ -408,7 +497,7 @@ export function useLeads(range?: DateRange) {
   return {
     leads, addLead, updateLeadStatus, updateLead,
     medidas, updateMedidas, getMedidas,
-    contratos, addContrato, addContratoFromNegocio, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
+    contratos, addContrato, addContratoFromNegocio, gerarContratoDireto, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
     negocios, enviarParaComercial, updateNegocio, aprovarFechamento,
     getLeadsByStatus,
   };

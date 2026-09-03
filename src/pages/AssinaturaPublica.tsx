@@ -103,6 +103,10 @@ export default function AssinaturaPublica() {
     }
     await load();
     setState("signed");
+
+    // Envia a confirmação por e-mail à cliente — best-effort: se falhar, a
+    // assinatura já foi registrada e a cliente ainda pode baixar o PDF aqui.
+    supabase.functions.invoke("enviar-contrato-cliente", { body: { token } }).catch(console.error);
   };
 
   return (

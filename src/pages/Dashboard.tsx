@@ -76,7 +76,7 @@ const Dashboard = () => {
   const periodMetrics = [
     { eyebrow: "Faturamento do Período", value: fmtBRL(kpis.faturamentoPeriodo), icon: DollarSign, accent: "primary" as const },
     { eyebrow: "Volume de Leads", value: String(kpis.volumeLeads), icon: Users, accent: "info" as const },
-    { eyebrow: "Agendamentos (Provas)", value: String(kpis.agendamentos), icon: CalendarCheck, accent: "info" as const },
+    { eyebrow: "Agendamentos", value: String(kpis.agendamentos), icon: CalendarCheck, accent: "info" as const },
     { eyebrow: "Aluguéis", value: String(kpis.alugueis), icon: Package, accent: "warning" as const },
     { eyebrow: "Ticket Médio", value: fmtBRL(kpis.ticketMedio), icon: Ticket, accent: "primary" as const },
     { eyebrow: "Conversão por Agendamento", value: fmtPct(kpis.conversaoPorAgendamento), icon: Percent, accent: "success" as const },

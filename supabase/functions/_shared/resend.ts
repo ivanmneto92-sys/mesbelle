@@ -56,11 +56,9 @@ export function templateBase(conteudo: string): string {
             <!-- Header -->
             <tr>
               <td style="background:#4a1535;padding:32px 40px;text-align:center;">
-                <h1 style="margin:0;color:#f9f5f1;font-family:Georgia,serif;font-size:28px;
-                            letter-spacing:3px;font-weight:normal;">MesBelle</h1>
-                <p style="margin:4px 0 0;color:#d4a8c7;font-size:12px;letter-spacing:2px;">
-                  ATELIER DE VESTIDOS
-                </p>
+                <img src="${Deno.env.get("SITE_URL") ?? "https://mesbelle.com.br"}/email-logo.png"
+                     alt="MesBelle Atelier" width="96" height="96"
+                     style="display:block;margin:0 auto;border-radius:12px;" />
               </td>
             </tr>
             <!-- Conteúdo -->

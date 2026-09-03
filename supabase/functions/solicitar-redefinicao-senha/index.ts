@@ -52,16 +52,13 @@ Deno.serve(async (req) => {
       return respostaGenerica();
     }
 
-    const nome = String(usuario.user_metadata?.nome ?? email.split("@")[0]);
-    const primeiroNome = nome.split(" ")[0];
-
     try {
       await enviarEmail({
         para: email,
         assunto: "Redefinir sua senha — MesBelle",
         html: templateBase(`
           <h2 style="color:#4a1535;font-size:22px;margin:0 0 16px;">
-            Olá, ${primeiroNome}!
+            Olá, tudo bem?
           </h2>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px;">
             Recebemos uma solicitação para redefinir a sua senha de acesso à MesBelle.

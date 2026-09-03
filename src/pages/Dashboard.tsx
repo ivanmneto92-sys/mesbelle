@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard } from "@/components/common/KpiCard";
 import {
   DollarSign, CalendarCheck, Package,
-  UserPlus, Handshake, Truck, TrendingUp,
+  UserPlus, Handshake, Truck,
   Users, Ticket, Percent, Target, Wallet,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -37,41 +37,6 @@ const Dashboard = () => {
     { label: "Nova Venda", icon: Handshake, to: "/comercial", roles: ["admin"], primary: true },
     { label: "Logística", icon: Truck, to: "/operacional/logistica", roles: ["admin"], primary: false },
   ].filter((s) => user && s.roles.includes(user.role));
-
-  const fatTrend = kpis.faturamentoOntem > 0
-    ? ((kpis.faturamentoHoje - kpis.faturamentoOntem) / kpis.faturamentoOntem) * 100
-    : (kpis.faturamentoHoje > 0 ? 100 : 0);
-
-  const metrics = [
-    {
-      eyebrow: "Faturamento hoje",
-      value: fmtBRL(kpis.faturamentoHoje),
-      hint: "vs ontem",
-      trend: { value: `${fatTrend >= 0 ? "+" : ""}${fatTrend.toFixed(0)}%`, up: fatTrend >= 0 },
-      icon: DollarSign, accent: "primary" as const, sparkline: [3, 4, 3.5, 5, 4.5, 6, 5.5, 7],
-    },
-    {
-      eyebrow: "Agendamentos",
-      value: String(kpis.agendamentosHoje),
-      hint: kpis.leadsNovosHoje > 0 ? `+${kpis.leadsNovosHoje} novos hoje` : "nenhum novo hoje",
-      trend: { value: kpis.agendamentosHoje > 0 ? "Hoje" : "Livre", up: true },
-      icon: CalendarCheck, accent: "info" as const, sparkline: [2, 3, 3, 4, 5, 5, 6, 7],
-    },
-    {
-      eyebrow: "Entregas pendentes",
-      value: String(kpis.entregasPendentes),
-      hint: kpis.entregasAtrasadas > 0 ? `${kpis.entregasAtrasadas} atrasada${kpis.entregasAtrasadas > 1 ? "s" : ""}` : "tudo em dia",
-      trend: { value: kpis.entregasAtrasadas > 0 ? "Atenção" : "OK", up: kpis.entregasAtrasadas === 0 },
-      icon: Package, accent: "warning" as const, sparkline: [6, 5, 5, 4, 4, 5, 4, 4],
-    },
-    {
-      eyebrow: "Conversão do mês",
-      value: `${kpis.conversaoMes.toFixed(0)}%`,
-      hint: "leads convertidos",
-      trend: { value: `${kpis.conversaoMes.toFixed(0)}%`, up: kpis.conversaoMes >= 50 },
-      icon: TrendingUp, accent: "success" as const, sparkline: [55, 58, 56, 60, 59, 61, 62, 62],
-    },
-  ];
 
   const periodMetrics = [
     { eyebrow: "Faturamento do Período", value: fmtBRL(kpis.faturamentoPeriodo), icon: DollarSign, accent: "primary" as const },
@@ -122,13 +87,6 @@ const Dashboard = () => {
         {loading
           ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
           : periodMetrics.map((m) => <KpiCard key={m.eyebrow} {...m} />)}
-      </div>
-
-      {/* KPIs de hoje */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
-        {loading
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
-          : metrics.map((m) => <KpiCard key={m.eyebrow} {...m} />)}
       </div>
     </>
   );

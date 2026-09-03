@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
@@ -22,10 +22,26 @@ const parseLocalDate = (s: string) => {
 
 const fmtLabel = (d: Date) => format(d, "d 'de' MMM 'de' yyyy", { locale: ptBR });
 
+// Um mês só cabe em qualquer largura; dois meses lado a lado só quando a
+// janela realmente tem espaço — o calendário se adapta ao monitor em vez de
+// depender de um valor fixo que fica bom numa tela e estourado em outra.
+function useMesesDoCalendario() {
+  const [meses, setMeses] = useState(1);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 700px)");
+    const atualizar = () => setMeses(mql.matches ? 2 : 1);
+    atualizar();
+    mql.addEventListener("change", atualizar);
+    return () => mql.removeEventListener("change", atualizar);
+  }, []);
+  return meses;
+}
+
 export function DateRangePicker({ value, onChange, className }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange>(value);
   const [activePreset, setActivePreset] = useState<DatePresetKey | null>(null);
+  const numberOfMonths = useMesesDoCalendario();
 
   const handleOpenChange = (next: boolean) => {
     if (next) {
@@ -95,15 +111,15 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
           </p>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {/* Atalhos em linha (quebra em várias linhas se precisar) em vez de
-              lista vertical alta — mantém o popover largo e baixo, não alto. */}
-          <div className="flex flex-wrap gap-1 p-2 border-b border-border-subtle">
+          {/* Grade (não lista vertical alta, não wrap "orgânico"): número de
+              colunas previsível em qualquer largura, sempre baixo e arrumado. */}
+          <div className="grid grid-cols-2 min-[420px]:grid-cols-3 sm:grid-cols-4 gap-1 p-2 border-b border-border-subtle">
             {DATE_PRESETS.map((p) => (
               <button
                 key={p.key}
                 onClick={() => handlePresetClick(p.key)}
                 className={cn(
-                  "text-sm px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border",
+                  "text-sm px-3 py-1.5 rounded-full whitespace-nowrap truncate transition-colors border",
                   activePreset === p.key
                     ? "bg-primary/10 text-primary font-medium border-primary/30"
                     : "text-foreground border-transparent hover:bg-muted"
@@ -116,7 +132,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
           <div className="p-2 overflow-x-auto">
             <Calendar
               mode="range"
-              numberOfMonths={2}
+              numberOfMonths={numberOfMonths}
               defaultMonth={draftFrom}
               selected={{ from: draftFrom, to: draftTo }}
               onSelect={handleCalendarSelect}

@@ -31,8 +31,8 @@ export function CalendarioMes({ dataReferencia, agendamentos, onClickDia }: Prop
   }, [agendamentos]);
 
   return (
-    <div>
-      <div className="grid grid-cols-7 text-center border-b">
+    <div className="overflow-auto max-h-[calc(100vh-220px)]">
+      <div className="grid grid-cols-7 text-center border-b sticky top-0 z-10 bg-background">
         {DIAS_SEMANA.map((d) => (
           <div key={d} className="py-2 text-xs font-semibold text-muted-foreground uppercase">
             {d}

@@ -20,11 +20,17 @@ import { toast } from "sonner";
 
 interface ContratosTabProps {
   contratos: Contrato[];
-  negociosAprovados: Negocio[];
-  leads: Lead[];
-  vestidos: Vestido[];
-  onGerarContratoFromNegocio: (negocio: Negocio) => (Contrato | undefined) | Promise<Contrato | null | undefined>;
-  onGerarContratoDoLead: (params: {
+  // Fluxo antigo (negociação já aprovada no funil comercial) — hoje só faz
+  // sentido na página do vendedor (/meu-contrato), chamada logo após uma
+  // venda em /minha-venda já ter criado o negócio aprovado com peça e valor.
+  negociosAprovados?: Negocio[];
+  onGerarContratoFromNegocio?: (negocio: Negocio) => (Contrato | undefined) | Promise<Contrato | null | undefined>;
+  // Fluxo principal (admin): gera o contrato direto do lead, escolhendo a
+  // peça no Acervo e o valor na hora — não depende de nenhuma negociação
+  // ter sido aprovada antes.
+  leads?: Lead[];
+  vestidos?: Vestido[];
+  onGerarContratoDoLead?: (params: {
     leadId: string; produtoDescricao: string; valor: number; metodoPagamento: string;
     dadosComplementares?: { nome?: string; cpf?: string; telefone?: string; email?: string };
   }) => Promise<Contrato | null>;
@@ -43,8 +49,10 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
   const [previewContrato, setPreviewContrato] = useState<Contrato | null>(null);
   const [linkContrato, setLinkContrato] = useState<Contrato | null>(null);
 
+  const usaFluxoDoLead = !!onGerarContratoDoLead && !!leads && !!vestidos;
+
   const leadsSemContrato = useMemo(
-    () => leads.filter((l) => !contratos.some((c) => c.leadId === l.id && c.statusAssinatura !== "cancelado")),
+    () => (leads ?? []).filter((l) => !contratos.some((c) => c.leadId === l.id && c.statusAssinatura !== "cancelado")),
     [leads, contratos]
   );
 
@@ -76,13 +84,13 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
     cancelado: "Cancelado",
   };
 
-  const negociosSemContrato = negociosAprovados.filter(
+  const negociosSemContrato = (negociosAprovados ?? []).filter(
     (n) => !contratos.some((c) => c.negocioId === n.id && c.statusAssinatura !== "cancelado")
   );
 
   const handleGerar = () => {
     const negocio = negociosSemContrato.find((n) => n.id === selectedNegocioId);
-    if (!negocio) {
+    if (!negocio || !onGerarContratoFromNegocio) {
       toast.error("Selecione uma negociação aprovada.");
       return;
     }
@@ -90,6 +98,11 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
     setNovoContratoOpen(false);
     setSelectedNegocioId("");
     toast.success("Contrato gerado com sucesso!");
+  };
+
+  const handleAbrirGerar = () => {
+    if (usaFluxoDoLead) setNovoDoLeadOpen(true);
+    else setNovoContratoOpen(true);
   };
 
   const handleAssinar = (base64: string) => {
@@ -152,11 +165,8 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
                 <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
                 <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF ou nº" className="pl-8 w-[250px]" />
               </div>
-              <Button size="sm" variant="outline" onClick={() => setNovoDoLeadOpen(true)}>
-                <UserSearch className="h-4 w-4 mr-1" /> Gerar do Lead
-              </Button>
-              <Button size="sm" onClick={() => setNovoContratoOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Gerar Contrato
+              <Button size="sm" onClick={handleAbrirGerar}>
+                {usaFluxoDoLead ? <UserSearch className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />} Gerar Contrato
               </Button>
             </div>
           </div>
@@ -216,7 +226,7 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
         </CardContent>
       </Card>
 
-      <Dialog open={novoContratoOpen} onOpenChange={setNovoContratoOpen}>
+      <Dialog open={!usaFluxoDoLead && novoContratoOpen} onOpenChange={setNovoContratoOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-serif">Gerar Novo Contrato</DialogTitle>
@@ -324,13 +334,15 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
         </SheetContent>
       </Sheet>
 
-      <GerarContratoDoLeadDialog
-        open={novoDoLeadOpen}
-        onOpenChange={setNovoDoLeadOpen}
-        leads={leadsSemContrato}
-        vestidos={vestidos}
-        onGerar={onGerarContratoDoLead}
-      />
+      {usaFluxoDoLead && (
+        <GerarContratoDoLeadDialog
+          open={novoDoLeadOpen}
+          onOpenChange={setNovoDoLeadOpen}
+          leads={leadsSemContrato}
+          vestidos={vestidos ?? []}
+          onGerar={onGerarContratoDoLead!}
+        />
+      )}
     </>
   );
 }

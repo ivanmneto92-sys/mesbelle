@@ -9,16 +9,14 @@ import { ContratosTab } from "@/components/comercial/ContratosTab";
 
 const ComercialContratos = () => {
   const {
-    leads, contratos, negocios,
-    addContratoFromNegocio, gerarContratoDireto, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
+    leads, contratos,
+    gerarContratoDireto, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
   } = useLeads();
   const { vestidos } = useAcervo();
   const location = useLocation();
   const [autoOpenContratoId, setAutoOpenContratoId] = useState<string | null>(
     (location.state as { autoOpenContratoId?: string } | null)?.autoOpenContratoId ?? null
   );
-
-  const negociosAprovados = negocios.filter((n) => n.statusNegociacao === "aprovado");
 
   return (
     <>
@@ -27,10 +25,8 @@ const ComercialContratos = () => {
         <PageHeader icon={ScrollText} title="Contratos" description="Emissão, acompanhamento e assinatura de contratos" />
         <ContratosTab
           contratos={contratos}
-          negociosAprovados={negociosAprovados}
           leads={leads}
           vestidos={vestidos}
-          onGerarContratoFromNegocio={addContratoFromNegocio}
           onGerarContratoDoLead={gerarContratoDireto}
           onUpdateStatus={updateContratoStatus}
           onAssinar={assinarContrato}

@@ -85,7 +85,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
         collisionPadding={16}
         className="w-auto max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto p-0 shadow-editorial-lg border-border-subtle rounded-lg"
       >
-        <div className="sticky top-0 z-10 bg-popover rounded-t-lg px-4 py-3 border-b border-border-subtle">
+        <div className="px-4 py-3 border-b border-border-subtle">
           <p className="text-sm font-medium">
             {fmtLabel(draftFrom)} a {fmtLabel(draftTo)}
           </p>
@@ -119,7 +119,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
             />
           </div>
         </div>
-        <div className="sticky bottom-0 z-10 bg-popover rounded-b-lg flex items-center justify-end gap-2 px-4 py-3 border-t border-border-subtle">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border-subtle">
           <Button variant="ghost" size="sm" onClick={handleCancelar}>Cancelar</Button>
           <Button size="sm" onClick={handleAtualizar}>Atualizar</Button>
         </div>

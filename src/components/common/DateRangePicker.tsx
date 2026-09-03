@@ -95,34 +95,34 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
           </p>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col sm:flex-row">
-            <div className="flex sm:flex-col gap-1 p-2 border-b sm:border-b-0 sm:border-r border-border-subtle overflow-x-auto sm:w-48 sm:shrink-0">
-              {DATE_PRESETS.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => handlePresetClick(p.key)}
-                  className={cn(
-                    "text-left text-sm px-3 py-2 rounded-lg whitespace-nowrap transition-colors shrink-0",
-                    activePreset === p.key
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-foreground hover:bg-muted"
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <div className="p-2 overflow-x-auto">
-              <Calendar
-                mode="range"
-                numberOfMonths={1}
-                defaultMonth={draftFrom}
-                selected={{ from: draftFrom, to: draftTo }}
-                onSelect={handleCalendarSelect}
-                locale={ptBR}
-                className="min-w-max"
-              />
-            </div>
+          {/* Atalhos em linha (quebra em várias linhas se precisar) em vez de
+              lista vertical alta — mantém o popover largo e baixo, não alto. */}
+          <div className="flex flex-wrap gap-1 p-2 border-b border-border-subtle">
+            {DATE_PRESETS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => handlePresetClick(p.key)}
+                className={cn(
+                  "text-sm px-3 py-1.5 rounded-full whitespace-nowrap transition-colors border",
+                  activePreset === p.key
+                    ? "bg-primary/10 text-primary font-medium border-primary/30"
+                    : "text-foreground border-transparent hover:bg-muted"
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="p-2 overflow-x-auto">
+            <Calendar
+              mode="range"
+              numberOfMonths={2}
+              defaultMonth={draftFrom}
+              selected={{ from: draftFrom, to: draftTo }}
+              onSelect={handleCalendarSelect}
+              locale={ptBR}
+              className="min-w-max"
+            />
           </div>
         </div>
         <div className="shrink-0 flex items-center justify-end gap-2 px-4 py-3 border-t border-border-subtle">

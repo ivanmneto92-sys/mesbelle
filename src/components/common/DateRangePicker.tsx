@@ -83,7 +83,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
       <PopoverContent
         align="end"
         collisionPadding={16}
-        className="w-auto max-w-[calc(100vw-2rem)] max-h-[85vh] flex flex-col p-0 shadow-editorial-lg border-border-subtle rounded-lg overflow-hidden"
+        className="w-auto max-w-[calc(100vw-2rem)] max-h-[min(85vh,var(--radix-popover-content-available-height,85vh))] flex flex-col p-0 shadow-editorial-lg border-border-subtle rounded-lg overflow-hidden"
       >
         {/* Cabeçalho e rodapé ficam fora da área rolável (flex, não sticky —
             sticky dentro de overflow-auto quebra a rolagem no Safari/Mac).

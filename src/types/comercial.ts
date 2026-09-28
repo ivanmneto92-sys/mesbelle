@@ -65,6 +65,8 @@ export interface Negocio {
   clienteId: string;
   clienteNome: string;
   clienteCpf: string;
+  clienteTelefone?: string | null;
+  clienteEmail?: string | null;
   vestidoNome?: string;
   valorNegociado: number;
   desconto: number;

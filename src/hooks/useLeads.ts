@@ -101,11 +101,13 @@ const rowToContrato = (r: ContratoRow): Contrato => ({
 
 type NegocioRow = {
   id: string; cliente_id: string; cliente_nome: string; cliente_cpf: string; vestido_nome: string | null;
+  cliente_telefone: string | null; cliente_email: string | null;
   valor_negociado: number; desconto: number; metodo_pagamento: string; status_negociacao: string;
   data_evento: string; criado_em: string; vendedor_id: string | null;
 };
 const rowToNegocio = (r: NegocioRow): Negocio => ({
   id: r.id, clienteId: r.cliente_id, clienteNome: r.cliente_nome, clienteCpf: r.cliente_cpf,
+  clienteTelefone: r.cliente_telefone ?? null, clienteEmail: r.cliente_email ?? null,
   vestidoNome: r.vestido_nome ?? undefined, valorNegociado: Number(r.valor_negociado),
   desconto: Number(r.desconto), metodoPagamento: r.metodo_pagamento,
   statusNegociacao: r.status_negociacao as StatusNegociacao,
@@ -331,7 +333,7 @@ export function useLeads(range?: DateRange) {
     const existing = contratos.find((c) => c.leadId === negocio.clienteId && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
     // Validação mínima — evita contratos incompletos
-    if (!lead.cpf?.trim() || !negocio.dataEvento || negocio.valorNegociado <= 0) {
+    if (!negocio.clienteCpf?.trim() || !negocio.dataEvento || negocio.valorNegociado <= 0) {
       return null;
     }
     const valorFinal = negocio.valorNegociado - negocio.desconto;
@@ -340,10 +342,11 @@ export function useLeads(range?: DateRange) {
     const insertRow = {
       numero, lead_id: negocio.clienteId, negocio_id: negocio.id,
       nome_cliente: negocio.clienteNome, cpf_cliente: negocio.clienteCpf,
-      email_cliente: lead.email ?? "",
+      email_cliente: negocio.clienteEmail || lead.email || "",
       data_evento: negocio.dataEvento, valor_total: valorFinal, status_assinatura: "pendente",
       termos_texto: gerarTermosContrato({
-        nomeLocataria: negocio.clienteNome, cpf: negocio.clienteCpf, celular: lead.telefone, email: lead.email,
+        nomeLocataria: negocio.clienteNome, cpf: negocio.clienteCpf,
+        celular: negocio.clienteTelefone || lead.telefone, email: negocio.clienteEmail || lead.email,
         produtoDescricao: negocio.vestidoNome || "—", valorLocacao: valorFinal,
         formaPagamento: negocio.metodoPagamento || "—",
         observacoesPagamento: negocio.desconto > 0 ? `Desconto aplicado: ${negocio.desconto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : undefined,

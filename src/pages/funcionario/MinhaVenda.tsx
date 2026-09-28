@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { SEO } from "@/components/SEO";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ const OPCOES_PARCELAS = [1, 2, 3, 4, 5, 6, 8, 10, 12];
 
 const MinhaVenda = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { vestidos } = useAcervo();
   const { leads } = useMeusLeads();
   const { verificar } = useDisponibilidade();
@@ -161,10 +164,10 @@ const MinhaVenda = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate("/meus-leads")}>
-              Ver meus leads
+            <Button variant="outline" onClick={() => navigate(isAdmin ? "/crm" : "/meus-leads")}>
+              {isAdmin ? "Ver CRM" : "Ver meus leads"}
             </Button>
-            <Button onClick={() => navigate(`/meu-contrato?leadId=${leadId}`)}>
+            <Button onClick={() => navigate(isAdmin ? "/comercial/contratos" : `/meu-contrato?leadId=${leadId}`)}>
               Gerar contrato →
             </Button>
           </div>
@@ -210,7 +213,7 @@ const MinhaVenda = () => {
             {leads.length === 0 && (
               <p className="text-xs text-muted-foreground mt-2">
                 Nenhum lead cadastrado.{" "}
-                <button className="underline" onClick={() => navigate("/meus-leads")}>
+                <button className="underline" onClick={() => navigate(isAdmin ? "/crm" : "/meus-leads")}>
                   Cadastrar cliente →
                 </button>
               </p>

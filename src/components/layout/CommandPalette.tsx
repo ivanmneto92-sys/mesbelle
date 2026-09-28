@@ -76,7 +76,7 @@ const items: CmdItem[] = [
 
   { label: "Meu Painel", icon: LayoutDashboard, url: "/meu-painel", roles: ["vendedor"], group: "Navegar" },
   { label: "Meus Leads", icon: Users, url: "/meus-leads", roles: ["vendedor"], group: "Navegar" },
-  { label: "Nova Venda", icon: ShoppingBag, url: "/minha-venda", roles: ["vendedor"], group: "Navegar" },
+  { label: "Nova Venda", icon: ShoppingBag, url: "/minha-venda", roles: ["vendedor", "admin"], group: "Navegar" },
   { label: "Minha Agenda", icon: CalendarDays, url: "/minha-agenda", roles: ["vendedor"], group: "Navegar" },
   { label: "Contratos", icon: FileSignature, url: "/meu-contrato", roles: ["vendedor"], group: "Navegar" },
   { label: "Minhas Métricas", icon: DollarSign, url: "/minhas-metricas", roles: ["vendedor"], group: "Navegar" },

@@ -337,28 +337,6 @@ const MinhaVenda = () => {
               )}
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <Tag className="h-3.5 w-3.5" /> Desconto no total (R$)
-                </Label>
-                <div className="relative w-48">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={resumo.subtotal - resumo.descontoItens}
-                    step={10}
-                    className="pl-9"
-                    value={pagamento.descontoGeral || ""}
-                    onChange={(e) => setPagamento((p) => ({
-                      ...p,
-                      descontoGeral: Math.max(0, Number(e.target.value)),
-                    }))}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
                 <Label className="text-sm font-medium">Observações (opcional)</Label>
                 <Textarea
                   placeholder="Ex: pagamento em duas vezes, sinal pago..."
@@ -389,12 +367,6 @@ const MinhaVenda = () => {
                   <div className="flex justify-between text-green-600">
                     <span>Descontos por peça</span>
                     <span>− {formatBRL(resumo.descontoItens)}</span>
-                  </div>
-                )}
-                {resumo.descontoGeral > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Desconto geral</span>
-                    <span>− {formatBRL(resumo.descontoGeral)}</span>
                   </div>
                 )}
                 <Separator />

@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { enviarEmail, templateBase, botaoCTA } from "../_shared/resend.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -95,19 +96,54 @@ Deno.serve(async (req) => {
     });
 
     // Generate password reset link so user can set their password
+    const siteUrl = Deno.env.get("SITE_URL");
     const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
       type: "recovery",
       email,
+      options: siteUrl ? { redirectTo: `${siteUrl}/redefinir-senha` } : undefined,
     });
+
+    // O e-mail é complementar: a conta e o papel já foram criados acima, então
+    // uma falha aqui não derruba a requisição — mas sem isso o convite nunca
+    // chegava ao destinatário (bug: essa function só devolvia o link na
+    // resposta HTTP, que o frontend não usava pra nada).
+    let emailEnviado = false;
+    if (linkData?.properties?.action_link) {
+      const primeiroNome = String(nome).split(" ")[0];
+      try {
+        await enviarEmail({
+          para: email,
+          assunto: `${primeiroNome}, você foi convidada para a MesBelle ✨`,
+          html: templateBase(`
+            <h2 style="color:#4a1535;font-size:22px;margin:0 0 16px;">
+              Olá, ${primeiroNome}! 👗
+            </h2>
+            <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 12px;">
+              Você foi adicionada à equipe da <strong>MesBelle Atelier</strong>.
+            </p>
+            <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px;">
+              Clique no botão abaixo para criar sua senha e começar a usar a plataforma:
+            </p>
+            ${botaoCTA("Criar minha senha →", linkData.properties.action_link)}
+            <p style="color:#9ca3af;font-size:13px;margin:24px 0 0;line-height:1.6;">
+              Este link expira em <strong>1 hora</strong>. Se você não esperava este e-mail, pode ignorá-lo com segurança.
+            </p>
+          `),
+        });
+        emailEnviado = true;
+      } catch (emailErr) {
+        console.error("[create-team-member] falha ao enviar e-mail via Resend:", emailErr);
+      }
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         user_id: userId,
         recovery_link: linkData?.properties?.action_link || null,
-        message: linkError
-          ? "Usuário criado, mas não foi possível gerar o link de recuperação"
-          : "Usuário criado com sucesso. Link de redefinição de senha gerado.",
+        message: emailEnviado
+          ? `Usuário criado com sucesso. Um e-mail foi enviado para ${email} com instruções para definir a senha.`
+          : "Usuário criado, mas não foi possível enviar o e-mail de convite — peça para um admin reenviar o link de redefinição de senha.",
       }),
       {
         status: 200,

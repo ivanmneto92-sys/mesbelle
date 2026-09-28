@@ -12,13 +12,14 @@ import { ReservaAgenda } from "@/types/acervo";
 interface Props {
   vestidos: Vestido[];
   reservas: ReservaAgenda[];
+  canManage: boolean;
   onUpdate: (id: string, patch: Partial<Vestido>) => void;
   onDelete: (id: string) => void;
   onAddReserva: (r: Omit<ReservaAgenda, "id">) => void;
   getReservas: (vestidoId: string) => ReservaAgenda[];
 }
 
-export function CatalogoTab({ vestidos, onUpdate, onDelete, onAddReserva, getReservas }: Props) {
+export function CatalogoTab({ vestidos, canManage, onUpdate, onDelete, onAddReserva, getReservas }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [catFilter, setCatFilter] = useState<CategoriaPeca | "todas">("todas");
@@ -91,6 +92,7 @@ export function CatalogoTab({ vestidos, onUpdate, onDelete, onAddReserva, getRes
         <VestidoDetailModal
           vestido={selectedVestido}
           open={!!selectedVestido}
+          canManage={canManage}
           onClose={() => setSelectedVestido(null)}
           onUpdate={(patch) => { onUpdate(selectedVestido.id, patch); setSelectedVestido(prev => prev ? { ...prev, ...patch } : null); }}
           onDelete={() => { onDelete(selectedVestido.id); setSelectedVestido(null); }}

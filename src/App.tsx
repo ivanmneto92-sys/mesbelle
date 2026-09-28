@@ -68,14 +68,17 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   // Portal isolado do funcionário — somente vendedor
   "/meu-painel": ["vendedor"],
   "/meus-leads": ["vendedor"],
-  "/minha-venda": ["vendedor"],
+  // Nova Venda: pedido do usuário, admin também precisa registrar vendas.
+  "/minha-venda": ["vendedor", "admin"],
   "/minha-agenda": ["vendedor"],
   "/meu-contrato": ["vendedor"],
   "/minhas-metricas": ["vendedor"],
 };
 
 // Rotas do portal isolado do funcionário (além de /perfil, comum a todos os roles).
-const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-venda", "/minha-agenda", "/meu-contrato", "/minhas-metricas"];
+// /minha-venda fica de fora — é compartilhada com admin (ver ROUTE_ROLES), igual
+// /operacional/acervo já era.
+const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-agenda", "/meu-contrato", "/minhas-metricas"];
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
   const { isAuthenticated, user, loading } = useAuth();

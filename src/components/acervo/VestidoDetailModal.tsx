@@ -12,12 +12,13 @@ import { Trash2 } from "lucide-react";
 interface Props {
   vestido: Vestido;
   open: boolean;
+  canManage: boolean;
   onClose: () => void;
   onUpdate: (patch: Partial<Vestido>) => void;
   onDelete: () => void;
 }
 
-export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete }: Props) {
+export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate, onDelete }: Props) {
   const [nome, setNome] = useState(vestido.nome);
   const [categoriaPeca, setCategoriaPeca] = useState<CategoriaPeca>(vestido.categoriaPeca);
   const [cor, setCor] = useState(vestido.cor);
@@ -67,17 +68,17 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
 
           <div>
             <Label className="text-xs text-muted-foreground">Trocar Foto</Label>
-            <Input type="file" accept="image/*" onChange={handleImageUpload} className="mt-1" />
+            <Input type="file" accept="image/*" onChange={handleImageUpload} className="mt-1" disabled={!canManage} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Label className="text-xs text-muted-foreground">Nome</Label>
-              <Input value={nome} onChange={(e) => setNome(e.target.value)} className="mt-1" />
+              <Input value={nome} onChange={(e) => setNome(e.target.value)} className="mt-1" disabled={!canManage} />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Categoria</Label>
-              <Select value={categoriaPeca} onValueChange={(v) => setCategoriaPeca(v as CategoriaPeca)}>
+              <Select value={categoriaPeca} onValueChange={(v) => setCategoriaPeca(v as CategoriaPeca)} disabled={!canManage}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(Object.keys(CATEGORIA_LABELS) as CategoriaPeca[]).map((c) => (
@@ -88,11 +89,11 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Cor</Label>
-              <Input value={cor} onChange={(e) => setCor(e.target.value)} className="mt-1" />
+              <Input value={cor} onChange={(e) => setCor(e.target.value)} className="mt-1" disabled={!canManage} />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Tamanho</Label>
-              <Select value={tamanho} onValueChange={setTamanho}>
+              <Select value={tamanho} onValueChange={setTamanho} disabled={!canManage}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["PP", "P", "M", "G", "GG", "XG"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -101,7 +102,7 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Comprimento</Label>
-              <Select value={comprimento} onValueChange={setComprimento}>
+              <Select value={comprimento} onValueChange={setComprimento} disabled={!canManage}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["Curto", "Midi", "Longo"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -110,7 +111,7 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as VestidoStatus)}>
+              <Select value={status} onValueChange={(v) => setStatus(v as VestidoStatus)} disabled={!canManage}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(Object.keys(STATUS_LABELS) as VestidoStatus[]).map(s => (
@@ -121,25 +122,31 @@ export function VestidoDetailModal({ vestido, open, onClose, onUpdate, onDelete 
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Preço Aluguel (R$)</Label>
-              <Input type="number" value={precoAluguel} onChange={(e) => setPrecoAluguel(e.target.value)} className="mt-1" />
+              <Input type="number" value={precoAluguel} onChange={(e) => setPrecoAluguel(e.target.value)} className="mt-1" disabled={!canManage} />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Preço Venda (R$)</Label>
-              <Input type="number" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} className="mt-1" />
+              <Input type="number" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} className="mt-1" disabled={!canManage} />
             </div>
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">Descrição</Label>
-            <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} className="mt-1" />
+            <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} className="mt-1" disabled={!canManage} />
           </div>
 
-          <div className="flex gap-2 pt-2">
-            <Button onClick={handleSave} className="flex-1">Salvar</Button>
-            <Button variant="destructive" size="icon" onClick={() => { onDelete(); onClose(); }}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {canManage ? (
+            <div className="flex gap-2 pt-2">
+              <Button onClick={handleSave} className="flex-1">Salvar</Button>
+              <Button variant="destructive" size="icon" onClick={() => { onDelete(); onClose(); }}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground pt-2">
+              Somente um administrador pode editar ou excluir uma peça do acervo.
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

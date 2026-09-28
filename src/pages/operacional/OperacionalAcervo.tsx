@@ -3,11 +3,14 @@ import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useAuth } from "@/contexts/AuthContext";
 import { useAcervo } from "@/hooks/useAcervo";
 import { CatalogoTab } from "@/components/acervo/CatalogoTab";
 import { NovoVestidoSheet } from "@/components/acervo/NovoVestidoSheet";
 
 const OperacionalAcervo = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [showNovo, setShowNovo] = useState(false);
   const {
     vestidos, addVestido, updateVestido, deleteVestido,
@@ -32,6 +35,7 @@ const OperacionalAcervo = () => {
         <CatalogoTab
           vestidos={vestidos}
           reservas={reservas}
+          canManage={isAdmin}
           onUpdate={updateVestido}
           onDelete={deleteVestido}
           onAddReserva={addReserva}

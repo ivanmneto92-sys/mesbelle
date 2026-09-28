@@ -43,6 +43,7 @@ const MinhaVenda = () => {
   const criarVenda = useCriarVenda();
 
   const [leadId, setLeadId] = useState<string>("");
+  const [locataria, setLocataria] = useState({ nome: "", cpf: "", telefone: "", email: "" });
   const [buscaPeca, setBuscaPeca] = useState("");
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [pagamento, setPagamento] = useState<DadosPagamento>({
@@ -117,8 +118,23 @@ const MinhaVenda = () => {
     return { subtotal, descontoItens, descontoGeral, total };
   })();
 
+  const handleSelecionarLead = (id: string) => {
+    setLeadId(id);
+    const lead = leads.find((l) => l.id === id);
+    if (lead) {
+      setLocataria({
+        nome: lead.nome ?? "",
+        cpf: lead.cpf ?? "",
+        telefone: lead.telefone ?? "",
+        email: lead.email ?? "",
+      });
+    }
+  };
+
   const podeConcluir =
     !!leadId &&
+    !!locataria.nome.trim() &&
+    !!locataria.cpf.trim() &&
     carrinho.length > 0 &&
     carrinho.every((i) => i.dataRetirada && i.dataDevolucao && i.disponivel !== false) &&
     !!pagamento.forma;
@@ -126,7 +142,7 @@ const MinhaVenda = () => {
   const handleConfirmar = async () => {
     const lead = leads.find((l) => l.id === leadId);
     if (!podeConcluir || !lead) return;
-    const result = await criarVenda.mutateAsync({ lead, itens: carrinho, pagamento, resumo });
+    const result = await criarVenda.mutateAsync({ lead, locataria, itens: carrinho, pagamento, resumo });
     if (result?.negocioId) setVendaConfirmada(result.negocioId);
   };
 
@@ -175,8 +191,8 @@ const MinhaVenda = () => {
               <User className="h-4 w-4 text-primary" /> 1. Cliente
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <Select value={leadId} onValueChange={setLeadId}>
+          <CardContent className="space-y-4">
+            <Select value={leadId} onValueChange={handleSelecionarLead}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Buscar cliente pelo nome..." />
               </SelectTrigger>
@@ -198,6 +214,49 @@ const MinhaVenda = () => {
                   Cadastrar cliente →
                 </button>
               </p>
+            )}
+
+            {leadId && (
+              <div className="space-y-3 pt-2 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Dados da locatária no contrato — edite se o contrato for em nome de outra pessoa.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Nome da locatária *</Label>
+                    <Input
+                      value={locataria.nome}
+                      onChange={(e) => setLocataria((p) => ({ ...p, nome: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">CPF *</Label>
+                    <Input
+                      value={locataria.cpf}
+                      onChange={(e) => setLocataria((p) => ({ ...p, cpf: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Celular</Label>
+                    <Input
+                      value={locataria.telefone}
+                      onChange={(e) => setLocataria((p) => ({ ...p, telefone: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">E-mail</Label>
+                    <Input
+                      type="email"
+                      value={locataria.email}
+                      onChange={(e) => setLocataria((p) => ({ ...p, email: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

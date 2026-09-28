@@ -5,8 +5,16 @@ import { toast } from "sonner";
 import { ItemCarrinho, DadosPagamento, ResumoPedido } from "@/types/venda";
 import type { Lead } from "@/types/comercial";
 
+export interface LocatariaOverride {
+  nome: string;
+  cpf: string;
+  telefone: string;
+  email: string;
+}
+
 interface CriarVendaInput {
   lead: Lead;
+  locataria: LocatariaOverride;
   itens: ItemCarrinho[];
   pagamento: DadosPagamento;
   resumo: ResumoPedido;
@@ -32,15 +40,17 @@ export function useCriarVenda() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ lead, itens, pagamento, resumo }: CriarVendaInput) => {
+    mutationFn: async ({ lead, locataria, itens, pagamento, resumo }: CriarVendaInput) => {
       const vestidoNome = itens.map((i) => i.nome).join(", ");
 
       const { data: negocio, error: negErr } = await supabase
         .from("negocios")
         .insert({
           cliente_id: lead.id,
-          cliente_nome: lead.nome,
-          cliente_cpf: lead.cpf,
+          cliente_nome: locataria.nome,
+          cliente_cpf: locataria.cpf,
+          cliente_telefone: locataria.telefone || null,
+          cliente_email: locataria.email || null,
           vestido_nome: vestidoNome,
           valor_negociado: resumo.subtotal,
           desconto: resumo.descontoItens + resumo.descontoGeral,
@@ -72,8 +82,8 @@ export function useCriarVenda() {
       // ficava sempre vazia mesmo com vendas reais acontecendo.
       const entregas = itens.map((item) => ({
         vestido_nome: item.nome,
-        cliente_nome: lead.nome,
-        cliente_telefone: lead.telefone,
+        cliente_nome: locataria.nome,
+        cliente_telefone: locataria.telefone || lead.telefone,
         endereco_entrega: lead.endereco,
         data_saida: item.dataRetirada,
         data_retorno: item.dataDevolucao,

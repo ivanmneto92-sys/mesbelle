@@ -11,6 +11,7 @@ import { useDateRange } from "@/hooks/useDateRange";
 import { useAuth } from "@/contexts/AuthContext";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { formatBRL } from "@/lib/formatters";
+import { calcularPercentualComissao, BONUS_COMISSAO_LIMIAR, BONUS_COMISSAO_VALOR } from "@/lib/comissao";
 
 type CardColor = "default" | "green" | "blue" | "yellow" | "red";
 
@@ -74,11 +75,11 @@ const MeuPainel = () => {
               color={kpis.totalFaturamento > 0 ? "green" : "default"}
             />
             <PainelKpiCard
-              label="Prévia de Comissão"
-              value={kpis.previaComissao > 0 ? formatBRL(kpis.previaComissao) : "—"}
-              sub="Regra a configurar"
+              label="A Receber (mês atual)"
+              value={formatBRL(kpis.previaComissao)}
+              sub={`Sobre ${formatBRL(kpis.faturamentoMesAtual)} faturado no mês`}
               icon={Gift}
-              color="default"
+              color={kpis.previaComissao > 0 ? "green" : "default"}
             />
           </div>
         </div>
@@ -99,9 +100,13 @@ const MeuPainel = () => {
           <PainelKpiCard label="Negócios Fechados" value={kpis.negociosFechados} icon={CheckCircle} color="green" />
           <PainelKpiCard label="Faturamento Gerado" value={formatBRL(kpis.faturamentoGerado)} icon={Wallet} color="default" />
           <PainelKpiCard
-            label="Projeção de Ganho"
-            value={kpis.projecaoGanho > 0 ? formatBRL(kpis.projecaoGanho) : "—"}
-            sub="Regra de comissão a configurar"
+            label="Faixa de Comissão Atual"
+            value={`${(calcularPercentualComissao(kpis.faturamentoMesAtual) * 100).toLocaleString("pt-BR")}%`}
+            sub={
+              kpis.faturamentoMesAtual >= BONUS_COMISSAO_LIMIAR
+                ? `+ ${formatBRL(BONUS_COMISSAO_VALOR)} de bônus já garantido`
+                : `Faltam ${formatBRL(Math.max(0, BONUS_COMISSAO_LIMIAR - kpis.faturamentoMesAtual))} para o bônus`
+            }
             icon={Gift}
             color="default"
           />

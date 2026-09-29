@@ -6,11 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BarChart2, CheckCircle, Wallet, Receipt, TrendingUp, Users, Gift, Clock } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import {
+  BarChart2, CheckCircle, Wallet, Receipt, TrendingUp, Users, Gift, Clock, Circle, Loader2,
+} from "lucide-react";
 import { useMeusKpis } from "@/hooks/useMeusKpis";
 import { useMeusLeads } from "@/hooks/useMeusLeads";
+import { useExtratoComissao, CategoriaComissao } from "@/hooks/useExtratoComissao";
 import { useDateRange } from "@/hooks/useDateRange";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, categoriaLabel } from "@/lib/formatters";
+import { FAIXAS_COMISSAO, BONUS_COMISSAO_LIMIAR, BONUS_COMISSAO_VALOR, calcularPercentualComissao } from "@/lib/comissao";
 
 type CardColor = "default" | "green" | "yellow" | "red";
 const COLOR_MAP: Record<CardColor, string> = { default: "", green: "text-success", yellow: "text-warning", red: "text-destructive" };
@@ -32,6 +37,12 @@ const MetricaCard = ({ label, value, sub, icon: Icon, color }: {
   </Card>
 );
 
+const CATEGORIA_BADGE_CLASS: Record<CategoriaComissao, string> = {
+  comissao: "bg-primary/10 text-primary border-primary/20",
+  ajuste_comissao: "bg-warning/15 text-warning border-warning/30",
+  bonus_comissao: "bg-success/15 text-success border-success/30",
+};
+
 const STATUS_LABELS: Record<string, string> = {
   novo_lead: "Novo Lead",
   em_atendimento: "Em Atendimento",
@@ -48,11 +59,20 @@ const MinhasMetricas = () => {
   const { range, setRange } = useDateRange();
   const kpis = useMeusKpis(range);
   const { leads } = useMeusLeads();
+  const { lancamentos, loading: extratoCarregando, totalAReceber } = useExtratoComissao(range);
   const navigate = useNavigate();
 
   const compraram = leads.filter((l) => l.enviadoComercial);
   const naoCompraram = leads.filter((l) => !l.enviadoComercial && l.statusFunil !== "novo_lead");
   const ticketMedio = kpis.negociosFechados > 0 ? kpis.faturamentoGerado / kpis.negociosFechados : 0;
+
+  const faturamentoMesAtual = kpis.faturamentoMesAtual;
+  const percentualAtual = calcularPercentualComissao(faturamentoMesAtual);
+  const faixaAtualIndex = FAIXAS_COMISSAO.findIndex((f) => f.percentual === percentualAtual);
+  const proximaFaixa = FAIXAS_COMISSAO[faixaAtualIndex + 1];
+  const progressoProximaFaixa = proximaFaixa ? Math.min(100, (faturamentoMesAtual / proximaFaixa.min) * 100) : 100;
+  const bonusAtingido = faturamentoMesAtual >= BONUS_COMISSAO_LIMIAR;
+  const progressoBonus = Math.min(100, (faturamentoMesAtual / BONUS_COMISSAO_LIMIAR) * 100);
 
   return (
     <>
@@ -69,8 +89,127 @@ const MinhasMetricas = () => {
           <MetricaCard label="Ticket Médio" value={kpis.negociosFechados > 0 ? formatBRL(ticketMedio) : "—"} color="default" icon={Receipt} />
           <MetricaCard label="Taxa de Conversão" value={`${kpis.taxaConversao.toFixed(1)}%`} color={kpis.taxaConversao > 25 ? "green" : "yellow"} icon={TrendingUp} />
           <MetricaCard label="Leads no Período" value={kpis.totalMeusLeads} color="default" icon={Users} />
-          <MetricaCard label="Projeção de Ganho" value="A configurar" sub="O admin irá definir a regra de comissão em breve" color="default" icon={Gift} />
+          <MetricaCard label="A Receber (período)" value={formatBRL(totalAReceber)} sub="Comissão + ajustes + bônus" color="green" icon={Gift} />
         </div>
+
+        {/* Metas do mês — sempre o mês corrente, independente do filtro de período acima */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-serif text-sm flex items-center gap-2">
+              <Gift className="h-4 w-4 text-primary" /> Metas do Mês Atual
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Faturamento do mês: <span className="font-semibold text-foreground">{formatBRL(faturamentoMesAtual)}</span> — faixa atual: <span className="font-semibold text-foreground">{(percentualAtual * 100).toLocaleString("pt-BR")}%</span>
+            </p>
+
+            <div className="space-y-2">
+              {FAIXAS_COMISSAO.map((f) => {
+                const atingida = faturamentoMesAtual >= f.min;
+                const ativa = f.percentual === percentualAtual;
+                return (
+                  <div
+                    key={f.percentual}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      ativa ? "border-primary bg-primary/5" : atingida ? "border-success/30 bg-success/5" : "border-border"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {atingida ? (
+                        <CheckCircle className="h-4 w-4 text-success shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-muted-foreground/30 shrink-0" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">{(f.percentual * 100).toLocaleString("pt-BR")}% de comissão</p>
+                        <p className="text-xs text-muted-foreground">
+                          {f.max === Infinity ? `A partir de ${formatBRL(f.min)}` : `${formatBRL(f.min)} a ${formatBRL(f.max)}`}
+                        </p>
+                      </div>
+                    </div>
+                    {ativa && <Badge className="shrink-0">Faixa atual</Badge>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {proximaFaixa && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-muted-foreground">
+                    Progresso até {(proximaFaixa.percentual * 100).toLocaleString("pt-BR")}%
+                  </span>
+                  <span className="text-xs font-medium">{formatBRL(faturamentoMesAtual)} / {formatBRL(proximaFaixa.min)}</span>
+                </div>
+                <Progress value={progressoProximaFaixa} className="h-2" />
+              </div>
+            )}
+
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  {bonusAtingido ? (
+                    <CheckCircle className="h-4 w-4 text-success" />
+                  ) : (
+                    <Gift className="h-4 w-4 text-muted-foreground/50" />
+                  )}
+                  <p className="text-sm font-medium">Bônus de {formatBRL(BONUS_COMISSAO_VALOR)}</p>
+                </div>
+                {bonusAtingido ? (
+                  <Badge variant="outline" className="bg-success/15 text-success border-success/30 shrink-0">Conquistado</Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    Faltam {formatBRL(Math.max(0, BONUS_COMISSAO_LIMIAR - faturamentoMesAtual))}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">Ao ultrapassar {formatBRL(BONUS_COMISSAO_LIMIAR)} faturados no mês</p>
+              <Progress value={progressoBonus} className="h-2" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Extrato de comissão — respeita o período selecionado no topo */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="font-serif text-sm flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-primary" /> Extrato de Comissão
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {extratoCarregando ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Carregando extrato...
+              </div>
+            ) : lancamentos.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum lançamento de comissão neste período.</p>
+            ) : (
+              <div className="max-h-96 overflow-y-auto">
+                <Table>
+                  <TableBody>
+                    {lancamentos.map((l) => (
+                      <TableRow key={l.id}>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(l.data + "T00:00:00").toLocaleDateString("pt-BR")}
+                        </TableCell>
+                        <TableCell className="text-sm">{l.descricaoPeca || l.clienteNome || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-xs ${CATEGORIA_BADGE_CLASS[l.categoria]}`}>
+                            {categoriaLabel(l.categoria)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums text-success whitespace-nowrap">
+                          + {formatBRL(l.valor)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="shadow-sm">
@@ -131,20 +270,6 @@ const MinhasMetricas = () => {
             </CardContent>
           </Card>
         </div>
-
-        <Card className="shadow-sm border-dashed">
-          <CardContent className="p-4 flex items-center gap-4">
-            <Gift className="h-8 w-8 text-muted-foreground/30 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">Projeção de Ganho</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                A regra de comissão ainda será configurada pelo admin. Assim que definida,
-                sua projeção de ganho aparecerá aqui automaticamente.
-              </p>
-            </div>
-            <Badge variant="outline" className="shrink-0">Em breve</Badge>
-          </CardContent>
-        </Card>
       </div>
     </>
   );

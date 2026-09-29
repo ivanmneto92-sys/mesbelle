@@ -7,6 +7,7 @@ export const CATEGORIA_LABELS: Record<string, string> = {
   venda: "Venda",
   receita_outros: "Outros (Receita)",
   comissao: "Comissão de Vendedora",
+  ajuste_comissao: "Ajuste de Comissão (mudança de faixa)",
   bonus_comissao: "Bônus de Faturamento",
   imposto: "Impostos & Taxas",
   taxa_cartao: "Taxa de Cartão",

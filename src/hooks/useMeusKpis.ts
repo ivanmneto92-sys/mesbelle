@@ -2,6 +2,10 @@ import { useLeads } from "./useLeads";
 import { useAgenda } from "./useAgenda";
 import { useAuth } from "@/contexts/AuthContext";
 import type { DateRange } from "./useDateRange";
+import { estimarComissaoMes } from "@/lib/comissao";
+
+const now = new Date();
+const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
 export interface MeusKpis {
   totalMeusLeads: number;
@@ -11,11 +15,12 @@ export interface MeusKpis {
   clientesSemCompra: number; // em atendimento/agendado sem ter comprado
   negociosFechados: number;
   faturamentoGerado: number;
-  projecaoGanho: number; // placeholder — regra de comissão a definir
+  faturamentoMesAtual: number; // negócios aprovados, só o mês corrente (base da faixa de comissão)
+  projecaoGanho: number; // comissão do mês corrente (normal + ajuste + bônus), pela tabela de faixas
   // ── Métricas comerciais em destaque no painel ──────────────────────
   totalAgendamentos: number; // agendamentos do funcionário no período
   totalFechamentos: number; // negócios aprovados
-  previaComissao: number; // placeholder — regra de comissão a definir
+  previaComissao: number; // mesmo valor de projecaoGanho — comissão do mês corrente
   totalFaturamento: number; // soma de valorNegociado - desconto dos negócios aprovados
 }
 
@@ -54,6 +59,14 @@ export function useMeusKpis(range: DateRange): MeusKpis {
     0
   );
 
+  // Base da faixa de comissão: faturamento líquido do mês CORRENTE (não do
+  // período do filtro) — mesma janela usada pelo trigger no banco
+  // (fn_negocio_aprovado_gera_transacao), que reseta todo mês.
+  const faturamentoMesAtual = negociosFechados
+    .filter((n) => n.criadoEm?.slice(0, 7) === mesAtual)
+    .reduce((s, n) => s + (n.valorNegociado - n.desconto), 0);
+  const projecaoGanho = estimarComissaoMes(faturamentoMesAtual);
+
   return {
     totalMeusLeads: leadsPeriodo.length,
     meusAgendamentos: agendamentos.length,
@@ -62,10 +75,11 @@ export function useMeusKpis(range: DateRange): MeusKpis {
     clientesSemCompra: clientesSemCompra.length,
     negociosFechados: negociosFechados.length,
     faturamentoGerado,
-    projecaoGanho: 0,
+    faturamentoMesAtual,
+    projecaoGanho,
     totalAgendamentos: agendamentos.length,
     totalFechamentos: negociosFechados.length,
-    previaComissao: 0,
+    previaComissao: projecaoGanho,
     totalFaturamento: faturamentoGerado,
   };
 }

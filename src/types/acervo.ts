@@ -44,6 +44,9 @@ export interface EtapaProducao {
   producaoId: string;
   nomeEtapa: string;
   isConcluido: boolean;
+  // Data/hora do último clique (concluir ou reabrir) — prova de quando a
+  // mudança de etapa aconteceu.
+  updatedAt: string;
 }
 
 export const STATUS_LABELS: Record<VestidoStatus, string> = {

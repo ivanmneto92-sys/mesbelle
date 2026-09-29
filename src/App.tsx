@@ -16,7 +16,6 @@ import ComercialRelatorioAgendamento from "./pages/comercial/ComercialRelatorioA
 import Agenda from "./pages/admin/Agenda";
 import ComercialContratos from "./pages/comercial/ComercialContratos";
 import OperacionalAcervo from "./pages/operacional/OperacionalAcervo";
-import OperacionalProducao from "./pages/operacional/OperacionalProducao";
 import OperacionalLogistica from "./pages/operacional/OperacionalLogistica";
 import OperacionalRelatorio from "./pages/operacional/OperacionalRelatorio";
 import FinanceiroDRE from "./pages/financeiro/FinanceiroDRE";
@@ -51,10 +50,10 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/comercial/calendario": ["admin"],
   "/comercial/contratos": ["admin"],
   "/operacional/acervo": ["admin", "vendedor"],
-  // Produção: vendedor só visualiza (RLS já bloqueia insert/update para
-  // quem não é admin) — pedido do usuário.
-  "/operacional/producao": ["admin", "vendedor"],
-  "/operacional/logistica": ["admin"],
+  // Logística: agora reúne Envios/Retiradas + Primeiro Aluguel (ex-Produção)
+  // + Aluguel (Mapa do Aluguel) em abas — vendedor só visualiza nas 3
+  // (RLS/UI já bloqueiam edição para quem não é admin) — pedido do usuário.
+  "/operacional/logistica": ["admin", "vendedor"],
   "/operacional/relatorio": ["admin", "socio"],
   "/financeiro/dre": ["admin", "socio"],
   "/financeiro/fluxo": ["admin"],
@@ -158,7 +157,8 @@ const AppRoutes = () => {
       <Route path="/acervo" element={<Navigate to="/operacional/acervo" replace />} />
       <Route path="/logistica" element={<Navigate to="/operacional/logistica" replace />} />
       <Route path="/operacional/acervo" element={<ProtectedRoute path="/operacional/acervo"><OperacionalAcervo /></ProtectedRoute>} />
-      <Route path="/operacional/producao" element={<ProtectedRoute path="/operacional/producao"><OperacionalProducao /></ProtectedRoute>} />
+      {/* Produção virou a aba "Primeiro Aluguel" dentro de Logística — pedido do usuário. */}
+      <Route path="/operacional/producao" element={<Navigate to="/operacional/logistica" replace />} />
       <Route path="/operacional/logistica" element={<ProtectedRoute path="/operacional/logistica"><OperacionalLogistica /></ProtectedRoute>} />
       <Route path="/operacional/relatorio" element={<ProtectedRoute path="/operacional/relatorio"><OperacionalRelatorio /></ProtectedRoute>} />
       <Route path="/financeiro" element={<Navigate to="/financeiro/dre" replace />} />

@@ -30,9 +30,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onUpdateStatus: (id: string, status: StatusLogistica) => void;
   onUpdateRastreio: (id: string, codigo: string) => void;
+  canManage: boolean;
 }
 
-export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpdateStatus, onUpdateRastreio }: Props) {
+export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpdateStatus, onUpdateRastreio, canManage }: Props) {
   const [status, setStatus] = useState<StatusLogistica>(item?.statusLogistica ?? "para_enviar");
   const [rastreio, setRastreio] = useState(item?.codigoRastreio ?? "");
 
@@ -109,30 +110,46 @@ export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpd
             </div>
           </div>
 
-          {/* Alterar status */}
-          <div className="space-y-2">
-            <Label>Alterar status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as StatusLogistica)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="para_enviar">Para Enviar</SelectItem>
-                <SelectItem value="em_transito">Em Trânsito</SelectItem>
-                <SelectItem value="com_cliente">Com Cliente</SelectItem>
-                <SelectItem value="atrasado">Atrasado</SelectItem>
-                <SelectItem value="devolvido">Devolvido</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {canManage ? (
+            <>
+              {/* Alterar status */}
+              <div className="space-y-2">
+                <Label>Alterar status</Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as StatusLogistica)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="para_enviar">Para Enviar</SelectItem>
+                    <SelectItem value="em_transito">Em Trânsito</SelectItem>
+                    <SelectItem value="com_cliente">Com Cliente</SelectItem>
+                    <SelectItem value="atrasado">Atrasado</SelectItem>
+                    <SelectItem value="devolvido">Devolvido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Rastreio */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Código de Rastreio</Label>
-            <Input placeholder="Ex: BR123456789" value={rastreio} onChange={(e) => setRastreio(e.target.value)} />
-          </div>
+              {/* Rastreio */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Código de Rastreio</Label>
+                <Input placeholder="Ex: BR123456789" value={rastreio} onChange={(e) => setRastreio(e.target.value)} />
+              </div>
 
-          <Button onClick={handleSave} className="w-full">Salvar Alterações</Button>
+              <Button onClick={handleSave} className="w-full">Salvar Alterações</Button>
+            </>
+          ) : (
+            <>
+              {currentItem.codigoRastreio && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Código de Rastreio</Label>
+                  <p className="text-sm">{currentItem.codigoRastreio}</p>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Somente um administrador pode alterar o status ou o rastreio.
+              </p>
+            </>
+          )}
         </div>
       </SheetContent>
     </Sheet>

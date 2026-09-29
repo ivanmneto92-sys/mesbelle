@@ -109,17 +109,37 @@ function Conector({ ativo }: { ativo: boolean }) {
   );
 }
 
-function NovoAjusteCallout() {
+function NovoAjusteCallout({
+  modelistaEtapa, canManage, onToggleEtapa,
+}: {
+  modelistaEtapa: EtapaProducao | undefined; canManage: boolean; onToggleEtapa: (etapaId: string) => void;
+}) {
+  const modelistaReaberta = modelistaEtapa && !modelistaEtapa.isConcluido;
+  const podeReabrir = canManage && !!modelistaEtapa && !modelistaReaberta;
+
   return (
     <div className="mt-3 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/20 p-3 w-48">
       <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground/70 bg-muted-foreground/10 rounded-full px-2 py-0.5">
         Opcional
       </span>
       <p className="text-xs font-medium leading-snug mt-1.5">Precisou de um novo ajuste?</p>
-      <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-muted-foreground">
-        <Undo2 className="h-3 w-3 shrink-0" />
-        <span>Volta à Modelista</span>
-      </div>
+
+      {podeReabrir ? (
+        <button
+          type="button"
+          onClick={() => onToggleEtapa(modelistaEtapa!.id)}
+          className="flex items-center gap-1.5 mt-1.5 text-[11px] text-primary hover:underline cursor-pointer"
+        >
+          <Undo2 className="h-3 w-3 shrink-0" />
+          <span>Volta à Modelista</span>
+        </button>
+      ) : (
+        <div className={cn("flex items-center gap-1.5 mt-1.5 text-[11px]", modelistaReaberta ? "text-primary" : "text-muted-foreground")}>
+          <Undo2 className="h-3 w-3 shrink-0" />
+          <span>{modelistaReaberta ? "Voltou para a Modelista" : "Volta à Modelista"}</span>
+        </div>
+      )}
+
       <div className="flex items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
         <Store className="h-3 w-3 shrink-0" />
         <span>Retorno à loja para a entrega</span>
@@ -133,6 +153,7 @@ export function ProducaoJornada({ etapas, canManage, onToggleEtapa }: Props) {
 
   const concluidas = etapas.filter((e) => e.isConcluido).length;
   const ultimaEtapaConcluida = etapas[etapas.length - 1]?.isConcluido;
+  const modelistaEtapa = etapas.find((e) => e.nomeEtapa === "Modelista");
 
   const handleClick = (etapaId: string) => {
     if (canManage) onToggleEtapa(etapaId);
@@ -158,7 +179,9 @@ export function ProducaoJornada({ etapas, canManage, onToggleEtapa }: Props) {
           nodes.push(
             <div key={etapa.id} className="flex flex-col items-center pt-2">
               <Cartao etapa={etapa} numero={i + 1} estado={estado} canManage={canManage} onClick={() => handleClick(etapa.id)} />
-              {i === INDICE_SEGUNDA_PROVA && <NovoAjusteCallout />}
+              {i === INDICE_SEGUNDA_PROVA && (
+                <NovoAjusteCallout modelistaEtapa={modelistaEtapa} canManage={canManage} onToggleEtapa={onToggleEtapa} />
+              )}
             </div>,
           );
           return nodes;
@@ -177,7 +200,9 @@ export function ProducaoJornada({ etapas, canManage, onToggleEtapa }: Props) {
                 </div>
               )}
               <Cartao etapa={etapa} numero={i + 1} estado={estado} canManage={canManage} onClick={() => handleClick(etapa.id)} />
-              {i === INDICE_SEGUNDA_PROVA && <NovoAjusteCallout />}
+              {i === INDICE_SEGUNDA_PROVA && (
+                <NovoAjusteCallout modelistaEtapa={modelistaEtapa} canManage={canManage} onToggleEtapa={onToggleEtapa} />
+              )}
             </div>
           );
         })}

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarRange, LayoutGrid } from "lucide-react";
@@ -18,12 +19,25 @@ type Modo = "calendario" | "kanban";
 
 const MinhaAgenda = () => {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [modo, setModo] = useState<Modo>("calendario");
   const [view, setView] = useState<ViewMode>("semana");
   const [dataReferencia, setDataReferencia] = useState(new Date());
   const [dialogAberto, setDialogAberto] = useState(false);
   const [dataHoraSelecionada, setDataHoraSelecionada] = useState<Date | undefined>();
   const [agendamentoEditar, setAgendamentoEditar] = useState<Agendamento | undefined>();
+
+  // Atalho "Novo Agendamento" do Meu Painel (/minha-agenda?novo=1) — abre o
+  // dialog direto, sem exigir um segundo clique depois de navegar até aqui.
+  useEffect(() => {
+    if (searchParams.get("novo") === "1") {
+      setDataHoraSelecionada(new Date());
+      setAgendamentoEditar(undefined);
+      setDialogAberto(true);
+      setSearchParams((prev) => { prev.delete("novo"); return prev; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: agDia } = useAgendaDia(dataReferencia, user?.id);
   const { data: agSemana } = useAgendaSemana(dataReferencia, user?.id);

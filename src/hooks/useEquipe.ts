@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Funcionario, AvaliacaoCliente, VendaFuncionario, TipoContrato } from "@/types/equipe";
 import type { DateRange } from "@/hooks/useDateRange";
+import { estimarComissaoMes } from "@/lib/comissao";
 
 const now = new Date();
 const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -157,7 +158,7 @@ export function useEquipe(range?: DateRange) {
     return funcionarios.filter(f => f.ativo).map(f => {
       const v = getVendasMes(f.id, mesAtual);
       const score = getScoreMes(f.id, mesAtual);
-      const comissao = v.valorTotal * f.percentualComissao;
+      const comissao = estimarComissaoMes(v.valorTotal);
       return { ...f, vendasMes: v.quantidade, valorVendas: v.valorTotal, comissao, score };
     });
   }, [funcionarios, getVendasMes, getScoreMes]);

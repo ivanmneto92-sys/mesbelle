@@ -50,12 +50,6 @@ const valorPositivo = z
   .gt(0, "Valor deve ser maior que zero")
   .max(99_999_999.99, "Valor excede o máximo permitido");
 
-// Percentual 0-100
-const percentual = z
-  .number({ invalid_type_error: "Percentual inválido" })
-  .min(0, "Mínimo 0%")
-  .max(100, "Máximo 100%");
-
 // ---------- Lead (CRM) ----------
 export const leadSchema = z.object({
   nome: nonEmpty("Nome", 120),
@@ -106,14 +100,9 @@ export const novoFuncionarioSchema = z.object({
   role: z.enum(["vendedor", "socio"], { errorMap: () => ({ message: "Cargo inválido" }) }),
   cargo: optionalStr(60),
   tipo_contrato: z.enum(["CLT", "PJ", "Freelancer", "Estágio"]).default("CLT"),
-  percentual_comissao: percentual,
   telefone: telefoneSchema.optional().or(z.literal("")),
 });
 export type NovoFuncionarioInput = z.infer<typeof novoFuncionarioSchema>;
-
-export const comissaoSchema = z.object({
-  percentual: percentual,
-});
 
 // ---------- Contrato ----------
 export const contratoSchema = z.object({

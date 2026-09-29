@@ -20,7 +20,8 @@ import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { novoFuncionarioSchema, comissaoSchema, firstZodError } from "@/lib/schemas";
+import { novoFuncionarioSchema, firstZodError } from "@/lib/schemas";
+import { calcularPercentualComissao, BONUS_COMISSAO_LIMIAR, BONUS_COMISSAO_VALOR } from "@/lib/comissao";
 
 function formatBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -40,43 +41,24 @@ const Equipe = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const [editComissao, setEditComissao] = useState("");
 
   // New member modal
   const [newMemberOpen, setNewMemberOpen] = useState(false);
   const [newMember, setNewMember] = useState({
     nome: "", email: "", role: "vendedor" as "vendedor" | "socio",
-    cargo: "", tipo_contrato: "CLT", percentual_comissao: "", telefone: "",
+    cargo: "", tipo_contrato: "CLT", telefone: "",
   });
   const [creatingMember, setCreatingMember] = useState(false);
 
   const selected = funcionarios.find(f => f.id === selectedId);
 
   const openProfile = (id: string) => {
-    const func = funcionarios.find(f => f.id === id);
     setSelectedId(id);
-    setEditComissao(func ? String(func.percentualComissao * 100) : "");
     setSheetOpen(true);
   };
 
-  const saveComissao = () => {
-    if (!selectedId) return;
-    const val = parseFloat(editComissao.replace(",", "."));
-    const parsed = comissaoSchema.safeParse({ percentual: isNaN(val) ? -1 : val });
-    if (!parsed.success) {
-      toast.error(firstZodError(parsed.error));
-      return;
-    }
-    updateFuncionario(selectedId, { percentualComissao: parsed.data.percentual / 100 });
-    toast.success("Comissão atualizada");
-  };
-
   const handleCreateMember = async () => {
-    const comissaoNum = parseFloat(newMember.percentual_comissao.replace(",", ".")) || 0;
-    const parsed = novoFuncionarioSchema.safeParse({
-      ...newMember,
-      percentual_comissao: comissaoNum,
-    });
+    const parsed = novoFuncionarioSchema.safeParse(newMember);
     if (!parsed.success) {
       toast.error(firstZodError(parsed.error));
       return;
@@ -90,7 +72,6 @@ const Equipe = () => {
           role: parsed.data.role,
           cargo: parsed.data.cargo,
           tipo_contrato: parsed.data.tipo_contrato,
-          percentual_comissao: parsed.data.percentual_comissao / 100,
           telefone: parsed.data.telefone,
         },
       });
@@ -100,7 +81,7 @@ const Equipe = () => {
 
       toast.success(`${parsed.data.nome} cadastrado(a) com sucesso! Um e-mail foi enviado para ${parsed.data.email} com instruções para definir a senha.`);
       setNewMemberOpen(false);
-      setNewMember({ nome: "", email: "", role: "vendedor", cargo: "", tipo_contrato: "CLT", percentual_comissao: "", telefone: "" });
+      setNewMember({ nome: "", email: "", role: "vendedor", cargo: "", tipo_contrato: "CLT", telefone: "" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao cadastrar membro");
     } finally {
@@ -269,11 +250,18 @@ const Equipe = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Percent className="h-3.5 w-3.5" /> Percentual de Comissão</Label>
-                  <div className="flex gap-2">
-                    <Input value={editComissao} onChange={e => setEditComissao(e.target.value)} placeholder="5" className="text-right" />
-                    <span className="flex items-center text-sm text-muted-foreground">%</span>
-                    <Button size="sm" onClick={saveComissao}>Salvar</Button>
+                  <Label className="flex items-center gap-2"><Percent className="h-3.5 w-3.5" /> Faixa de Comissão (automática)</Label>
+                  <div className="p-3 rounded-lg border text-sm space-y-1">
+                    <p>
+                      Faixa atual: <span className="font-semibold">{(calcularPercentualComissao(selected.valorVendas) * 100).toLocaleString("pt-BR")}%</span>{" "}
+                      sobre {formatBRL(selected.valorVendas)} faturado no mês
+                    </p>
+                    {selected.valorVendas >= BONUS_COMISSAO_LIMIAR && (
+                      <p className="text-success">+ {formatBRL(BONUS_COMISSAO_VALOR)} de bônus (passou de {formatBRL(BONUS_COMISSAO_LIMIAR)})</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Calculada automaticamente pela tabela padrão da empresa — não é mais editável manualmente.
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -339,16 +327,13 @@ const Equipe = () => {
               <Label>Cargo</Label>
               <Input value={newMember.cargo} onChange={e => setNewMember(p => ({ ...p, cargo: e.target.value }))} placeholder="Ex: Consultora de Vendas" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Comissão (%)</Label>
-                <Input value={newMember.percentual_comissao} onChange={e => setNewMember(p => ({ ...p, percentual_comissao: e.target.value }))} placeholder="5" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Telefone</Label>
-                <Input value={newMember.telefone} onChange={e => setNewMember(p => ({ ...p, telefone: e.target.value }))} placeholder="(11) 99999-0000" />
-              </div>
+            <div className="space-y-1.5">
+              <Label>Telefone</Label>
+              <Input value={newMember.telefone} onChange={e => setNewMember(p => ({ ...p, telefone: e.target.value }))} placeholder="(11) 99999-0000" />
             </div>
+            <p className="text-xs text-muted-foreground">
+              A comissão segue automaticamente a tabela padrão da empresa (por faixa de faturamento do mês) — não precisa ser cadastrada aqui.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewMemberOpen(false)}>Cancelar</Button>

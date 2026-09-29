@@ -29,6 +29,7 @@ export const CATEGORIAS: CategoriaOption[] = [
   { value: "receita_outros", label: "Outros (Receita)", tipo: "entrada", tipoCusto: null },
   // Despesas Variáveis
   { value: "comissao", label: "Comissão de Vendedora", tipo: "saida", tipoCusto: "variavel" },
+  { value: "bonus_comissao", label: "Bônus de Faturamento", tipo: "saida", tipoCusto: "variavel" },
   { value: "imposto", label: "Impostos & Taxas", tipo: "saida", tipoCusto: "variavel" },
   { value: "taxa_cartao", label: "Taxa de Cartão", tipo: "saida", tipoCusto: "variavel" },
   { value: "custo_producao", label: "Custo de Produção/Ajuste", tipo: "saida", tipoCusto: "variavel" },

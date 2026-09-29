@@ -12,10 +12,11 @@ import {
 } from "lucide-react";
 import { useMeusKpis } from "@/hooks/useMeusKpis";
 import { useMeusLeads } from "@/hooks/useMeusLeads";
-import { useExtratoComissao, CategoriaComissao } from "@/hooks/useExtratoComissao";
+import { useExtratoComissao } from "@/hooks/useExtratoComissao";
 import { useDateRange } from "@/hooks/useDateRange";
-import { formatBRL, categoriaLabel } from "@/lib/formatters";
+import { formatBRL } from "@/lib/formatters";
 import { FAIXAS_COMISSAO, BONUS_COMISSAO_LIMIAR, BONUS_COMISSAO_VALOR, calcularPercentualComissao } from "@/lib/comissao";
+import { ExtratoComissaoCard } from "@/components/funcionario/ExtratoComissaoCard";
 
 type CardColor = "default" | "green" | "yellow" | "red";
 const COLOR_MAP: Record<CardColor, string> = { default: "", green: "text-success", yellow: "text-warning", red: "text-destructive" };
@@ -37,12 +38,6 @@ const MetricaCard = ({ label, value, sub, icon: Icon, color }: {
   </Card>
 );
 
-const CATEGORIA_BADGE_CLASS: Record<CategoriaComissao, string> = {
-  comissao: "bg-primary/10 text-primary border-primary/20",
-  ajuste_comissao: "bg-warning/15 text-warning border-warning/30",
-  bonus_comissao: "bg-success/15 text-success border-success/30",
-};
-
 const STATUS_LABELS: Record<string, string> = {
   novo_lead: "Novo Lead",
   em_atendimento: "Em Atendimento",
@@ -59,7 +54,7 @@ const MinhasMetricas = () => {
   const { range, setRange } = useDateRange();
   const kpis = useMeusKpis(range);
   const { leads } = useMeusLeads();
-  const { lancamentos, loading: extratoCarregando, totalAReceber } = useExtratoComissao(range);
+  const { grupos: gruposComissao, loading: extratoCarregando, totalAReceber } = useExtratoComissao(range);
   const navigate = useNavigate();
 
   const compraram = leads.filter((l) => l.enviadoComercial);
@@ -182,30 +177,13 @@ const MinhasMetricas = () => {
               <div className="flex items-center justify-center py-8 text-muted-foreground text-sm gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" /> Carregando extrato...
               </div>
-            ) : lancamentos.length === 0 ? (
+            ) : gruposComissao.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhum lançamento de comissão neste período.</p>
             ) : (
-              <div className="max-h-96 overflow-y-auto">
-                <Table>
-                  <TableBody>
-                    {lancamentos.map((l) => (
-                      <TableRow key={l.id}>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(l.data + "T00:00:00").toLocaleDateString("pt-BR")}
-                        </TableCell>
-                        <TableCell className="text-sm">{l.descricaoPeca || l.clienteNome || "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`text-xs ${CATEGORIA_BADGE_CLASS[l.categoria]}`}>
-                            {categoriaLabel(l.categoria)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums text-success whitespace-nowrap">
-                          + {formatBRL(l.valor)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="max-h-[32rem] overflow-y-auto space-y-3 p-4 pt-0">
+                {gruposComissao.map((g) => (
+                  <ExtratoComissaoCard key={g.negocioId} grupo={g} />
+                ))}
               </div>
             )}
           </CardContent>

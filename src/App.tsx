@@ -35,6 +35,7 @@ import MeusLeads from "./pages/funcionario/MeusLeads";
 import MinhaVenda from "./pages/funcionario/MinhaVenda";
 import MinhaAgenda from "./pages/funcionario/MinhaAgenda";
 import MeuContrato from "./pages/funcionario/MeuContrato";
+import MeuTermoRetirada from "./pages/funcionario/MeuTermoRetirada";
 import MinhasMetricas from "./pages/funcionario/MinhasMetricas";
 import NotFound from "./pages/NotFound";
 import AssinaturaPublica from "./pages/AssinaturaPublica";
@@ -74,13 +75,14 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/minha-venda": ["vendedor", "admin"],
   "/minha-agenda": ["vendedor"],
   "/meu-contrato": ["vendedor"],
+  "/meu-termo-retirada": ["vendedor"],
   "/minhas-metricas": ["vendedor"],
 };
 
 // Rotas do portal isolado do funcionário (além de /perfil, comum a todos os roles).
 // /minha-venda fica de fora — é compartilhada com admin (ver ROUTE_ROLES), igual
 // /operacional/acervo já era.
-const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-agenda", "/meu-contrato", "/minhas-metricas"];
+const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-agenda", "/meu-contrato", "/meu-termo-retirada", "/minhas-metricas"];
 
 const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -176,6 +178,7 @@ const AppRoutes = () => {
       <Route path="/minha-venda" element={<ProtectedRoute path="/minha-venda"><MinhaVenda /></ProtectedRoute>} />
       <Route path="/minha-agenda" element={<ProtectedRoute path="/minha-agenda"><MinhaAgenda /></ProtectedRoute>} />
       <Route path="/meu-contrato" element={<ProtectedRoute path="/meu-contrato"><MeuContrato /></ProtectedRoute>} />
+      <Route path="/meu-termo-retirada" element={<ProtectedRoute path="/meu-termo-retirada"><MeuTermoRetirada /></ProtectedRoute>} />
       <Route path="/minhas-metricas" element={<ProtectedRoute path="/minhas-metricas"><MinhasMetricas /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

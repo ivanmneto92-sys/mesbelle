@@ -29,7 +29,7 @@ function getDiasAtraso(dataRetorno: string): number {
 
 const OperacionalLogistica = () => {
   const { range, setRange } = useDateRange();
-  const { items, updateStatus, updateRastreio, getByStatus } = useLogistica(range);
+  const { items, updateStatus, updateRastreio, assinarTermo, getByStatus } = useLogistica(range);
   const [detailItem, setDetailItem] = useState<AluguelLogistica | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [termoOpen, setTermoOpen] = useState(false);
@@ -116,7 +116,7 @@ const OperacionalLogistica = () => {
         onUpdateRastreio={updateRastreio}
       />
 
-      <TermoRetiradaModal items={items} open={termoOpen} onOpenChange={setTermoOpen} />
+      <TermoRetiradaModal items={items} open={termoOpen} onOpenChange={setTermoOpen} onAssinar={assinarTermo} />
     </div>
     </>
   );

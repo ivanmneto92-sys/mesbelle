@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Users, CalendarCheck2, UserCheck, TrendingUp, CheckCircle, Wallet, Gift, AlertTriangle,
+  ShoppingBag, CalendarPlus,
 } from "lucide-react";
 import { useMeusKpis } from "@/hooks/useMeusKpis";
 import { useDateRange } from "@/hooks/useDateRange";
@@ -59,6 +60,15 @@ const MeuPainel = () => {
             <p className="text-sm text-muted-foreground mt-0.5">Aqui está o resumo das suas atividades</p>
           </div>
           <DateRangePicker value={range} onChange={setRange} />
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button size="lg" className="flex-1 sm:flex-none" onClick={() => navigate("/minha-venda")}>
+            <ShoppingBag className="h-4 w-4 mr-2" /> Vendas
+          </Button>
+          <Button size="lg" variant="outline" className="flex-1 sm:flex-none" onClick={() => navigate("/minha-agenda?novo=1")}>
+            <CalendarPlus className="h-4 w-4 mr-2" /> Novo Agendamento
+          </Button>
         </div>
 
         <div className="rounded-xl border bg-muted/30 p-4">

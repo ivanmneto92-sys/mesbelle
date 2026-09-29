@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
+import { useVestidoSituacao } from "@/hooks/useVestidoSituacao";
+import { VestidoSituacaoAtual } from "./VestidoSituacaoAtual";
 
 interface Props {
   vestido: Vestido;
@@ -29,6 +31,7 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
   const [descricao, setDescricao] = useState(vestido.descricao ?? "");
   const [status, setStatus] = useState<VestidoStatus>(vestido.status);
   const [imagemUrl, setImagemUrl] = useState(vestido.imagemUrl);
+  const { situacao, loading: loadingSituacao } = useVestidoSituacao(open ? vestido.id : null);
 
   const handleSave = () => {
     onUpdate({
@@ -62,6 +65,8 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
+          <VestidoSituacaoAtual situacao={situacao} loading={loadingSituacao} />
+
           <div className="aspect-[4/3] rounded-lg overflow-hidden bg-muted">
             <img src={imagemUrl} alt={nome} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
           </div>

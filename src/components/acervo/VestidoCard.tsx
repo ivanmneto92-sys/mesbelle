@@ -1,4 +1,4 @@
-import { Vestido, STATUS_LABELS, STATUS_COLORS } from "@/types/acervo";
+import { Vestido } from "@/types/acervo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,18 +23,11 @@ export function VestidoCard({ vestido: v, onClick, onAgenda }: Props) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
         />
-        {/* "Alugado" não vira badge aqui — a peça pode estar alugada agora e
-            disponível de novo em breve, então um badge fixo passa a ideia
-            errada de indisponibilidade permanente. A situação real (com
-            quem, até quando, se está na costura/lavanderia) aparece ao
-            clicar na peça. */}
-        {v.status !== "alugado" && (
-          <div className="absolute top-2 left-2 flex gap-1.5">
-            <Badge className={`text-[10px] px-2 py-0.5 ${STATUS_COLORS[v.status]}`}>
-              {STATUS_LABELS[v.status]}
-            </Badge>
-          </div>
-        )}
+        {/* Nenhum badge de status aqui — a peça pode estar alugada agora e
+            disponível de novo em breve (ou vice-versa), então um selo fixo
+            no card sempre passava uma ideia incompleta ou desatualizada. A
+            situação real (com quem, até quando, se está na costura/
+            lavanderia) aparece ao clicar na peça. */}
         {v.isConsignado && (
           <div className="absolute top-2 right-2">
             <Badge className="bg-accent text-accent-foreground text-[10px] px-2 py-0.5 border-0 backdrop-blur-sm">

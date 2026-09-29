@@ -1,11 +1,10 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AluguelLogistica, StatusLogistica } from "@/types/logistica";
-import { MapPin, Phone, Calendar, Truck } from "lucide-react";
+import { MapPin, Phone, Calendar } from "lucide-react";
 import { useState } from "react";
 
 const statusLabels: Record<StatusLogistica, string> = {
@@ -29,19 +28,16 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdateStatus: (id: string, status: StatusLogistica) => void;
-  onUpdateRastreio: (id: string, codigo: string) => void;
   canManage: boolean;
 }
 
-export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpdateStatus, onUpdateRastreio, canManage }: Props) {
+export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpdateStatus, canManage }: Props) {
   const [status, setStatus] = useState<StatusLogistica>(item?.statusLogistica ?? "para_enviar");
-  const [rastreio, setRastreio] = useState(item?.codigoRastreio ?? "");
 
   // Sync when item changes
   const currentItem = item;
   if (currentItem && status !== currentItem.statusLogistica) {
     setStatus(currentItem.statusLogistica);
-    setRastreio(currentItem.codigoRastreio ?? "");
   }
 
   if (!currentItem) return null;
@@ -50,9 +46,6 @@ export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpd
 
   const handleSave = () => {
     onUpdateStatus(currentItem.id, status);
-    if (rastreio !== (currentItem.codigoRastreio ?? "")) {
-      onUpdateRastreio(currentItem.id, rastreio);
-    }
     onOpenChange(false);
   };
 
@@ -112,7 +105,7 @@ export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpd
 
           {canManage ? (
             <>
-              {/* Alterar status */}
+              {/* Alterar status — também pode ser feito arrastando o card no quadro */}
               <div className="space-y-2">
                 <Label>Alterar status</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as StatusLogistica)}>
@@ -129,26 +122,12 @@ export default function LogisticaDetalhesSheet({ item, open, onOpenChange, onUpd
                 </Select>
               </div>
 
-              {/* Rastreio */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Código de Rastreio</Label>
-                <Input placeholder="Ex: BR123456789" value={rastreio} onChange={(e) => setRastreio(e.target.value)} />
-              </div>
-
               <Button onClick={handleSave} className="w-full">Salvar Alterações</Button>
             </>
           ) : (
-            <>
-              {currentItem.codigoRastreio && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Truck className="h-3.5 w-3.5" /> Código de Rastreio</Label>
-                  <p className="text-sm">{currentItem.codigoRastreio}</p>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Somente um administrador pode alterar o status ou o rastreio.
-              </p>
-            </>
+            <p className="text-xs text-muted-foreground">
+              Somente um administrador pode alterar o status.
+            </p>
           )}
         </div>
       </SheetContent>

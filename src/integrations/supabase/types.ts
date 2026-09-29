@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -105,42 +105,51 @@ export type Database = {
       }
       alugueis_logistica: {
         Row: {
+          assinatura_base64: string | null
           cliente_nome: string
           cliente_telefone: string
-          codigo_rastreio: string | null
           created_at: string
+          data_assinatura: string | null
           data_retorno: string
           data_saida: string
           endereco_entrega: string
           id: string
+          ip_assinatura: string | null
           status_logistica: string
           updated_at: string
+          user_agent_assinatura: string | null
           vestido_nome: string
         }
         Insert: {
+          assinatura_base64?: string | null
           cliente_nome?: string
           cliente_telefone?: string
-          codigo_rastreio?: string | null
           created_at?: string
+          data_assinatura?: string | null
           data_retorno: string
           data_saida: string
           endereco_entrega?: string
           id?: string
+          ip_assinatura?: string | null
           status_logistica?: string
           updated_at?: string
+          user_agent_assinatura?: string | null
           vestido_nome?: string
         }
         Update: {
+          assinatura_base64?: string | null
           cliente_nome?: string
           cliente_telefone?: string
-          codigo_rastreio?: string | null
           created_at?: string
+          data_assinatura?: string | null
           data_retorno?: string
           data_saida?: string
           endereco_entrega?: string
           id?: string
+          ip_assinatura?: string | null
           status_logistica?: string
           updated_at?: string
+          user_agent_assinatura?: string | null
           vestido_nome?: string
         }
         Relationships: []
@@ -182,6 +191,7 @@ export type Database = {
           data: string
           funcionario_id: string | null
           id: string
+          ip_hash: string | null
           nota: number
         }
         Insert: {
@@ -190,6 +200,7 @@ export type Database = {
           data: string
           funcionario_id?: string | null
           id?: string
+          ip_hash?: string | null
           nota: number
         }
         Update: {
@@ -198,6 +209,7 @@ export type Database = {
           data?: string
           funcionario_id?: string | null
           id?: string
+          ip_hash?: string | null
           nota?: number
         }
         Relationships: []
@@ -259,6 +271,7 @@ export type Database = {
           data_criacao: string
           data_evento: string
           email_cliente: string
+          email_enviado_em: string | null
           id: string
           ip_assinatura: string | null
           lead_id: string
@@ -282,6 +295,7 @@ export type Database = {
           data_criacao?: string
           data_evento?: string
           email_cliente?: string
+          email_enviado_em?: string | null
           id?: string
           ip_assinatura?: string | null
           lead_id: string
@@ -305,6 +319,7 @@ export type Database = {
           data_criacao?: string
           data_evento?: string
           email_cliente?: string
+          email_enviado_em?: string | null
           id?: string
           ip_assinatura?: string | null
           lead_id?: string
@@ -338,6 +353,7 @@ export type Database = {
           nome_etapa: string
           ordem: number
           producao_id: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -346,6 +362,7 @@ export type Database = {
           nome_etapa: string
           ordem?: number
           producao_id: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -354,6 +371,7 @@ export type Database = {
           nome_etapa?: string
           ordem?: number
           producao_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -395,6 +413,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      jornada_aluguel: {
+        Row: {
+          created_at: string
+          id: string
+          is_concluido: boolean
+          nome_etapa: string
+          ordem: number
+          reserva_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_concluido?: boolean
+          nome_etapa: string
+          ordem?: number
+          reserva_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_concluido?: boolean
+          nome_etapa?: string
+          ordem?: number
+          reserva_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_aluguel_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas_agenda"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -506,59 +562,107 @@ export type Database = {
           },
         ]
       }
+      meta_breakdown_capabilities: {
+        Row: {
+          ad_account_id: string
+          detalhes: Json | null
+          flexible_format_asset_type: boolean | null
+          image_asset: boolean | null
+          media_asset_url: boolean | null
+          media_type: boolean | null
+          tested_at: string
+          video_asset: boolean | null
+        }
+        Insert: {
+          ad_account_id: string
+          detalhes?: Json | null
+          flexible_format_asset_type?: boolean | null
+          image_asset?: boolean | null
+          media_asset_url?: boolean | null
+          media_type?: boolean | null
+          tested_at?: string
+          video_asset?: boolean | null
+        }
+        Update: {
+          ad_account_id?: string
+          detalhes?: Json | null
+          flexible_format_asset_type?: boolean | null
+          image_asset?: boolean | null
+          media_asset_url?: boolean | null
+          media_type?: boolean | null
+          tested_at?: string
+          video_asset?: boolean | null
+        }
+        Relationships: []
+      }
       negocios: {
         Row: {
           cliente_cpf: string
+          cliente_email: string | null
           cliente_id: string
           cliente_nome: string
+          cliente_telefone: string | null
           created_at: string
           criado_em: string
           data_evento: string
           desconto: number
+          descricao_primeiro_aluguel: string | null
           id: string
           metodo_pagamento: string
           observacoes: string | null
           parcelas: number
           status_negociacao: string
+          tipo_negocio: string
           updated_at: string
           valor_negociado: number
           vendedor_id: string | null
+          vestido_id_novo: string | null
           vestido_nome: string | null
         }
         Insert: {
           cliente_cpf?: string
+          cliente_email?: string | null
           cliente_id: string
           cliente_nome: string
+          cliente_telefone?: string | null
           created_at?: string
           criado_em?: string
           data_evento?: string
           desconto?: number
+          descricao_primeiro_aluguel?: string | null
           id?: string
           metodo_pagamento?: string
           observacoes?: string | null
           parcelas?: number
           status_negociacao?: string
+          tipo_negocio?: string
           updated_at?: string
           valor_negociado?: number
           vendedor_id?: string | null
+          vestido_id_novo?: string | null
           vestido_nome?: string | null
         }
         Update: {
           cliente_cpf?: string
+          cliente_email?: string | null
           cliente_id?: string
           cliente_nome?: string
+          cliente_telefone?: string | null
           created_at?: string
           criado_em?: string
           data_evento?: string
           desconto?: number
+          descricao_primeiro_aluguel?: string | null
           id?: string
           metodo_pagamento?: string
           observacoes?: string | null
           parcelas?: number
           status_negociacao?: string
+          tipo_negocio?: string
           updated_at?: string
           valor_negociado?: number
           vendedor_id?: string | null
+          vestido_id_novo?: string | null
           vestido_nome?: string | null
         }
         Relationships: [
@@ -569,7 +673,32 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "negocios_vestido_id_novo_fkey"
+            columns: ["vestido_id_novo"]
+            isOneToOne: false
+            referencedRelation: "vestidos"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      password_reset_attempts: {
+        Row: {
+          criado_em: string
+          email: string
+          id: string
+        }
+        Insert: {
+          criado_em?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          criado_em?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
       }
       permissoes_config: {
         Row: {
@@ -594,42 +723,66 @@ export type Database = {
       }
       producoes: {
         Row: {
+          ajuste_solicitado: boolean
           cliente_nome: string
           created_at: string
           data_prazo: string | null
           data_prova: string | null
           id: string
+          negocio_id: string | null
           notas_tecnicas: string
           ref_imagens_urls: string[]
           status_geral: string
           titulo_vestido: string
           updated_at: string
+          vestido_id: string | null
         }
         Insert: {
+          ajuste_solicitado?: boolean
           cliente_nome?: string
           created_at?: string
           data_prazo?: string | null
           data_prova?: string | null
           id?: string
+          negocio_id?: string | null
           notas_tecnicas?: string
           ref_imagens_urls?: string[]
           status_geral?: string
           titulo_vestido?: string
           updated_at?: string
+          vestido_id?: string | null
         }
         Update: {
+          ajuste_solicitado?: boolean
           cliente_nome?: string
           created_at?: string
           data_prazo?: string | null
           data_prova?: string | null
           id?: string
+          negocio_id?: string | null
           notas_tecnicas?: string
           ref_imagens_urls?: string[]
           status_geral?: string
           titulo_vestido?: string
           updated_at?: string
+          vestido_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "producoes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producoes_vestido_id_fkey"
+            columns: ["vestido_id"]
+            isOneToOne: false
+            referencedRelation: "vestidos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -873,11 +1026,34 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_webhook_eventos: {
+        Row: {
+          recebido_em: string
+          wamid: string
+        }
+        Insert: {
+          recebido_em?: string
+          wamid: string
+        }
+        Update: {
+          recebido_em?: string
+          wamid?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      _client_ip_from_request: { Args: never; Returns: string }
+      _get_meta_credentials: {
+        Args: never
+        Returns: {
+          access_token: string
+          ad_account_id: string
+        }[]
+      }
       assinar_contrato_publico: {
         Args: {
           _assinatura: string
@@ -890,6 +1066,22 @@ export type Database = {
       can_read_crm: { Args: { _user_id: string }; Returns: boolean }
       can_read_socios: { Args: { _user_id: string }; Returns: boolean }
       can_write_crm: { Args: { _user_id: string }; Returns: boolean }
+      fn_criar_vestido_primeiro_aluguel: {
+        Args: {
+          p_categoria: string
+          p_comprimento: string
+          p_cor: string
+          p_descricao: string
+          p_nome: string
+          p_preco_aluguel: number
+          p_tamanho: string
+        }
+        Returns: string
+      }
+      fn_faixa_comissao: {
+        Args: { v_faturamento_mes: number }
+        Returns: number
+      }
       get_contrato_by_token: {
         Args: { _token: string }
         Returns: {
@@ -946,12 +1138,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -975,11 +1167,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1000,11 +1192,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1025,11 +1217,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1042,11 +1234,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

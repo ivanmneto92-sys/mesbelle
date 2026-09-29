@@ -9,7 +9,6 @@ export interface AluguelLogistica {
   dataSaida: string;
   dataRetorno: string;
   statusLogistica: StatusLogistica;
-  codigoRastreio?: string;
   // Termo de Retirada — assinatura digital da cliente (igual ao contrato).
   assinaturaBase64?: string;
   dataAssinatura?: string;

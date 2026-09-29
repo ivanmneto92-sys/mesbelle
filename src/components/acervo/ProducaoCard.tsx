@@ -2,11 +2,10 @@ import { Producao, EtapaProducao, PRODUCAO_STATUS_LABELS } from "@/types/acervo"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
 import { Upload, FileText, Image } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useRef } from "react";
+import { ProducaoJornada } from "./ProducaoJornada";
 
 interface Props {
   producao: Producao;
@@ -19,9 +18,6 @@ interface Props {
 
 export function ProducaoCard({ producao: p, etapas, canManage, onToggleEtapa, onUploadRef, onOpenDetalhes }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const done = etapas.filter(e => e.isConcluido).length;
-  const total = etapas.length;
-  const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,32 +44,8 @@ export function ProducaoCard({ producao: p, etapas, canManage, onToggleEtapa, on
           </Badge>
         </div>
 
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted-foreground">Progresso</span>
-            <span className="text-xs font-medium">{done}/{total} etapas ({percent}%)</span>
-          </div>
-          <Progress value={percent} className="h-2" />
-        </div>
-
-        <div className="space-y-2 mb-4">
-          {etapas.map((etapa) => (
-            <div
-              key={etapa.id}
-              className={`flex items-center gap-3 group ${canManage ? "cursor-pointer" : ""}`}
-              onClick={() => canManage && onToggleEtapa(etapa.id)}
-            >
-              <Checkbox
-                checked={etapa.isConcluido}
-                onCheckedChange={() => canManage && onToggleEtapa(etapa.id)}
-                disabled={!canManage}
-                className="pointer-events-none"
-              />
-              <span className={`text-sm transition-colors ${etapa.isConcluido ? "line-through text-muted-foreground" : canManage ? "group-hover:text-primary" : ""}`}>
-                {etapa.nomeEtapa}
-              </span>
-            </div>
-          ))}
+        <div className="mb-5">
+          <ProducaoJornada etapas={etapas} canManage={canManage} onToggleEtapa={onToggleEtapa} />
         </div>
 
         <div className="flex gap-2">

@@ -78,12 +78,17 @@ export const PRODUCAO_STATUS_LABELS: Record<ProducaoStatus, string> = {
   concluido: "Concluído",
 };
 
+// Jornada do Primeiro Aluguel (vestido feito do zero) — ordem fixa, usada
+// tanto para gerar as etapas de uma produção nova (useAcervo.addProducao)
+// quanto para escolher o ícone de cada etapa na linha do tempo visual
+// (ProducaoJornada). A 6ª etapa (Segunda Prova) pode abrir um ciclo
+// opcional de novo ajuste antes da Entrega Final — ver ProducaoJornada.
 export const DEFAULT_ETAPAS = [
-  "Tecido Comprado",
+  "Compra de Material",
   "Modelista",
-  "Costura Base",
   "Bordadeira",
-  "Provas",
-  "Acabamento Final",
-  "Entrega",
+  "Primeira Prova",
+  "Ajustes",
+  "Segunda Prova",
+  "Entrega Final",
 ];

@@ -12,17 +12,20 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { format, parseISO, subDays } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { useAcervo } from "@/hooks/useAcervo";
 import { useMeusLeads } from "@/hooks/useMeusLeads";
 import { useDisponibilidade } from "@/hooks/useDisponibilidade";
-import { useCriarVenda } from "@/hooks/useCriarVenda";
+import { useCriarVenda, TipoNegocio } from "@/hooks/useCriarVenda";
 import { formatBRL } from "@/lib/formatters";
-import type { Vestido } from "@/types/acervo";
+import type { Vestido, CategoriaPeca } from "@/types/acervo";
+import { CATEGORIA_LABELS } from "@/types/acervo";
 import { ItemCarrinho, DadosPagamento, FormaPagamento, ResumoPedido } from "@/types/venda";
 import {
   Search, Plus, Trash2, Tag, CalendarRange, CreditCard,
   CheckCircle, AlertTriangle, Loader2, ShoppingBag, Receipt,
-  User, Package,
+  User, Package, Sparkles, Scissors,
 } from "lucide-react";
 
 const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string; icon: string }[] = [
@@ -45,6 +48,7 @@ const MinhaVenda = () => {
   const { verificar } = useDisponibilidade();
   const criarVenda = useCriarVenda();
 
+  const [tipoNegocio, setTipoNegocio] = useState<TipoNegocio | "">("");
   const [leadId, setLeadId] = useState<string>("");
   const [locataria, setLocataria] = useState({ nome: "", cpf: "", telefone: "", email: "" });
   const [buscaPeca, setBuscaPeca] = useState("");
@@ -53,6 +57,66 @@ const MinhaVenda = () => {
     forma: "pix", parcelas: 1, descontoGeral: 0, observacoes: "",
   });
   const [vendaConfirmada, setVendaConfirmada] = useState<string | null>(null);
+
+  // Formulário da peça nova (Primeiro Aluguel) — vestido que ainda não
+  // existe no Acervo, feito sob medida pra essa cliente.
+  const [novaPeca, setNovaPeca] = useState({
+    nome: "", categoria: "vestido" as CategoriaPeca, cor: "", tamanho: "", comprimento: "",
+    valor: "", descricao: "", dataRetirada: "", dataDevolucao: "",
+  });
+  const [criandoPeca, setCriandoPeca] = useState(false);
+
+  const handleSelecionarTipo = (tipo: TipoNegocio) => {
+    setTipoNegocio(tipo);
+    setCarrinho([]);
+  };
+
+  const adicionarPecaNova = async () => {
+    const valor = Number(novaPeca.valor);
+    if (!novaPeca.nome.trim() || !valor || valor <= 0 || !novaPeca.dataRetirada || !novaPeca.dataDevolucao) {
+      toast.error("Preencha nome, valor e as datas da peça.");
+      return;
+    }
+    if (novaPeca.dataRetirada >= novaPeca.dataDevolucao) {
+      toast.error("A data de devolução precisa ser depois da retirada.");
+      return;
+    }
+    setCriandoPeca(true);
+    try {
+      const { data: vestidoId, error } = await supabase.rpc("fn_criar_vestido_primeiro_aluguel", {
+        p_nome: novaPeca.nome.trim(),
+        p_categoria: novaPeca.categoria,
+        p_cor: novaPeca.cor,
+        p_tamanho: novaPeca.tamanho,
+        p_comprimento: novaPeca.comprimento,
+        p_preco_aluguel: valor,
+        p_descricao: novaPeca.descricao,
+      });
+      if (error || !vestidoId) throw new Error(error?.message || "Erro ao criar a peça");
+
+      const item: ItemCarrinho = {
+        id: crypto.randomUUID(),
+        vestidoId: vestidoId as string,
+        nome: novaPeca.nome.trim(),
+        sku: "",
+        fotoUrl: null,
+        categoria: novaPeca.categoria,
+        valorOriginal: valor,
+        desconto: 0,
+        valorFinal: valor,
+        dataRetirada: novaPeca.dataRetirada,
+        dataDevolucao: novaPeca.dataDevolucao,
+        disponivel: true,
+        verificando: false,
+      };
+      setCarrinho([item]);
+      toast.success("Peça adicionada — ela vai entrar em Produção ao confirmar o aluguel.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar a peça");
+    } finally {
+      setCriandoPeca(false);
+    }
+  };
 
   const pecasFiltradas = vestidos.filter((v) => {
     if (!buscaPeca.trim()) return false;
@@ -135,6 +199,7 @@ const MinhaVenda = () => {
   };
 
   const podeConcluir =
+    !!tipoNegocio &&
     !!leadId &&
     !!locataria.nome.trim() &&
     !!locataria.cpf.trim() &&
@@ -144,24 +209,38 @@ const MinhaVenda = () => {
 
   const handleConfirmar = async () => {
     const lead = leads.find((l) => l.id === leadId);
-    if (!podeConcluir || !lead) return;
-    const result = await criarVenda.mutateAsync({ lead, locataria, itens: carrinho, pagamento, resumo });
+    if (!podeConcluir || !lead || !tipoNegocio) return;
+    const result = await criarVenda.mutateAsync({
+      lead, locataria, itens: carrinho, pagamento, resumo,
+      tipoNegocio, descricaoPrimeiroAluguel: novaPeca.descricao,
+    });
     if (result?.negocioId) setVendaConfirmada(result.negocioId);
   };
+
+  const prazoProducaoEstimado = carrinho[0]?.dataRetirada
+    ? format(subDays(parseISO(carrinho[0].dataRetirada), 3), "dd/MM/yyyy")
+    : null;
 
   if (vendaConfirmada) {
     return (
       <>
-        <SEO title="Venda registrada — Més Belle" description="Venda registrada com sucesso." path="/minha-venda" />
+        <SEO title="Aluguel registrado — Més Belle" description="Aluguel registrado com sucesso." path="/minha-venda" />
         <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
           <div className="p-6 bg-green-100 rounded-full">
             <CheckCircle className="h-16 w-16 text-green-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-serif font-bold">Venda registrada! 🎉</h2>
+            <h2 className="text-2xl font-serif font-bold">Aluguel registrado! 🎉</h2>
             <p className="text-muted-foreground mt-1">
-              O pagamento foi registrado e as peças foram reservadas.
+              O pagamento foi registrado e {tipoNegocio === "primeiro_aluguel" ? "a peça foi reservada" : "as peças foram reservadas"}.
             </p>
+            {tipoNegocio === "primeiro_aluguel" && (
+              <p className="text-sm text-primary mt-2 flex items-center justify-center gap-1.5">
+                <Scissors className="h-3.5 w-3.5" />
+                Peça enviada para Produção
+                {prazoProducaoEstimado && <> — prazo até {prazoProducaoEstimado}</>}
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => navigate(isAdmin ? "/crm" : "/meus-leads")}>
@@ -178,14 +257,50 @@ const MinhaVenda = () => {
 
   return (
     <>
-      <SEO title="Nova Venda — Més Belle" description="Registre a locação de peças e o pagamento da cliente." path="/minha-venda" />
+      <SEO title="Novo Aluguel — Més Belle" description="Registre o aluguel de peças e o pagamento da cliente." path="/minha-venda" />
       <div className="space-y-6 max-w-4xl mx-auto">
 
         <PageHeader
           icon={ShoppingBag}
-          title="Nova Venda"
-          description="Registre a locação de peças e o pagamento da cliente"
+          title="Novo Aluguel"
+          description="Registre o aluguel de peças e o pagamento da cliente"
         />
+
+        {/* SEÇÃO 0: Tipo de Locação */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-serif text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" /> Tipo de Locação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handleSelecionarTipo("aluguel")}
+                className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                  tipoNegocio === "aluguel" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <p className="font-medium flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> Aluguel</p>
+                <p className="text-xs text-muted-foreground mt-1">Peça já existe no Acervo, pronta para alugar.</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSelecionarTipo("primeiro_aluguel")}
+                className={`text-left p-4 rounded-lg border-2 transition-colors ${
+                  tipoNegocio === "primeiro_aluguel" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <p className="font-medium flex items-center gap-2"><Scissors className="h-4 w-4 text-primary" /> Primeiro Aluguel</p>
+                <p className="text-xs text-muted-foreground mt-1">Vestido feito do zero — ainda não existe no estoque.</p>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {tipoNegocio && (
+        <>
 
         {/* SEÇÃO 1: Cliente */}
         <Card className="shadow-sm">
@@ -273,57 +388,187 @@ const MinhaVenda = () => {
           </CardHeader>
           <CardContent className="space-y-4">
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                placeholder="Buscar peça por nome ou SKU..."
-                value={buscaPeca}
-                onChange={(e) => setBuscaPeca(e.target.value)}
-              />
-              {buscaPeca.trim() && (
-                <div className="absolute z-10 mt-1 w-full bg-background border rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                  {pecasFiltradas.length === 0 && (
-                    <div className="p-3 text-sm text-muted-foreground">
-                      Nenhuma peça encontrada para "{buscaPeca}"
-                    </div>
-                  )}
-                  {pecasFiltradas.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => adicionarPeca(p)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 text-left transition-colors"
-                    >
-                      {p.imagemUrl ? (
-                        <img src={p.imagemUrl} alt={p.nome} className="h-10 w-8 object-cover rounded" />
-                      ) : (
-                        <div className="h-10 w-8 bg-muted rounded flex items-center justify-center">
-                          <Package className="h-4 w-4 text-muted-foreground" />
+            {tipoNegocio === "aluguel" && (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Buscar peça por nome ou SKU..."
+                    value={buscaPeca}
+                    onChange={(e) => setBuscaPeca(e.target.value)}
+                  />
+                  {buscaPeca.trim() && (
+                    <div className="absolute z-10 mt-1 w-full bg-background border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                      {pecasFiltradas.length === 0 && (
+                        <div className="p-3 text-sm text-muted-foreground">
+                          Nenhuma peça encontrada para "{buscaPeca}"
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{p.nome}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {p.sku} · {formatBRL(Number(p.precoAluguel ?? 0))}
-                        </p>
-                      </div>
-                      {p.status !== "disponivel" && (
-                        <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-300 shrink-0">
-                          {p.status}
-                        </Badge>
-                      )}
-                      <Plus className="h-4 w-4 text-primary shrink-0" />
-                    </button>
-                  ))}
+                      {pecasFiltradas.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => adicionarPeca(p)}
+                          className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 text-left transition-colors"
+                        >
+                          {p.imagemUrl ? (
+                            <img src={p.imagemUrl} alt={p.nome} className="h-10 w-8 object-cover rounded" />
+                          ) : (
+                            <div className="h-10 w-8 bg-muted rounded flex items-center justify-center">
+                              <Package className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{p.nome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {p.sku} · {formatBRL(Number(p.precoAluguel ?? 0))}
+                            </p>
+                          </div>
+                          {p.status !== "disponivel" && (
+                            <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-300 shrink-0">
+                              {p.status}
+                            </Badge>
+                          )}
+                          <Plus className="h-4 w-4 text-primary shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {carrinho.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-                <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Nenhuma peça adicionada ainda</p>
-                <p className="text-xs">Use a busca acima para adicionar vestidos ou acessórios</p>
+                {carrinho.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">Nenhuma peça adicionada ainda</p>
+                    <p className="text-xs">Use a busca acima para adicionar vestidos ou acessórios</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {tipoNegocio === "primeiro_aluguel" && carrinho.length === 0 && (
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Scissors className="h-3.5 w-3.5 shrink-0" />
+                  Vestido feito sob medida — essas informações vão para o contrato e para a Produção.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label className="text-xs text-muted-foreground">Nome/descrição curta da peça *</Label>
+                    <Input
+                      value={novaPeca.nome}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, nome: e.target.value }))}
+                      placeholder="Ex: Vestido sereia bordado"
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Categoria</Label>
+                    <Select
+                      value={novaPeca.categoria}
+                      onValueChange={(v) => setNovaPeca((p) => ({ ...p, categoria: v as CategoriaPeca }))}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CATEGORIA_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Valor do aluguel (R$) *</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={novaPeca.valor}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, valor: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Cor</Label>
+                    <Input
+                      value={novaPeca.cor}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, cor: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Tamanho</Label>
+                    <Input
+                      value={novaPeca.tamanho}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, tamanho: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Comprimento</Label>
+                    <Input
+                      value={novaPeca.comprimento}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, comprimento: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label className="text-xs text-muted-foreground">Detalhes para a Produção (opcional)</Label>
+                    <Textarea
+                      value={novaPeca.descricao}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, descricao: e.target.value }))}
+                      placeholder="Ex: tecido, bordado, referências combinadas com a cliente..."
+                      rows={2}
+                      className="resize-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CalendarRange className="h-3 w-3" /> Retirada (entrega prevista) *
+                    </Label>
+                    <Input
+                      type="date"
+                      value={novaPeca.dataRetirada}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, dataRetirada: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CalendarRange className="h-3 w-3" /> Devolução *
+                    </Label>
+                    <Input
+                      type="date"
+                      min={novaPeca.dataRetirada}
+                      value={novaPeca.dataDevolucao}
+                      onChange={(e) => setNovaPeca((p) => ({ ...p, dataDevolucao: e.target.value }))}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                </div>
+                {novaPeca.dataRetirada && (
+                  <p className="text-xs text-muted-foreground">
+                    Prazo estimado para a Produção terminar: até{" "}
+                    <span className="font-medium text-foreground">
+                      {format(subDays(parseISO(novaPeca.dataRetirada), 3), "dd/MM/yyyy")}
+                    </span>{" "}
+                    (72h antes da retirada).
+                  </p>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={criandoPeca}
+                  onClick={adicionarPecaNova}
+                >
+                  {criandoPeca ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Criando peça...</>
+                  ) : (
+                    <><Plus className="h-4 w-4 mr-2" /> Adicionar peça</>
+                  )}
+                </Button>
               </div>
             )}
 
@@ -468,11 +713,14 @@ const MinhaVenda = () => {
                 {criarVenda.isPending ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Registrando...</>
                 ) : (
-                  <><CheckCircle className="h-4 w-4 mr-2" /> Confirmar venda</>
+                  <><CheckCircle className="h-4 w-4 mr-2" /> Confirmar aluguel</>
                 )}
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        </>
         )}
 
       </div>

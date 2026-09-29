@@ -12,12 +12,18 @@ export interface LocatariaOverride {
   email: string;
 }
 
+export type TipoNegocio = "aluguel" | "primeiro_aluguel";
+
 interface CriarVendaInput {
   lead: Lead;
   locataria: LocatariaOverride;
   itens: ItemCarrinho[];
   pagamento: DadosPagamento;
   resumo: ResumoPedido;
+  tipoNegocio: TipoNegocio;
+  // Só para "primeiro_aluguel" — vai para o contrato e para a Produção
+  // gerada automaticamente (trigger fn_negocio_primeiro_aluguel_gera_producao).
+  descricaoPrimeiroAluguel?: string;
 }
 
 const FORMA_LABELS: Record<DadosPagamento["forma"], string> = {
@@ -40,8 +46,9 @@ export function useCriarVenda() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ lead, locataria, itens, pagamento, resumo }: CriarVendaInput) => {
+    mutationFn: async ({ lead, locataria, itens, pagamento, resumo, tipoNegocio, descricaoPrimeiroAluguel }: CriarVendaInput) => {
       const vestidoNome = itens.map((i) => i.nome).join(", ");
+      const ehPrimeiroAluguel = tipoNegocio === "primeiro_aluguel";
 
       const { data: negocio, error: negErr } = await supabase
         .from("negocios")
@@ -58,8 +65,16 @@ export function useCriarVenda() {
           parcelas: pagamento.forma === "credito" ? pagamento.parcelas : 1,
           observacoes: pagamento.observacoes || null,
           status_negociacao: "aprovado",
-          data_evento: lead.dataEvento || itens[0]?.dataRetirada || "",
+          // Primeiro Aluguel: usa a data de retirada da peça (não o evento do
+          // lead) — é essa coluna que o trigger de Produção lê pra calcular o
+          // prazo (retirada - 72h).
+          data_evento: ehPrimeiroAluguel
+            ? (itens[0]?.dataRetirada || "")
+            : (lead.dataEvento || itens[0]?.dataRetirada || ""),
           vendedor_id: user?.id ?? null,
+          tipo_negocio: tipoNegocio,
+          vestido_id_novo: ehPrimeiroAluguel ? (itens[0]?.vestidoId ?? null) : null,
+          descricao_primeiro_aluguel: ehPrimeiroAluguel ? (descricaoPrimeiroAluguel || null) : null,
         })
         .select("id")
         .single();
@@ -91,8 +106,14 @@ export function useCriarVenda() {
       const { error: logErr } = await supabase.from("alugueis_logistica").insert(entregas);
       if (logErr) throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
 
-      const vestidoIds = itens.map((i) => i.vestidoId);
-      await supabase.from("vestidos").update({ status: "alugado" }).in("id", vestidoIds);
+      // Primeiro Aluguel: a peça acabou de ser criada com status "producao"
+      // (fn_criar_vestido_primeiro_aluguel) — continua assim até a Produção
+      // concluir a etapa "Entrega Final" (trigger fn_entrega_final_libera_vestido
+      // marca "alugado" automaticamente nesse momento).
+      if (!ehPrimeiroAluguel) {
+        const vestidoIds = itens.map((i) => i.vestidoId);
+        await supabase.from("vestidos").update({ status: "alugado" }).in("id", vestidoIds);
+      }
 
       await supabase.from("leads").update({ enviado_comercial: true }).eq("id", lead.id);
 
@@ -100,11 +121,11 @@ export function useCriarVenda() {
     },
 
     onSuccess: () => {
-      toast.success("Venda registrada com sucesso! 🎉");
+      toast.success("Aluguel registrado com sucesso! 🎉");
     },
 
     onError: (e: Error) => {
-      toast.error(e.message || "Erro ao registrar venda");
+      toast.error(e.message || "Erro ao registrar aluguel");
     },
   });
 }

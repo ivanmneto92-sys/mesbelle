@@ -50,7 +50,7 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
         roles: ["admin", "vendedor", "socio"],
         children: [
           { title: "CRM (Funil de Leads)", url: "/crm", icon: Handshake, roles: ["admin"] },
-          { title: "Nova Venda", url: "/minha-venda", icon: ShoppingBag, roles: ["admin"] },
+          { title: "Novo Aluguel", url: "/minha-venda", icon: ShoppingBag, roles: ["admin"] },
           { title: "Relatório Comercial", url: "/comercial/relatorio", icon: FileBarChart, roles: ["admin", "vendedor", "socio"] },
           { title: "Relatório Agendamento", url: "/comercial/relatorio-agendamento", icon: BarChart3, roles: ["admin"] },
           { title: "Calendário", url: "/comercial/calendario", icon: CalendarDays, roles: ["admin", "vendedor"] },
@@ -132,7 +132,7 @@ const navGroupsFuncionario: { label: string; items: NavEntry[] }[] = [
     label: "Atendimento",
     items: [
       { title: "Meus Leads", url: "/meus-leads", icon: Users, roles: ["vendedor"] },
-      { title: "Nova Venda", url: "/minha-venda", icon: ShoppingBag, roles: ["vendedor"] },
+      { title: "Novo Aluguel", url: "/minha-venda", icon: ShoppingBag, roles: ["vendedor"] },
       { title: "Minha Agenda", url: "/minha-agenda", icon: CalendarDays, roles: ["vendedor"] },
       { title: "Contratos", url: "/meu-contrato", icon: FileSignature, roles: ["vendedor"] },
     ],

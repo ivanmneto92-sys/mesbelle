@@ -10,7 +10,6 @@ const ROUTE_LABELS: Record<string, string> = {
   "/comercial/calendario": "Calendário",
   "/comercial/contratos": "Contratos",
   "/operacional/acervo": "Acervo",
-  "/operacional/producao": "Produção",
   "/operacional/logistica": "Logística",
   "/operacional/relatorio": "Relatório Operacional",
   "/financeiro": "Financeiro",

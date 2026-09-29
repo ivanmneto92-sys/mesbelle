@@ -4,7 +4,7 @@ import {
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
   Megaphone, BarChart3, CalendarDays, UserCircle, ScrollText,
   FileBarChart, Wallet, TrendingUp, ArrowLeftRight, PieChart, UserSearch,
-  Package2, LayoutGrid, Scissors, FileSignature, FileText,
+  Package2, LayoutGrid, FileSignature, FileText,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -77,7 +77,8 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
         roles: ["admin", "vendedor", "socio"],
         children: [
           { title: "Acervo", url: "/operacional/acervo", icon: LayoutGrid, roles: ["admin", "vendedor"] },
-          { title: "Produção", url: "/operacional/producao", icon: Scissors, roles: ["admin"] },
+          // Logística agora inclui Primeiro Aluguel (ex-Produção) e o Mapa
+          // do Aluguel como abas — pedido do usuário.
           { title: "Logística", url: "/operacional/logistica", icon: Truck, roles: ["admin", "vendedor"] },
           { title: "Relatório", url: "/operacional/relatorio", icon: BarChart3, roles: ["admin", "socio"] },
         ],
@@ -142,10 +143,9 @@ const navGroupsFuncionario: { label: string; items: NavEntry[] }[] = [
     label: "Acervo",
     items: [
       { title: "Acervo", url: "/operacional/acervo", icon: LayoutGrid, roles: ["vendedor"] },
-      // Só visualização — RLS já bloqueia insert/update de produção para
-      // quem não é admin, e a UI da página reforça isso (tudo somente
-      // leitura para o vendedor).
-      { title: "Produção", url: "/operacional/producao", icon: Scissors, roles: ["vendedor"] },
+      // Só visualização nas 3 abas (Envios/Retiradas, Primeiro Aluguel,
+      // Aluguel) — a UI e a RLS já bloqueiam edição pra quem não é admin.
+      { title: "Logística", url: "/operacional/logistica", icon: Truck, roles: ["vendedor"] },
     ],
   },
   {

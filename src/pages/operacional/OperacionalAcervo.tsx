@@ -26,9 +26,11 @@ const OperacionalAcervo = () => {
           title="Acervo"
           description="Gestão de peças, SKU e disponibilidade"
           actions={
-            <Button size="sm" onClick={() => setShowNovo(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Nova Peça
-            </Button>
+            isAdmin && (
+              <Button size="sm" onClick={() => setShowNovo(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Peça
+              </Button>
+            )
           }
         />
 
@@ -42,11 +44,13 @@ const OperacionalAcervo = () => {
           getReservas={getReservasForVestido}
         />
 
-        <NovoVestidoSheet
-          open={showNovo}
-          onClose={() => setShowNovo(false)}
-          onSave={addVestido}
-        />
+        {isAdmin && (
+          <NovoVestidoSheet
+            open={showNovo}
+            onClose={() => setShowNovo(false)}
+            onSave={addVestido}
+          />
+        )}
       </div>
     </>
   );

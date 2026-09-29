@@ -79,6 +79,7 @@ const items: CmdItem[] = [
   { label: "Novo Aluguel", icon: ShoppingBag, url: "/minha-venda", roles: ["vendedor", "admin"], group: "Navegar" },
   { label: "Minha Agenda", icon: CalendarDays, url: "/minha-agenda", roles: ["vendedor"], group: "Navegar" },
   { label: "Contratos", icon: FileSignature, url: "/meu-contrato", roles: ["vendedor"], group: "Navegar" },
+  { label: "Termo de Retirada", icon: Package, url: "/meu-termo-retirada", roles: ["vendedor"], group: "Navegar" },
   { label: "Minhas Métricas", icon: DollarSign, url: "/minhas-metricas", roles: ["vendedor"], group: "Navegar" },
 
   { label: "Novo lead", hint: "Cadastrar cliente", icon: UserPlus, url: "/crm?new=lead", roles: ["admin"], group: "Ações rápidas" },
@@ -88,6 +89,7 @@ const items: CmdItem[] = [
 
   { label: "Novo lead", hint: "Cadastrar cliente", icon: UserPlus, url: "/meus-leads", roles: ["vendedor"], group: "Ações rápidas" },
   { label: "Gerar contrato", hint: "Para assinatura", icon: FileSignature, url: "/meu-contrato", roles: ["vendedor"], group: "Ações rápidas" },
+  { label: "Registrar retirada", hint: "Termo de Retirada", icon: Package, url: "/meu-termo-retirada", roles: ["vendedor"], group: "Ações rápidas" },
 ];
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void; }

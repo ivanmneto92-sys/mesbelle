@@ -1,16 +1,20 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { AluguelLogistica } from "@/types/logistica";
 import { useState, useRef } from "react";
-import { FileText, Printer } from "lucide-react";
+import { FileText, Printer, CheckCircle } from "lucide-react";
+import { SignaturePad } from "@/components/comercial/SignaturePad";
+import { toast } from "sonner";
 
 interface Props {
   items: AluguelLogistica[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAssinar: (id: string, assinaturaBase64: string) => Promise<void> | void;
 }
 
-export default function TermoRetiradaModal({ items, open, onOpenChange }: Props) {
+export default function TermoRetiradaModal({ items, open, onOpenChange, onAssinar }: Props) {
   const [selected, setSelected] = useState<AluguelLogistica | null>(null);
   const termoRef = useRef<HTMLDivElement>(null);
 
@@ -19,6 +23,13 @@ export default function TermoRetiradaModal({ items, open, onOpenChange }: Props)
   const formatDate = (d: string) => {
     const [y, m, day] = d.split("-");
     return `${day}/${m}/${y}`;
+  };
+
+  const handleAssinar = async (base64: string) => {
+    if (!selected) return;
+    await onAssinar(selected.id, base64);
+    setSelected({ ...selected, assinaturaBase64: base64, dataAssinatura: new Date().toISOString() });
+    toast.success("Termo assinado com sucesso!");
   };
 
   const handlePrint = () => {
@@ -35,6 +46,7 @@ export default function TermoRetiradaModal({ items, open, onOpenChange }: Props)
         .label { font-weight: 600; }
         .signature { margin-top: 60px; display: flex; justify-content: space-between; }
         .sig-line { width: 45%; text-align: center; border-top: 1px solid #333; padding-top: 8px; }
+        .sig-img { max-width: 260px; max-height: 130px; }
         @media print { body { padding: 20px; } }
       </style></head><body>${termoRef.current.innerHTML}</body></html>
     `);
@@ -65,7 +77,14 @@ export default function TermoRetiradaModal({ items, open, onOpenChange }: Props)
                   <p className="text-sm font-medium">{item.clienteNome}</p>
                   <p className="text-xs text-muted-foreground">{item.vestidoNome}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">{formatDate(item.dataSaida)}</span>
+                <div className="flex items-center gap-2">
+                  {item.assinaturaBase64 && (
+                    <Badge className="bg-success/15 text-success border-success/30 text-[10px]">
+                      <CheckCircle className="h-3 w-3 mr-1" /> Assinado
+                    </Badge>
+                  )}
+                  <span className="text-xs text-muted-foreground">{formatDate(item.dataSaida)}</span>
+                </div>
               </button>
             ))}
           </div>
@@ -99,15 +118,45 @@ export default function TermoRetiradaModal({ items, open, onOpenChange }: Props)
                 <p>4. Em caso de atraso na devolução, pagar multa de 10% do valor do aluguel por dia de atraso.</p>
               </div>
 
-              <div style={{ marginTop: "48px", display: "flex", justifyContent: "space-between" }}>
+              <div style={{ marginTop: "48px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <div style={{ width: "45%", textAlign: "center", borderTop: "1px solid #333", paddingTop: "8px" }}>
                   <p>Més Belle</p>
                 </div>
-                <div style={{ width: "45%", textAlign: "center", borderTop: "1px solid #333", paddingTop: "8px" }}>
-                  <p>{selected.clienteNome}</p>
+                <div style={{ width: "45%", textAlign: "center" }}>
+                  {selected.assinaturaBase64 ? (
+                    <>
+                      <img src={selected.assinaturaBase64} alt="Assinatura da cliente" className="sig-img mx-auto" style={{ maxWidth: "220px", maxHeight: "100px" }} />
+                      <div style={{ borderTop: "1px solid #333", paddingTop: "8px" }}>
+                        <p>{selected.clienteNome}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ borderTop: "1px solid #333", paddingTop: "8px" }}>
+                      <p>{selected.clienteNome}</p>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {selected.assinaturaBase64 && selected.dataAssinatura && (
+                <p style={{ fontSize: "11px", color: "#888", textAlign: "right", marginTop: "4px" }}>
+                  Assinado digitalmente em {new Date(selected.dataAssinatura).toLocaleString("pt-BR")}
+                </p>
+              )}
             </div>
+
+            {!selected.assinaturaBase64 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Assinatura da Cliente</p>
+                <SignaturePad onConfirm={handleAssinar} />
+              </div>
+            )}
+
+            {selected.assinaturaBase64 && (
+              <Badge className="bg-success/20 text-success border-success/30 border text-sm py-1 px-3">
+                <CheckCircle className="h-3.5 w-3.5 mr-1" /> Termo Assinado
+              </Badge>
+            )}
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setSelected(null)} className="flex-1">Voltar</Button>

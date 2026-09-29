@@ -4,7 +4,7 @@ import {
   UserCog, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Handshake, Sparkles,
   Megaphone, BarChart3, CalendarDays, UserCircle, ScrollText,
   FileBarChart, Wallet, TrendingUp, ArrowLeftRight, PieChart, UserSearch,
-  Package2, LayoutGrid, Scissors, FileSignature,
+  Package2, LayoutGrid, Scissors, FileSignature, FileText,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
@@ -135,6 +135,7 @@ const navGroupsFuncionario: { label: string; items: NavEntry[] }[] = [
       { title: "Novo Aluguel", url: "/minha-venda", icon: ShoppingBag, roles: ["vendedor"] },
       { title: "Minha Agenda", url: "/minha-agenda", icon: CalendarDays, roles: ["vendedor"] },
       { title: "Contratos", url: "/meu-contrato", icon: FileSignature, roles: ["vendedor"] },
+      { title: "Termo de Retirada", url: "/meu-termo-retirada", icon: FileText, roles: ["vendedor"] },
     ],
   },
   {

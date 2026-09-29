@@ -8,6 +8,8 @@ type Row = {
   id: string; vestido_nome: string; cliente_nome: string; cliente_telefone: string;
   endereco_entrega: string; data_saida: string; data_retorno: string;
   status_logistica: string; codigo_rastreio: string | null;
+  assinatura_base64: string | null; data_assinatura: string | null;
+  ip_assinatura: string | null; user_agent_assinatura: string | null;
 };
 const rowTo = (r: Row): AluguelLogistica => ({
   id: r.id, vestidoNome: r.vestido_nome, clienteNome: r.cliente_nome,
@@ -15,6 +17,10 @@ const rowTo = (r: Row): AluguelLogistica => ({
   dataSaida: r.data_saida, dataRetorno: r.data_retorno,
   statusLogistica: r.status_logistica as StatusLogistica,
   codigoRastreio: r.codigo_rastreio ?? undefined,
+  assinaturaBase64: r.assinatura_base64 ?? undefined,
+  dataAssinatura: r.data_assinatura ?? undefined,
+  ipAssinatura: r.ip_assinatura ?? undefined,
+  userAgentAssinatura: r.user_agent_assinatura ?? undefined,
 });
 
 export function useLogistica(range?: DateRange) {
@@ -73,9 +79,37 @@ export function useLogistica(range?: DateRange) {
     await supabase.from("alugueis_logistica").update({ codigo_rastreio: codigo }).eq("id", id);
   }, []);
 
+  // Assinatura digital do Termo de Retirada — mesmo padrão do contrato
+  // (assinarContrato em useLeads.ts): base64 do traço + data + IP + user
+  // agent, para servir de evidência.
+  const assinarTermo = useCallback(async (id: string, assinaturaBase64: string) => {
+    const dataAssinatura = new Date().toISOString();
+    const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null;
+    let ip: string | null = null;
+    try {
+      const r = await fetch("https://api.ipify.org?format=json");
+      if (r.ok) {
+        const j = await r.json();
+        if (typeof j?.ip === "string") ip = j.ip;
+      }
+    } catch { /* ignore */ }
+
+    setItems((prev) => prev.map((i) =>
+      i.id === id
+        ? { ...i, assinaturaBase64, dataAssinatura, ipAssinatura: ip ?? undefined, userAgentAssinatura: userAgent ?? undefined }
+        : i
+    ));
+    await supabase.from("alugueis_logistica").update({
+      assinatura_base64: assinaturaBase64,
+      data_assinatura: dataAssinatura,
+      ip_assinatura: ip,
+      user_agent_assinatura: userAgent,
+    }).eq("id", id);
+  }, []);
+
   const getByStatus = useCallback((status: StatusLogistica) => items.filter(i => i.statusLogistica === status), [items]);
 
   const activeItems = items.filter(i => i.statusLogistica !== "devolvido");
 
-  return { items: activeItems, updateStatus, updateRastreio, getByStatus };
+  return { items: activeItems, updateStatus, updateRastreio, assinarTermo, getByStatus };
 }

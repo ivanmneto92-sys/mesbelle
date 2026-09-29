@@ -31,6 +31,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/minha-venda": "Novo Aluguel",
   "/minha-agenda": "Minha Agenda",
   "/meu-contrato": "Contratos",
+  "/meu-termo-retirada": "Termo de Retirada",
   "/minhas-metricas": "Minhas Métricas",
 };
 

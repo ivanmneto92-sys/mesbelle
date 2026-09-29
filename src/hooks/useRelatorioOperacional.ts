@@ -79,11 +79,14 @@ export function useRelatorioOperacional(range: DateRange) {
 
   const totalPecas = vestidos.length;
   const disponiveis = vestidos.filter((v) => v.status === "disponivel").length;
-  const alugadas = vestidos.filter((v) => v.status === "alugado").length;
   const emManutencao = vestidos.filter((v) => v.status === "manutencao" || v.status === "ajuste").length;
   const emProducao = vestidos.filter((v) => v.status === "producao").length;
   const inativas = vestidos.filter((v) => v.status === "inativo").length;
-  const taxaOcupacao = totalPecas > 0 ? (alugadas / totalPecas) * 100 : 0;
+  // Taxa de ocupação usa locações ativas (reservas em andamento), não o status
+  // estático do vestido — a mesma peça passa por vários aluguéis ao longo do
+  // tempo, então "quantas estão em locação agora" vem da agenda, não de um
+  // campo fixo em vestidos.
+  const taxaOcupacao = totalPecas > 0 ? (alugueisAtivos.length / totalPecas) * 100 : 0;
 
   const alugueisAtivosFormatados: AluguelAtivo[] = alugueisAtivos.map((a) => {
     const devData = a.data_retorno ? new Date(a.data_retorno + "T00:00:00") : null;
@@ -145,7 +148,7 @@ export function useRelatorioOperacional(range: DateRange) {
 
   return {
     isLoading,
-    totalPecas, disponiveis, alugadas, emManutencao, emProducao, inativas,
+    totalPecas, disponiveis, emManutencao, emProducao, inativas,
     taxaOcupacao,
     alugueisAtivos: alugueisAtivosFormatados,
     atrasados, vencendoLogo, emDia,

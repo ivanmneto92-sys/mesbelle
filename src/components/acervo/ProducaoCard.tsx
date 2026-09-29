@@ -11,12 +11,13 @@ import { useRef } from "react";
 interface Props {
   producao: Producao;
   etapas: EtapaProducao[];
+  canManage: boolean;
   onToggleEtapa: (etapaId: string) => void;
   onUploadRef: (producaoId: string, url: string) => void;
   onOpenDetalhes: () => void;
 }
 
-export function ProducaoCard({ producao: p, etapas, onToggleEtapa, onUploadRef, onOpenDetalhes }: Props) {
+export function ProducaoCard({ producao: p, etapas, canManage, onToggleEtapa, onUploadRef, onOpenDetalhes }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const done = etapas.filter(e => e.isConcluido).length;
   const total = etapas.length;
@@ -59,15 +60,16 @@ export function ProducaoCard({ producao: p, etapas, onToggleEtapa, onUploadRef, 
           {etapas.map((etapa) => (
             <div
               key={etapa.id}
-              className="flex items-center gap-3 cursor-pointer group"
-              onClick={() => onToggleEtapa(etapa.id)}
+              className={`flex items-center gap-3 group ${canManage ? "cursor-pointer" : ""}`}
+              onClick={() => canManage && onToggleEtapa(etapa.id)}
             >
               <Checkbox
                 checked={etapa.isConcluido}
-                onCheckedChange={() => onToggleEtapa(etapa.id)}
+                onCheckedChange={() => canManage && onToggleEtapa(etapa.id)}
+                disabled={!canManage}
                 className="pointer-events-none"
               />
-              <span className={`text-sm transition-colors ${etapa.isConcluido ? "line-through text-muted-foreground" : "group-hover:text-primary"}`}>
+              <span className={`text-sm transition-colors ${etapa.isConcluido ? "line-through text-muted-foreground" : canManage ? "group-hover:text-primary" : ""}`}>
                 {etapa.nomeEtapa}
               </span>
             </div>
@@ -76,21 +78,23 @@ export function ProducaoCard({ producao: p, etapas, onToggleEtapa, onUploadRef, 
 
         <div className="flex gap-2">
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => {
-              if (hasRef) {
-                window.open(p.refImagensUrls[0], "_blank");
-              } else {
-                fileRef.current?.click();
-              }
-            }}
-          >
-            {hasRef ? <Image className="h-3 w-3 mr-1" /> : <Upload className="h-3 w-3 mr-1" />}
-            {hasRef ? "Ver Referência" : "Upload Referência"}
-          </Button>
+          {(canManage || hasRef) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => {
+                if (hasRef) {
+                  window.open(p.refImagensUrls[0], "_blank");
+                } else if (canManage) {
+                  fileRef.current?.click();
+                }
+              }}
+            >
+              {hasRef ? <Image className="h-3 w-3 mr-1" /> : <Upload className="h-3 w-3 mr-1" />}
+              {hasRef ? "Ver Referência" : "Upload Referência"}
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="text-xs" onClick={onOpenDetalhes}>
             <FileText className="h-3 w-3 mr-1" />
             Detalhes Técnicos

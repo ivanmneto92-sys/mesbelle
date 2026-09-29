@@ -9,10 +9,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   producao: Producao;
+  canManage: boolean;
   onSave: (notas: string) => void;
 }
 
-export function DetalhesTecnicosSheet({ open, onClose, producao, onSave }: Props) {
+export function DetalhesTecnicosSheet({ open, onClose, producao, canManage, onSave }: Props) {
   const [notas, setNotas] = useState(producao.notasTecnicas);
 
   return (
@@ -33,11 +34,18 @@ export function DetalhesTecnicosSheet({ open, onClose, producao, onSave }: Props
               onChange={(e) => setNotas(e.target.value)}
               placeholder="Tipo de renda, alterações de decote, medidas específicas da cliente..."
               className="mt-1 min-h-[200px]"
+              disabled={!canManage}
             />
           </div>
-          <Button onClick={() => onSave(notas)} className="w-full">
-            Salvar Anotações
-          </Button>
+          {canManage ? (
+            <Button onClick={() => onSave(notas)} className="w-full">
+              Salvar Anotações
+            </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Somente um administrador pode editar os detalhes de produção.
+            </p>
+          )}
         </div>
       </SheetContent>
     </Sheet>

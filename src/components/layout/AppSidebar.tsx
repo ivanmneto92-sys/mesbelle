@@ -141,6 +141,10 @@ const navGroupsFuncionario: { label: string; items: NavEntry[] }[] = [
     label: "Acervo",
     items: [
       { title: "Acervo", url: "/operacional/acervo", icon: LayoutGrid, roles: ["vendedor"] },
+      // Só visualização — RLS já bloqueia insert/update de produção para
+      // quem não é admin, e a UI da página reforça isso (tudo somente
+      // leitura para o vendedor).
+      { title: "Produção", url: "/operacional/producao", icon: Scissors, roles: ["vendedor"] },
     ],
   },
   {

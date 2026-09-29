@@ -50,7 +50,9 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/comercial/calendario": ["admin"],
   "/comercial/contratos": ["admin"],
   "/operacional/acervo": ["admin", "vendedor"],
-  "/operacional/producao": ["admin"],
+  // Produção: vendedor só visualiza (RLS já bloqueia insert/update para
+  // quem não é admin) — pedido do usuário.
+  "/operacional/producao": ["admin", "vendedor"],
   "/operacional/logistica": ["admin"],
   "/operacional/relatorio": ["admin", "socio"],
   "/financeiro/dre": ["admin", "socio"],

@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { EtapaProducao } from "@/types/acervo";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface Props {
   etapas: EtapaProducao[];
@@ -97,6 +98,11 @@ function Cartao({
         {estado === "concluida" ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
       </div>
       <span className={cn("text-[11px] leading-tight", LABEL_CLASSES[estado])}>{etapa.nomeEtapa}</span>
+      {estado === "concluida" && etapa.updatedAt && (
+        <span className="text-[9px] text-muted-foreground/70 tabular-nums">
+          {format(new Date(etapa.updatedAt), "dd/MM HH:mm")}
+        </span>
+      )}
     </button>
   );
 }

@@ -66,9 +66,9 @@ const producaoToRow = (p: Partial<Producao>): Record<string, unknown> => {
   return o;
 };
 
-type EtapaRow = { id: string; producao_id: string; nome_etapa: string; is_concluido: boolean; ordem: number };
+type EtapaRow = { id: string; producao_id: string; nome_etapa: string; is_concluido: boolean; ordem: number; updated_at: string };
 const rowToEtapa = (r: EtapaRow): EtapaProducao => ({
-  id: r.id, producaoId: r.producao_id, nomeEtapa: r.nome_etapa, isConcluido: r.is_concluido,
+  id: r.id, producaoId: r.producao_id, nomeEtapa: r.nome_etapa, isConcluido: r.is_concluido, updatedAt: r.updated_at,
 });
 
 export function useAcervo(range?: DateRange) {

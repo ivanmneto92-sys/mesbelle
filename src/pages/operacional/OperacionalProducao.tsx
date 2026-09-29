@@ -2,9 +2,12 @@ import { SEO } from "@/components/SEO";
 import { Scissors } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAcervo } from "@/hooks/useAcervo";
+import { useAuth } from "@/contexts/AuthContext";
 import { ProducaoTab } from "@/components/acervo/ProducaoTab";
 
 const OperacionalProducao = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { producoes, addProducao, updateProducao, toggleEtapa, getEtapasForProducao } = useAcervo();
 
   return (
@@ -16,6 +19,7 @@ const OperacionalProducao = () => {
         <ProducaoTab
           producoes={producoes}
           getEtapas={getEtapasForProducao}
+          canManage={isAdmin}
           onToggleEtapa={toggleEtapa}
           onAddProducao={addProducao}
           onUpdateProducao={updateProducao}

@@ -16,12 +16,13 @@ import { DetalhesTecnicosSheet } from "./DetalhesTecnicosSheet";
 interface Props {
   producoes: Producao[];
   getEtapas: (producaoId: string) => EtapaProducao[];
+  canManage: boolean;
   onToggleEtapa: (etapaId: string) => void;
   onAddProducao: (p: Omit<Producao, "id">) => void;
   onUpdateProducao: (id: string, patch: Partial<Producao>) => void;
 }
 
-export function ProducaoTab({ producoes, getEtapas, onToggleEtapa, onAddProducao, onUpdateProducao }: Props) {
+export function ProducaoTab({ producoes, getEtapas, canManage, onToggleEtapa, onAddProducao, onUpdateProducao }: Props) {
   const [showNew, setShowNew] = useState(false);
   const [detalhesProducao, setDetalhesProducao] = useState<Producao | null>(null);
 
@@ -58,9 +59,11 @@ export function ProducaoTab({ producoes, getEtapas, onToggleEtapa, onAddProducao
       <Card className="border-border/50">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle className="font-serif text-lg">Produção — Primeiro Aluguel</CardTitle>
-          <Button size="sm" onClick={() => setShowNew(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Nova Produção
-          </Button>
+          {canManage && (
+            <Button size="sm" onClick={() => setShowNew(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Nova Produção
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {producoes.length === 0 ? (
@@ -71,6 +74,7 @@ export function ProducaoTab({ producoes, getEtapas, onToggleEtapa, onAddProducao
                 key={p.id}
                 producao={p}
                 etapas={getEtapas(p.id)}
+                canManage={canManage}
                 onToggleEtapa={onToggleEtapa}
                 onUploadRef={handleUploadRef}
                 onOpenDetalhes={() => setDetalhesProducao(p)}
@@ -81,6 +85,7 @@ export function ProducaoTab({ producoes, getEtapas, onToggleEtapa, onAddProducao
       </Card>
 
       {/* New production dialog */}
+      {canManage && (
       <Dialog open={showNew} onOpenChange={setShowNew}>
         <DialogContent>
           <DialogHeader>
@@ -131,6 +136,7 @@ export function ProducaoTab({ producoes, getEtapas, onToggleEtapa, onAddProducao
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Technical details sheet */}
       {detalhesProducao && (
@@ -138,6 +144,7 @@ export function ProducaoTab({ producoes, getEtapas, onToggleEtapa, onAddProducao
           open={!!detalhesProducao}
           onClose={() => setDetalhesProducao(null)}
           producao={detalhesProducao}
+          canManage={canManage}
           onSave={(notas) => { onUpdateProducao(detalhesProducao.id, { notasTecnicas: notas }); setDetalhesProducao(null); }}
         />
       )}

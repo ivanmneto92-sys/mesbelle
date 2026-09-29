@@ -59,7 +59,7 @@ const items: CmdItem[] = [
   { label: "Meta Ads", icon: Megaphone, url: "/marketing/meta-ads", roles: ["admin"], group: "Navegar" },
 
   { label: "Acervo", icon: ShoppingBag, url: "/operacional/acervo", roles: ["admin"], group: "Navegar" },
-  { label: "Produção", icon: Scissors, url: "/operacional/producao", roles: ["admin"], group: "Navegar" },
+  { label: "Produção", icon: Scissors, url: "/operacional/producao", roles: ["admin", "vendedor"], group: "Navegar" },
   { label: "Logística", icon: Truck, url: "/operacional/logistica", roles: ["admin"], group: "Navegar" },
   { label: "Relatório Operacional", icon: BarChart3, url: "/operacional/relatorio", roles: ["admin"], group: "Navegar" },
 

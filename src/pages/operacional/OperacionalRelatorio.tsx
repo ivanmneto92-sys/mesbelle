@@ -77,10 +77,9 @@ const OperacionalRelatorio = () => {
 
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Status do Acervo — Hoje</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatusCard label="Total de Peças" value={rel.totalPecas} color="default" />
             <StatusCard label="Disponíveis" value={rel.disponiveis} color="green" />
-            <StatusCard label="Alugadas" value={rel.alugadas} color="yellow" />
             <StatusCard label="Manutenção" value={rel.emManutencao} color="red" />
             <StatusCard label="Produção" value={rel.emProducao} color="blue" />
             <StatusCard label="Taxa de Ocupação" value={`${rel.taxaOcupacao.toFixed(1)}%`} color={rel.taxaOcupacao > 50 ? "green" : "yellow"} highlight />
@@ -95,7 +94,6 @@ const OperacionalRelatorio = () => {
             </div>
             <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
               {rel.disponiveis > 0 && <div className="bg-primary" style={{ flex: rel.disponiveis }} title="Disponível" />}
-              {rel.alugadas > 0 && <div className="bg-warning" style={{ flex: rel.alugadas }} title="Alugado" />}
               {rel.emManutencao > 0 && <div className="bg-destructive" style={{ flex: rel.emManutencao }} title="Manutenção" />}
               {rel.emProducao > 0 && <div className="bg-info" style={{ flex: rel.emProducao }} title="Produção" />}
               {rel.inativas > 0 && <div className="bg-muted-foreground/30" style={{ flex: rel.inativas }} title="Inativo" />}
@@ -103,7 +101,6 @@ const OperacionalRelatorio = () => {
             <div className="flex gap-4 mt-2 flex-wrap">
               {[
                 { label: "Disponível", color: "bg-primary", n: rel.disponiveis },
-                { label: "Alugado", color: "bg-warning", n: rel.alugadas },
                 { label: "Manutenção", color: "bg-destructive", n: rel.emManutencao },
                 { label: "Produção", color: "bg-info", n: rel.emProducao },
                 { label: "Inativo", color: "bg-muted-foreground/30", n: rel.inativas },

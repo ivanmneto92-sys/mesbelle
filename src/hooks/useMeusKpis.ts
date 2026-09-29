@@ -36,7 +36,15 @@ export function useMeusKpis(range: DateRange): MeusKpis {
     user?.id,
   );
 
-  const leadsPeriodo = leads.filter(
+  // "Minhas Métricas" — só conta o que é deste funcionário: leads que ele
+  // atende (atendidoPor) e negócios que ele fechou (vendedorId). Sem isso,
+  // useLeads()/negocios (select "*" sem filtro) misturava números da loja
+  // inteira, inclusive negócios sem vendedor vinculado, na tela de um único
+  // vendedor.
+  const meusLeads = leads.filter((l) => l.atendidoPor === user?.id);
+  const meusNegocios = negocios.filter((n) => n.vendedorId === user?.id);
+
+  const leadsPeriodo = meusLeads.filter(
     (l) => l.criadoEm && l.criadoEm >= range.from && l.criadoEm <= range.to + "T23:59:59"
   );
 
@@ -46,14 +54,20 @@ export function useMeusKpis(range: DateRange): MeusKpis {
     ["compareceu_alugou"].includes(l.statusFunil ?? "")
   );
 
-  const clientesAtivos = leads.filter((l) => l.enviadoComercial);
-  const clientesSemCompra = leads.filter(
+  const clientesAtivos = meusLeads.filter((l) => l.enviadoComercial);
+  const clientesSemCompra = meusLeads.filter(
     (l) =>
       ["em_atendimento", "prova_agendada", "agendado"].includes(l.statusFunil ?? "") &&
       !l.enviadoComercial
   );
 
-  const negociosFechados = negocios.filter((n) => n.statusNegociacao === "aprovado");
+  const meusNegociosAprovados = meusNegocios.filter((n) => n.statusNegociacao === "aprovado");
+
+  // "Negócios Fechados"/"Faturamento Gerado" respeitam o período escolhido
+  // no DateRangePicker da tela, igual a "Leads no Período".
+  const negociosFechados = meusNegociosAprovados.filter(
+    (n) => n.criadoEm && n.criadoEm >= range.from && n.criadoEm <= range.to + "T23:59:59"
+  );
   const faturamentoGerado = negociosFechados.reduce(
     (s, n) => s + (n.valorNegociado - n.desconto),
     0
@@ -62,7 +76,7 @@ export function useMeusKpis(range: DateRange): MeusKpis {
   // Base da faixa de comissão: faturamento líquido do mês CORRENTE (não do
   // período do filtro) — mesma janela usada pelo trigger no banco
   // (fn_negocio_aprovado_gera_transacao), que reseta todo mês.
-  const faturamentoMesAtual = negociosFechados
+  const faturamentoMesAtual = meusNegociosAprovados
     .filter((n) => n.criadoEm?.slice(0, 7) === mesAtual)
     .reduce((s, n) => s + (n.valorNegociado - n.desconto), 0);
   const projecaoGanho = estimarComissaoMes(faturamentoMesAtual);

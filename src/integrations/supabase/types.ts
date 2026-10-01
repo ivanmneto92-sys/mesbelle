@@ -978,6 +978,7 @@ export type Database = {
           descricao: string | null
           id: string
           imagem_url: string
+          imagens_urls: string[]
           is_consignado: boolean
           nome: string
           preco_aluguel: number
@@ -996,6 +997,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           imagem_url?: string
+          imagens_urls?: string[]
           is_consignado?: boolean
           nome: string
           preco_aluguel?: number
@@ -1014,6 +1016,7 @@ export type Database = {
           descricao?: string | null
           id?: string
           imagem_url?: string
+          imagens_urls?: string[]
           is_consignado?: boolean
           nome?: string
           preco_aluguel?: number

@@ -7,9 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { useVestidoSituacao } from "@/hooks/useVestidoSituacao";
 import { VestidoSituacaoAtual } from "./VestidoSituacaoAtual";
+
+const MAX_FOTOS = 10;
 
 interface Props {
   vestido: Vestido;
@@ -30,12 +33,14 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
   const [precoVenda, setPrecoVenda] = useState(String(vestido.precoVenda));
   const [descricao, setDescricao] = useState(vestido.descricao ?? "");
   const [status, setStatus] = useState<VestidoStatus>(vestido.status);
-  const [imagemUrl, setImagemUrl] = useState(vestido.imagemUrl);
+  const [imagens, setImagens] = useState<string[]>(vestido.imagensUrls.length > 0 ? vestido.imagensUrls : (vestido.imagemUrl ? [vestido.imagemUrl] : []));
   const { situacao, loading: loadingSituacao } = useVestidoSituacao(open ? vestido.id : null);
 
   const handleSave = () => {
     onUpdate({
-      nome, categoriaPeca, cor, tamanho, comprimento, status, imagemUrl,
+      nome, categoriaPeca, cor, tamanho, comprimento, status,
+      imagensUrls: imagens,
+      imagemUrl: imagens[0] || "/placeholder.svg",
       precoAluguel: Number(precoAluguel) || 0,
       precoVenda: Number(precoVenda) || 0,
       descricao: descricao || null,
@@ -43,13 +48,34 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
     onClose();
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setImagemUrl(reader.result as string);
-    reader.readAsDataURL(file);
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    if (imagens.length + files.length > MAX_FOTOS) {
+      toast.error(`Máximo de ${MAX_FOTOS} fotos por peça`);
+      return;
+    }
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`"${file.name}" é muito grande (máx. 5MB)`);
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast.error(`"${file.name}" não é uma imagem`);
+        return;
+      }
+    }
+    const novas = await Promise.all(files.map((file) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    })));
+    setImagens((prev) => [...prev, ...novas]);
   };
+
+  const removeImagem = (idx: number) => setImagens((prev) => prev.filter((_, i) => i !== idx));
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -68,12 +94,39 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
           <VestidoSituacaoAtual situacao={situacao} loading={loadingSituacao} />
 
           <div className="aspect-[4/3] rounded-lg overflow-hidden bg-muted">
-            <img src={imagemUrl} alt={nome} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
+            <img src={imagens[0] || "/placeholder.svg"} alt={nome} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Trocar Foto</Label>
-            <Input type="file" accept="image/*" onChange={handleImageUpload} className="mt-1" disabled={!canManage} />
+            <Label className="text-xs text-muted-foreground">Fotos ({imagens.length}/{MAX_FOTOS})</Label>
+            {imagens.length > 0 && (
+              <div className="mt-1 grid grid-cols-4 gap-2">
+                {imagens.map((img, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
+                    <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => removeImagem(idx)}
+                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 text-[9px] bg-background/90 rounded px-1 py-0.5">Capa</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {canManage && (
+              <Input
+                type="file" accept="image/*" multiple
+                onChange={handleImagesUpload} className="mt-2"
+                disabled={imagens.length >= MAX_FOTOS}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

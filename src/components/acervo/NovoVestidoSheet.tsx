@@ -8,7 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 import { vestidoSchema, firstZodError } from "@/lib/schemas";
+
+const MAX_FOTOS = 10;
 
 interface Props {
   open: boolean;
@@ -26,30 +29,43 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
   const [precoVenda, setPrecoVenda] = useState("");
   const [descricao, setDescricao] = useState("");
   const [isConsignado, setIsConsignado] = useState(false);
-  const [imagemUrl, setImagemUrl] = useState("");
+  const [imagens, setImagens] = useState<string[]>([]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Imagem muito grande (máx. 5MB)");
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    if (imagens.length + files.length > MAX_FOTOS) {
+      toast.error(`Máximo de ${MAX_FOTOS} fotos por peça`);
       return;
     }
-    if (!file.type.startsWith("image/")) {
-      toast.error("Apenas arquivos de imagem são aceitos");
-      return;
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`"${file.name}" é muito grande (máx. 5MB)`);
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast.error(`"${file.name}" não é uma imagem`);
+        return;
+      }
     }
-    const reader = new FileReader();
-    reader.onload = () => setImagemUrl(reader.result as string);
-    reader.readAsDataURL(file);
+    const novas = await Promise.all(files.map((file) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    })));
+    setImagens((prev) => [...prev, ...novas]);
   };
+
+  const removeImagem = (idx: number) => setImagens((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSave = () => {
     const candidate = {
       nome, cor, tamanho, comprimento, isConsignado,
       precoAluguel: Number(precoAluguel) || 0,
       precoVenda: Number(precoVenda) || 0,
-      imagemUrl,
+      imagensUrls: imagens,
     };
     const parsed = vestidoSchema.safeParse(candidate);
     if (!parsed.success) {
@@ -57,9 +73,10 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
       return;
     }
     onSave({
-      ...(parsed.data as Omit<Vestido, "id" | "status" | "imagemUrl" | "sku" | "categoriaPeca" | "descricao" | "qtdTotalLocacoes">),
+      ...(parsed.data as Omit<Vestido, "id" | "status" | "imagemUrl" | "imagensUrls" | "sku" | "categoriaPeca" | "descricao" | "qtdTotalLocacoes">),
       status: "disponivel",
-      imagemUrl: parsed.data.imagemUrl || "/placeholder.svg",
+      imagensUrls: parsed.data.imagensUrls,
+      imagemUrl: parsed.data.imagensUrls[0] || "/placeholder.svg",
       sku: null,
       categoriaPeca,
       descricao: descricao || null,
@@ -68,7 +85,7 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
     toast.success("Vestido cadastrado");
     // reset
     setNome(""); setCategoriaPeca("vestido"); setCor(""); setTamanho("M"); setComprimento("Longo");
-    setPrecoAluguel(""); setPrecoVenda(""); setDescricao(""); setIsConsignado(false); setImagemUrl("");
+    setPrecoAluguel(""); setPrecoVenda(""); setDescricao(""); setIsConsignado(false); setImagens([]);
     onClose();
   };
 
@@ -138,11 +155,29 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
           </div>
 
           <div>
-            <Label>Foto</Label>
-            <Input type="file" accept="image/*" onChange={handleImageUpload} className="mt-1" />
-            {imagemUrl && (
-              <div className="mt-2 aspect-[4/3] rounded-lg overflow-hidden bg-muted">
-                <img src={imagemUrl} alt="Preview" className="w-full h-full object-cover" />
+            <Label>Fotos ({imagens.length}/{MAX_FOTOS})</Label>
+            <Input
+              type="file" accept="image/*" multiple
+              onChange={handleImagesUpload} className="mt-1"
+              disabled={imagens.length >= MAX_FOTOS}
+            />
+            {imagens.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {imagens.map((img, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
+                    <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImagem(idx)}
+                      className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 text-[9px] bg-background/90 rounded px-1 py-0.5">Capa</span>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

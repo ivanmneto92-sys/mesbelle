@@ -34,6 +34,7 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
   const [descricao, setDescricao] = useState(vestido.descricao ?? "");
   const [status, setStatus] = useState<VestidoStatus>(vestido.status);
   const [imagens, setImagens] = useState<string[]>(vestido.imagensUrls.length > 0 ? vestido.imagensUrls : (vestido.imagemUrl ? [vestido.imagemUrl] : []));
+  const [fotoAtiva, setFotoAtiva] = useState(0);
   const { situacao, loading: loadingSituacao } = useVestidoSituacao(open ? vestido.id : null);
 
   const handleSave = () => {
@@ -75,7 +76,10 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
     setImagens((prev) => [...prev, ...novas]);
   };
 
-  const removeImagem = (idx: number) => setImagens((prev) => prev.filter((_, i) => i !== idx));
+  const removeImagem = (idx: number) => {
+    setImagens((prev) => prev.filter((_, i) => i !== idx));
+    setFotoAtiva((prev) => (idx <= prev ? Math.max(0, prev - 1) : prev));
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -94,29 +98,34 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
           <VestidoSituacaoAtual situacao={situacao} loading={loadingSituacao} />
 
           <div className="aspect-[4/3] rounded-lg overflow-hidden bg-muted">
-            <img src={imagens[0] || "/placeholder.svg"} alt={nome} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
+            <img src={imagens[fotoAtiva] || "/placeholder.svg"} alt={nome} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Fotos ({imagens.length}/{MAX_FOTOS})</Label>
+            <Label className="text-xs text-muted-foreground">Fotos ({imagens.length}/{MAX_FOTOS}) — clique para ampliar</Label>
             {imagens.length > 0 && (
               <div className="mt-1 grid grid-cols-4 gap-2">
                 {imagens.map((img, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
+                  <button
+                    type="button"
+                    key={idx}
+                    onClick={() => setFotoAtiva(idx)}
+                    className={`relative aspect-square rounded-lg overflow-hidden bg-muted group ${idx === fotoAtiva ? "ring-2 ring-primary" : ""}`}
+                  >
                     <img src={img} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                     {canManage && (
-                      <button
-                        type="button"
-                        onClick={() => removeImagem(idx)}
+                      <span
+                        role="button"
+                        onClick={(e) => { e.stopPropagation(); removeImagem(idx); }}
                         className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <X className="h-3 w-3" />
-                      </button>
+                      </span>
                     )}
                     {idx === 0 && (
                       <span className="absolute bottom-1 left-1 text-[9px] bg-background/90 rounded px-1 py-0.5">Capa</span>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

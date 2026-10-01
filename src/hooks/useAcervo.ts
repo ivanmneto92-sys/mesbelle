@@ -5,6 +5,7 @@ import {
   VestidoStatus, ReservaStatus, ProducaoStatus,
 } from "@/types/acervo";
 import type { DateRange } from "@/hooks/useDateRange";
+import { toast } from "sonner";
 
 // Legacy keys kept for cleanup in AuthContext
 export const ACERVO_STORAGE_KEYS = ["mesbelle_vestidos", "mesbelle_reservas", "mesbelle_producoes", "mesbelle_etapas"];
@@ -137,25 +138,37 @@ export function useAcervo(range?: DateRange) {
 
   // --- Vestidos ---
   const addVestido = useCallback(async (v: Omit<Vestido, "id">) => {
-    const { data } = await supabase.from("vestidos").insert(vestidoToRow(v) as never).select().single();
+    const { data, error } = await supabase.from("vestidos").insert(vestidoToRow(v) as never).select().single();
+    if (error) { toast.error("Não foi possível salvar a peça: " + error.message); return; }
     if (data) setVestidos(prev => [rowToVestido(data as VestidoRow), ...prev]);
   }, []);
 
   const updateVestido = useCallback(async (id: string, patch: Partial<Vestido>) => {
+    const anterior = vestidos.find(v => v.id === id);
     setVestidos(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
-    await supabase.from("vestidos").update(vestidoToRow(patch) as never).eq("id", id);
-  }, []);
+    const { error } = await supabase.from("vestidos").update(vestidoToRow(patch) as never).eq("id", id);
+    if (error) {
+      if (anterior) setVestidos(prev => prev.map(v => v.id === id ? anterior : v));
+      toast.error("Não foi possível salvar as alterações: " + error.message);
+    }
+  }, [vestidos]);
 
   const deleteVestido = useCallback(async (id: string) => {
+    const anterior = vestidos.find(v => v.id === id);
     setVestidos(prev => prev.filter(v => v.id !== id));
-    await supabase.from("vestidos").delete().eq("id", id);
-  }, []);
+    const { error } = await supabase.from("vestidos").delete().eq("id", id);
+    if (error) {
+      if (anterior) setVestidos(prev => [...prev, anterior]);
+      toast.error("Não foi possível excluir a peça: " + error.message);
+    }
+  }, [vestidos]);
 
   // --- Reservas ---
   const addReserva = useCallback(async (r: Omit<ReservaAgenda, "id">) => {
-    const { data } = await supabase.from("reservas_agenda").insert({
+    const { data, error } = await supabase.from("reservas_agenda").insert({
       vestido_id: r.vestidoId, data_inicio: r.dataInicio, data_fim: r.dataFim, status_reserva: r.statusReserva,
     }).select().single();
+    if (error) { toast.error("Não foi possível salvar a reserva: " + error.message); return; }
     if (data) setReservas(prev => [...prev, rowToReserva(data as ReservaRow)]);
   }, []);
 
@@ -164,21 +177,28 @@ export function useAcervo(range?: DateRange) {
 
   // --- Producoes ---
   const addProducao = useCallback(async (p: Omit<Producao, "id">) => {
-    const { data } = await supabase.from("producoes").insert(producaoToRow(p) as never).select().single();
+    const { data, error } = await supabase.from("producoes").insert(producaoToRow(p) as never).select().single();
+    if (error) { toast.error("Não foi possível criar a produção: " + error.message); return; }
     if (!data) return;
     const newProd = rowToProducao(data as ProducaoRow);
     setProducoes(prev => [newProd, ...prev]);
     const etapaRows = DEFAULT_ETAPAS.map((nome, ordem) => ({
       producao_id: newProd.id, nome_etapa: nome, is_concluido: false, ordem,
     }));
-    const { data: eData } = await supabase.from("etapas_producao").insert(etapaRows).select();
+    const { data: eData, error: eError } = await supabase.from("etapas_producao").insert(etapaRows).select();
+    if (eError) { toast.error("Produção criada, mas as etapas não foram geradas: " + eError.message); return; }
     if (eData) setEtapas(prev => [...prev, ...(eData as EtapaRow[]).map(rowToEtapa)]);
   }, []);
 
   const updateProducao = useCallback(async (id: string, patch: Partial<Producao>) => {
+    const anterior = producoes.find(p => p.id === id);
     setProducoes(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
-    await supabase.from("producoes").update(producaoToRow(patch) as never).eq("id", id);
-  }, []);
+    const { error } = await supabase.from("producoes").update(producaoToRow(patch) as never).eq("id", id);
+    if (error) {
+      if (anterior) setProducoes(prev => prev.map(p => p.id === id ? anterior : p));
+      toast.error("Não foi possível salvar as alterações: " + error.message);
+    }
+  }, [producoes]);
 
   // --- Etapas ---
   const toggleEtapa = useCallback(async (etapaId: string) => {
@@ -186,7 +206,11 @@ export function useAcervo(range?: DateRange) {
     if (!current) return;
     const next = !current.isConcluido;
     setEtapas(prev => prev.map(e => e.id === etapaId ? { ...e, isConcluido: next } : e));
-    await supabase.from("etapas_producao").update({ is_concluido: next }).eq("id", etapaId);
+    const { error } = await supabase.from("etapas_producao").update({ is_concluido: next }).eq("id", etapaId);
+    if (error) {
+      setEtapas(prev => prev.map(e => e.id === etapaId ? { ...e, isConcluido: current.isConcluido } : e));
+      toast.error("Não foi possível atualizar a etapa: " + error.message);
+    }
   }, [etapas]);
 
   const getEtapasForProducao = useCallback((producaoId: string) =>

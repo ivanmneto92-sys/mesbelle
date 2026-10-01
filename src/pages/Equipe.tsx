@@ -65,7 +65,7 @@ const Equipe = () => {
     }
     setCreatingMember(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-team-member", {
+      const { data, error } = await supabase.functions.invoke("criar-funcionario", {
         body: {
           nome: parsed.data.nome,
           email: parsed.data.email,

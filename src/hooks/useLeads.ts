@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negocio, StatusNegociacao } from "@/types/comercial";
 import type { DateRange } from "@/hooks/useDateRange";
 import { gerarTermosContrato } from "@/lib/contratoTemplate";
+import { toast } from "sonner";
 
 // ============= Legacy storage cleanup =============
 // Kept for compatibility — clears any residual data from the old localStorage-based system.
@@ -185,7 +186,7 @@ export function useLeads(range?: DateRange) {
       atendido_por: lead.atendidoPor ?? userId,
     } as { nome: string } & Record<string, unknown>;
     const { data, error } = await supabase.from("leads").insert(insertRow as never).select().single();
-    if (error || !data) return null;
+    if (error || !data) { toast.error("Não foi possível salvar a cliente: " + (error?.message ?? "erro desconhecido")); return null; }
     const newLead = rowToLead(data as LeadRow);
     setLeads((prev) => [newLead, ...prev]);
     return newLead;
@@ -193,14 +194,24 @@ export function useLeads(range?: DateRange) {
 
   const updateLeadStatus = useCallback(async (leadId: string, newStatus: CrmFunnelStatus, extra?: Partial<Lead>) => {
     const patch = { ...leadPatchToRow(extra ?? {}), status_funil: newStatus };
+    const anterior = leads.find((l) => l.id === leadId);
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, statusFunil: newStatus, ...(extra ?? {}) } : l));
-    await supabase.from("leads").update(patch as never).eq("id", leadId);
-  }, []);
+    const { error } = await supabase.from("leads").update(patch as never).eq("id", leadId);
+    if (error) {
+      if (anterior) setLeads((prev) => prev.map((l) => l.id === leadId ? anterior : l));
+      toast.error("Não foi possível atualizar a cliente: " + error.message);
+    }
+  }, [leads]);
 
   const updateLead = useCallback(async (leadId: string, data: Partial<Lead>) => {
+    const anterior = leads.find((l) => l.id === leadId);
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, ...data } : l));
-    await supabase.from("leads").update(leadPatchToRow(data) as never).eq("id", leadId);
-  }, []);
+    const { error } = await supabase.from("leads").update(leadPatchToRow(data) as never).eq("id", leadId);
+    if (error) {
+      if (anterior) setLeads((prev) => prev.map((l) => l.id === leadId ? anterior : l));
+      toast.error("Não foi possível salvar as alterações: " + error.message);
+    }
+  }, [leads]);
 
   const updateMedidas = useCallback(async (leadId: string, data: Omit<MedidasCliente, "leadId">) => {
     const payload = {
@@ -213,7 +224,8 @@ export function useLeads(range?: DateRange) {
       if (exists) return prev.map((m) => m.leadId === leadId ? { ...m, ...data } : m);
       return [...prev, { leadId, ...data }];
     });
-    await supabase.from("medidas").upsert(payload, { onConflict: "lead_id" });
+    const { error } = await supabase.from("medidas").upsert(payload, { onConflict: "lead_id" });
+    if (error) toast.error("Não foi possível salvar as medidas: " + error.message);
   }, []);
 
   const getMedidas = useCallback((leadId: string) => medidas.find((m) => m.leadId === leadId), [medidas]);
@@ -252,9 +264,14 @@ export function useLeads(range?: DateRange) {
     if (data.metodoPagamento !== undefined) patch.metodo_pagamento = data.metodoPagamento;
     if (data.statusNegociacao !== undefined) patch.status_negociacao = data.statusNegociacao;
     if (data.dataEvento !== undefined) patch.data_evento = data.dataEvento;
+    const anterior = negocios.find((n) => n.id === negocioId);
     setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, ...data } : n));
-    await supabase.from("negocios").update(patch as never).eq("id", negocioId);
-  }, []);
+    const { error } = await supabase.from("negocios").update(patch as never).eq("id", negocioId);
+    if (error) {
+      if (anterior) setNegocios((prev) => prev.map((n) => n.id === negocioId ? anterior : n));
+      toast.error("Não foi possível atualizar o negócio: " + error.message);
+    }
+  }, [negocios]);
 
   // === CONTRATOS ===
   // Generates a human-readable contract number like MB-YYMM-### based on existing rows in the current month.
@@ -414,9 +431,14 @@ export function useLeads(range?: DateRange) {
   }, [negocios, addContratoFromNegocio]);
 
   const updateContratoStatus = useCallback(async (contratoId: string, status: ContratoStatus) => {
+    const anterior = contratos.find((c) => c.id === contratoId);
     setContratos((prev) => prev.map((c) => c.id === contratoId ? { ...c, statusAssinatura: status } : c));
-    await supabase.from("contratos").update({ status_assinatura: status }).eq("id", contratoId);
-  }, []);
+    const { error } = await supabase.from("contratos").update({ status_assinatura: status }).eq("id", contratoId);
+    if (error) {
+      if (anterior) setContratos((prev) => prev.map((c) => c.id === contratoId ? anterior : c));
+      toast.error("Não foi possível atualizar o contrato: " + error.message);
+    }
+  }, [contratos]);
 
   const assinarContrato = useCallback(async (contratoId: string, assinaturaBase64: string) => {
     const dataAssinatura = new Date().toISOString();
@@ -431,6 +453,7 @@ export function useLeads(range?: DateRange) {
       }
     } catch { /* ignore */ }
 
+    const anterior = contratos.find((c) => c.id === contratoId);
     setContratos((prev) => prev.map((c) =>
       c.id === contratoId
         ? {
@@ -443,14 +466,20 @@ export function useLeads(range?: DateRange) {
           }
         : c
     ));
-    await supabase.from("contratos").update({
+    const { error } = await supabase.from("contratos").update({
       status_assinatura: "assinado",
       assinatura_base64: assinaturaBase64,
       data_assinatura: dataAssinatura,
       ip_assinatura: ip,
       user_agent_assinatura: userAgent,
     }).eq("id", contratoId);
-  }, []);
+    if (error) {
+      if (anterior) setContratos((prev) => prev.map((c) => c.id === contratoId ? anterior : c));
+      toast.error("Não foi possível registrar a assinatura: " + error.message);
+      return false;
+    }
+    return true;
+  }, [contratos]);
 
   const gerarLinkAssinatura = useCallback(async (contratoId: string, validadeHoras: number): Promise<string | null> => {
     const token = crypto.randomUUID();

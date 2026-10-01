@@ -597,6 +597,7 @@ export type Database = {
       }
       negocios: {
         Row: {
+          bandeira_cartao: string | null
           cliente_cpf: string
           cliente_email: string | null
           cliente_id: string
@@ -620,6 +621,7 @@ export type Database = {
           vestido_nome: string | null
         }
         Insert: {
+          bandeira_cartao?: string | null
           cliente_cpf?: string
           cliente_email?: string | null
           cliente_id: string
@@ -643,6 +645,7 @@ export type Database = {
           vestido_nome?: string | null
         }
         Update: {
+          bandeira_cartao?: string | null
           cliente_cpf?: string
           cliente_email?: string | null
           cliente_id?: string
@@ -887,6 +890,30 @@ export type Database = {
           id?: string
           nome?: string
           percentual_participacao?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      taxas_cartao: {
+        Row: {
+          bandeira: string
+          id: string
+          parcelas: number
+          taxa_percentual: number
+          updated_at: string
+        }
+        Insert: {
+          bandeira: string
+          id?: string
+          parcelas: number
+          taxa_percentual: number
+          updated_at?: string
+        }
+        Update: {
+          bandeira?: string
+          id?: string
+          parcelas?: number
+          taxa_percentual?: number
           updated_at?: string
         }
         Relationships: []

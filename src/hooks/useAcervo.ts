@@ -89,7 +89,7 @@ export function useAcervo(range?: DateRange) {
           .lte("created_at", `${range.to}T23:59:59`);
       }
       const [vRes, rRes, pRes, eRes] = await Promise.all([
-        supabase.from("vestidos").select("*").order("nome"),
+        supabase.from("vestidos").select("*").order("created_at", { ascending: false }),
         supabase.from("reservas_agenda").select("*"),
         producoesQuery,
         supabase.from("etapas_producao").select("*").order("ordem"),
@@ -110,7 +110,7 @@ export function useAcervo(range?: DateRange) {
     const channel = supabase
       .channel(`acervo_${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "vestidos" }, async () => {
-        const { data } = await supabase.from("vestidos").select("*").order("nome");
+        const { data } = await supabase.from("vestidos").select("*").order("created_at", { ascending: false });
         if (data) setVestidos((data as VestidoRow[]).map(rowToVestido));
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "reservas_agenda" }, async () => {
@@ -138,7 +138,7 @@ export function useAcervo(range?: DateRange) {
   // --- Vestidos ---
   const addVestido = useCallback(async (v: Omit<Vestido, "id">) => {
     const { data } = await supabase.from("vestidos").insert(vestidoToRow(v) as never).select().single();
-    if (data) setVestidos(prev => [...prev, rowToVestido(data as VestidoRow)]);
+    if (data) setVestidos(prev => [rowToVestido(data as VestidoRow), ...prev]);
   }, []);
 
   const updateVestido = useCallback(async (id: string, patch: Partial<Vestido>) => {

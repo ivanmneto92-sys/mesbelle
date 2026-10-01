@@ -6,6 +6,7 @@ import { useState, useRef } from "react";
 import { FileText, Printer, CheckCircle } from "lucide-react";
 import { SignaturePad } from "@/components/comercial/SignaturePad";
 import { toast } from "sonner";
+import { ASSINATURA_MESBELLE_URL, ASSINANTE_MESBELLE_NOME } from "@/lib/assinaturaMesbelle";
 
 interface Props {
   items: AluguelLogistica[];
@@ -119,8 +120,12 @@ export default function TermoRetiradaModal({ items, open, onOpenChange, onAssina
               </div>
 
               <div style={{ marginTop: "48px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                <div style={{ width: "45%", textAlign: "center", borderTop: "1px solid #333", paddingTop: "8px" }}>
-                  <p>Més Belle</p>
+                <div style={{ width: "45%", textAlign: "center" }}>
+                  <img src={ASSINATURA_MESBELLE_URL} alt="Assinatura da Més Belle" className="sig-img mx-auto" style={{ maxWidth: "220px", maxHeight: "100px" }} />
+                  <div style={{ borderTop: "1px solid #333", paddingTop: "8px" }}>
+                    <p>Més Belle</p>
+                    <p style={{ fontSize: "11px", color: "#888" }}>{ASSINANTE_MESBELLE_NOME}</p>
+                  </div>
                 </div>
                 <div style={{ width: "45%", textAlign: "center" }}>
                   {selected.assinaturaBase64 ? (

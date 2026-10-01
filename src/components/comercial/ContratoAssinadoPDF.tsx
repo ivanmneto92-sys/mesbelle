@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, Image, pdf } from "@react-pdf/renderer";
+import { ASSINATURA_MESBELLE_URL, ASSINANTE_MESBELLE_NOME } from "@/lib/assinaturaMesbelle";
 
 interface ContratoPDFData {
   numero: string;
@@ -26,8 +27,10 @@ const styles = StyleSheet.create({
   metaValue: { fontSize: 11, fontFamily: "Helvetica-Bold" },
   sectionTitle: { fontSize: 11, fontFamily: "Helvetica-Bold", marginTop: 8, marginBottom: 6, color: "#5A0019" },
   terms: { fontSize: 9, lineHeight: 1.5, marginBottom: 12 },
-  signatureBox: { borderWidth: 1, borderColor: "#ddd", borderRadius: 6, padding: 12, marginTop: 8 },
-  signatureImg: { height: 80, objectFit: "contain", marginVertical: 6 },
+  signaturesRow: { flexDirection: "row", marginTop: 8 },
+  signatureBox: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 6, padding: 12, marginRight: 8 },
+  signatureBoxLast: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 6, padding: 12 },
+  signatureImg: { height: 70, objectFit: "contain", marginVertical: 6 },
   evidenceBox: { backgroundColor: "#fdf6f8", borderWidth: 1, borderColor: "#f0d7e0", borderRadius: 6, padding: 10, marginTop: 12 },
   evidenceTitle: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#5A0019", marginBottom: 4 },
   evidenceRow: { flexDirection: "row", marginBottom: 2 },
@@ -77,14 +80,21 @@ const ContratoDoc = ({ data }: { data: ContratoPDFData }) => {
         <Text style={styles.sectionTitle}>Termos e Condições</Text>
         <Text style={styles.terms}>{data.termos_texto}</Text>
 
-        <View style={styles.signatureBox}>
-          <Text style={styles.evidenceTitle}>Assinatura da Cliente</Text>
-          {data.assinatura_base64 ? (
-            <Image src={data.assinatura_base64} style={styles.signatureImg} />
-          ) : (
-            <Text style={{ fontSize: 9, color: "#999" }}>Sem assinatura registrada.</Text>
-          )}
-          <Text style={{ fontSize: 8, color: "#666" }}>{data.nome_cliente} — CPF {data.cpf_cliente}</Text>
+        <View style={styles.signaturesRow}>
+          <View style={styles.signatureBox}>
+            <Text style={styles.evidenceTitle}>Assinatura da Més Belle</Text>
+            <Image src={ASSINATURA_MESBELLE_URL} style={styles.signatureImg} />
+            <Text style={{ fontSize: 8, color: "#666" }}>{ASSINANTE_MESBELLE_NOME}</Text>
+          </View>
+          <View style={styles.signatureBoxLast}>
+            <Text style={styles.evidenceTitle}>Assinatura da Cliente</Text>
+            {data.assinatura_base64 ? (
+              <Image src={data.assinatura_base64} style={styles.signatureImg} />
+            ) : (
+              <Text style={{ fontSize: 9, color: "#999" }}>Sem assinatura registrada.</Text>
+            )}
+            <Text style={{ fontSize: 8, color: "#666" }}>{data.nome_cliente} — CPF {data.cpf_cliente}</Text>
+          </View>
         </View>
 
         <View style={styles.evidenceBox}>

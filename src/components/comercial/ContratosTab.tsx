@@ -36,7 +36,7 @@ interface ContratosTabProps {
     dadosComplementares?: { nome?: string; cpf?: string; telefone?: string; email?: string };
   }) => Promise<Contrato | null>;
   onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
-  onAssinar: (contratoId: string, assinaturaBase64: string) => void;
+  onAssinar: (contratoId: string, assinaturaBase64: string) => boolean | Promise<boolean | undefined> | undefined;
   onGerarLink: (contratoId: string, validadeHoras: number) => Promise<string | null>;
   autoOpenContratoId?: string | null;
   onAutoOpenHandled?: () => void;
@@ -106,9 +106,10 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
     else setNovoContratoOpen(true);
   };
 
-  const handleAssinar = (base64: string) => {
+  const handleAssinar = async (base64: string) => {
     if (!previewContrato) return;
-    onAssinar(previewContrato.id, base64);
+    const ok = await onAssinar(previewContrato.id, base64);
+    if (ok === false) return; // erro já avisado pelo hook — mantém o pad de assinatura visível
     setPreviewContrato({ ...previewContrato, statusAssinatura: "assinado", assinaturaBase64: base64, dataAssinatura: new Date().toISOString() });
     toast.success("Contrato assinado com sucesso!");
   };

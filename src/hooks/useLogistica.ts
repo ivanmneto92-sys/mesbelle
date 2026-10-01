@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AluguelLogistica, StatusLogistica } from "@/types/logistica";
 import type { DateRange } from "@/hooks/useDateRange";
+import { toast } from "sonner";
 
 type Row = {
   id: string; vestido_nome: string; cliente_nome: string; cliente_telefone: string;
@@ -70,18 +71,25 @@ export function useLogistica(range?: DateRange) {
       }
     } catch { /* ignore */ }
 
+    const anterior = items.find((i) => i.id === id);
     setItems((prev) => prev.map((i) =>
       i.id === id
         ? { ...i, assinaturaBase64, dataAssinatura, ipAssinatura: ip ?? undefined, userAgentAssinatura: userAgent ?? undefined }
         : i
     ));
-    await supabase.from("alugueis_logistica").update({
+    const { error } = await supabase.from("alugueis_logistica").update({
       assinatura_base64: assinaturaBase64,
       data_assinatura: dataAssinatura,
       ip_assinatura: ip,
       user_agent_assinatura: userAgent,
     }).eq("id", id);
-  }, []);
+    if (error) {
+      if (anterior) setItems((prev) => prev.map((i) => i.id === id ? anterior : i));
+      toast.error("Não foi possível registrar a assinatura: " + error.message);
+      return false;
+    }
+    return true;
+  }, [items]);
 
   return { items, updateStatus, assinarTermo };
 }

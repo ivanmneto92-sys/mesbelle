@@ -12,7 +12,7 @@ interface Props {
   items: AluguelLogistica[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAssinar: (id: string, assinaturaBase64: string) => Promise<void> | void;
+  onAssinar: (id: string, assinaturaBase64: string) => boolean | Promise<boolean | undefined> | undefined;
 }
 
 export default function TermoRetiradaModal({ items, open, onOpenChange, onAssinar }: Props) {
@@ -28,7 +28,8 @@ export default function TermoRetiradaModal({ items, open, onOpenChange, onAssina
 
   const handleAssinar = async (base64: string) => {
     if (!selected) return;
-    await onAssinar(selected.id, base64);
+    const ok = await onAssinar(selected.id, base64);
+    if (ok === false) return; // erro já avisado pelo hook — mantém o pad de assinatura visível
     setSelected({ ...selected, assinaturaBase64: base64, dataAssinatura: new Date().toISOString() });
     toast.success("Termo assinado com sucesso!");
   };

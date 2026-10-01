@@ -34,8 +34,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!callerRole) return json({ error: "Apenas administradores podem criar funcionários" }, 403);
 
-    const { nome, email } = await req.json();
+    // role/cargo/tipo_contrato/percentual_comissao/telefone são opcionais —
+    // usados pela tela de Equipe (que cadastra vendedoras e sócias com mais
+    // detalhe); a tela simples de Funcionários manda só nome e email, e cai
+    // nos padrões abaixo (vendedor, CLT, 0%). Unifica os dois fluxos de
+    // "criar membro da equipe" numa função só (antes a tela de Equipe usava
+    // create-team-member, uma segunda implementação divergente da mesma
+    // coisa).
+    const { nome, email, role, cargo, tipo_contrato, percentual_comissao, telefone } = await req.json();
     if (!nome || !email) return json({ error: "nome e email são obrigatórios" }, 400);
+
+    const roleFinal = role === "socio" ? "socio" : "vendedor";
 
     const { data: existentes } = await adminClient.auth.admin.listUsers();
     const jaExiste = existentes?.users.find((u) => u.email === email);
@@ -57,10 +66,23 @@ Deno.serve(async (req) => {
     });
     if (linkErr || !linkData?.user) return json({ error: linkErr?.message ?? "Falha ao gerar convite" }, 400);
 
-    // O profile já é criado pelo trigger handle_new_user (usando o nome dos metadados acima).
+    const userId = linkData.user.id;
+
+    // O profile já é criado pelo trigger handle_new_user (usando o nome dos
+    // metadados acima) — aqui só completamos os campos extras quando a tela
+    // de Equipe os informou.
+    if (cargo || tipo_contrato || percentual_comissao !== undefined || telefone) {
+      await adminClient.from("profiles").update({
+        cargo: cargo || "",
+        tipo_contrato: tipo_contrato || "CLT",
+        percentual_comissao: percentual_comissao || 0,
+        telefone: telefone || "",
+      }).eq("user_id", userId);
+    }
+
     const { error: roleErr } = await adminClient.from("user_roles").insert({
-      user_id: linkData.user.id,
-      role: "vendedor",
+      user_id: userId,
+      role: roleFinal,
     });
     if (roleErr) return json({ error: roleErr.message }, 400);
 
@@ -78,8 +100,7 @@ Deno.serve(async (req) => {
             Olá, ${primeiroNome}! 👗
           </h2>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 12px;">
-            Você foi adicionada à equipe da <strong>MesBelle Atelier</strong> como
-            consultora de vendas.
+            Você foi adicionada à equipe da <strong>MesBelle Atelier</strong>${roleFinal === "socio" ? "" : " como consultora de vendas"}.
           </p>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px;">
             Clique no botão abaixo para criar sua senha e começar a usar a plataforma:
@@ -99,12 +120,12 @@ Deno.serve(async (req) => {
 
     return json({
       success: true,
-      userId: linkData.user.id,
+      userId,
       message: emailEnviado
         ? "Convite enviado para " + email
         : "Funcionário criado, mas o e-mail de convite falhou — use \"Reenviar convite\" na tela de Funcionários.",
       funcionario: {
-        id: linkData.user.id,
+        id: userId,
         email: linkData.user.email,
         nome,
         criadoEm: linkData.user.created_at,

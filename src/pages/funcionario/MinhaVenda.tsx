@@ -18,10 +18,11 @@ import { useAcervo } from "@/hooks/useAcervo";
 import { useMeusLeads } from "@/hooks/useMeusLeads";
 import { useDisponibilidade } from "@/hooks/useDisponibilidade";
 import { useCriarVenda, TipoNegocio } from "@/hooks/useCriarVenda";
+import { useTaxasCartao } from "@/hooks/useTaxasCartao";
 import { formatBRL } from "@/lib/formatters";
 import type { Vestido, CategoriaPeca } from "@/types/acervo";
 import { CATEGORIA_LABELS } from "@/types/acervo";
-import { ItemCarrinho, DadosPagamento, FormaPagamento, ResumoPedido } from "@/types/venda";
+import { ItemCarrinho, DadosPagamento, FormaPagamento, BandeiraCartao, ResumoPedido } from "@/types/venda";
 import {
   Search, Plus, Trash2, Tag, CalendarRange, CreditCard,
   CheckCircle, AlertTriangle, Loader2, ShoppingBag, Receipt,
@@ -37,7 +38,12 @@ const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string; icon: string }[]
   { value: "misto", label: "Misto (PIX + Cartão)", icon: "🔀" },
 ];
 
-const OPCOES_PARCELAS = [1, 2, 3, 4, 5, 6, 8, 10, 12];
+const OPCOES_PARCELAS = Array.from({ length: 18 }, (_, i) => i + 1);
+
+const BANDEIRAS: { value: BandeiraCartao; label: string }[] = [
+  { value: "visa_master", label: "Visa / Master" },
+  { value: "elo", label: "Elo" },
+];
 
 const MinhaVenda = () => {
   const navigate = useNavigate();
@@ -47,6 +53,7 @@ const MinhaVenda = () => {
   const { leads } = useMeusLeads();
   const { verificar } = useDisponibilidade();
   const criarVenda = useCriarVenda();
+  const { getTaxa } = useTaxasCartao();
 
   const [tipoNegocio, setTipoNegocio] = useState<TipoNegocio | "">("");
   const [leadId, setLeadId] = useState<string>("");
@@ -54,7 +61,7 @@ const MinhaVenda = () => {
   const [buscaPeca, setBuscaPeca] = useState("");
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [pagamento, setPagamento] = useState<DadosPagamento>({
-    forma: "pix", parcelas: 1, descontoGeral: 0, observacoes: "",
+    forma: "pix", parcelas: 1, bandeira: null, descontoGeral: 0, observacoes: "",
   });
   const [vendaConfirmada, setVendaConfirmada] = useState<string | null>(null);
 
@@ -205,7 +212,8 @@ const MinhaVenda = () => {
     !!locataria.cpf.trim() &&
     carrinho.length > 0 &&
     carrinho.every((i) => i.dataRetirada && i.dataDevolucao && i.disponivel !== false) &&
-    !!pagamento.forma;
+    !!pagamento.forma &&
+    ((pagamento.forma !== "credito" && pagamento.forma !== "debito") || !!pagamento.bandeira);
 
   const handleConfirmar = async () => {
     const lead = leads.find((l) => l.id === leadId);
@@ -603,7 +611,7 @@ const MinhaVenda = () => {
                     <button
                       key={f.value}
                       type="button"
-                      onClick={() => setPagamento((p) => ({ ...p, forma: f.value, parcelas: 1 }))}
+                      onClick={() => setPagamento((p) => ({ ...p, forma: f.value, parcelas: 1, bandeira: null }))}
                       className={`flex items-center gap-2 p-3 rounded-lg border text-sm transition-colors ${
                         pagamento.forma === f.value
                           ? "border-primary bg-primary/5 text-primary font-medium"
@@ -615,6 +623,28 @@ const MinhaVenda = () => {
                   ))}
                 </div>
               </div>
+
+              {(pagamento.forma === "credito" || pagamento.forma === "debito") && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Bandeira do cartão *</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BANDEIRAS.map((b) => (
+                      <button
+                        key={b.value}
+                        type="button"
+                        onClick={() => setPagamento((p) => ({ ...p, bandeira: b.value }))}
+                        className={`p-3 rounded-lg border text-sm transition-colors ${
+                          pagamento.bandeira === b.value
+                            ? "border-primary bg-primary/5 text-primary font-medium"
+                            : "border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {pagamento.forma === "credito" && (
                 <div className="space-y-2">
@@ -642,6 +672,21 @@ const MinhaVenda = () => {
                   </div>
                 </div>
               )}
+
+              {(pagamento.forma === "credito" || pagamento.forma === "debito") && pagamento.bandeira && (() => {
+                const parcelasLookup = pagamento.forma === "debito" ? 0 : pagamento.parcelas;
+                const taxaPct = getTaxa(pagamento.bandeira, parcelasLookup);
+                if (taxaPct === null) return null;
+                const recebe = resumo.total * (1 - taxaPct / 100);
+                return (
+                  <div className="flex items-center justify-between text-xs bg-muted/50 rounded-lg px-3 py-2">
+                    <span className="text-muted-foreground">
+                      Taxa da operadora: <span className="font-medium text-foreground">{taxaPct.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</span>
+                    </span>
+                    <span>A loja recebe <span className="font-medium text-foreground">{formatBRL(recebe)}</span></span>
+                  </div>
+                );
+              })()}
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Observações (opcional)</Label>

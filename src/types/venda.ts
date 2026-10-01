@@ -15,10 +15,12 @@ export interface ItemCarrinho {
 }
 
 export type FormaPagamento = "pix" | "dinheiro" | "credito" | "debito" | "boleto" | "misto";
+export type BandeiraCartao = "visa_master" | "elo";
 
 export interface DadosPagamento {
   forma: FormaPagamento;
   parcelas: number; // 1 = à vista; >1 apenas para crédito
+  bandeira: BandeiraCartao | null; // só para forma "credito"/"debito" — define a taxa real cobrada
   descontoGeral: number; // R$ desconto aplicado no total
   observacoes: string;
 }

@@ -63,6 +63,7 @@ export function useCriarVenda() {
           desconto: resumo.descontoItens + resumo.descontoGeral,
           metodo_pagamento: FORMA_LABELS[pagamento.forma],
           parcelas: pagamento.forma === "credito" ? pagamento.parcelas : 1,
+          bandeira_cartao: pagamento.forma === "credito" || pagamento.forma === "debito" ? pagamento.bandeira : null,
           observacoes: pagamento.observacoes || null,
           status_negociacao: "aprovado",
           // Primeiro Aluguel: usa a data de retirada da peça (não o evento do

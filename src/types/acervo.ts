@@ -1,7 +1,7 @@
 export type VestidoStatus = "disponivel" | "alugado" | "ajuste" | "manutencao" | "producao" | "inativo";
 export type ReservaStatus = "aluguel" | "lavanderia" | "ajuste";
 export type ProducaoStatus = "em_producao" | "pausado" | "concluido";
-export type CategoriaPeca = "vestido" | "acessorio" | "sapato" | "conjunto" | "outros";
+export type CategoriaPeca = "vestido" | "bolsa" | "acessorio" | "sapato" | "conjunto" | "outros";
 
 export interface Vestido {
   id: string;
@@ -15,7 +15,11 @@ export interface Vestido {
   precoVenda: number;
   status: VestidoStatus;
   isConsignado: boolean;
+  // Foto de capa — sempre a primeira de imagensUrls (mantida à parte porque
+  // cards/listas mostram só uma thumbnail e não precisam carregar a galeria
+  // inteira).
   imagemUrl: string;
+  imagensUrls: string[];
   descricao: string | null;
   qtdTotalLocacoes: number;
 }
@@ -69,6 +73,7 @@ export const STATUS_COLORS: Record<VestidoStatus, string> = {
 
 export const CATEGORIA_LABELS: Record<CategoriaPeca, string> = {
   vestido: "Vestido",
+  bolsa: "Bolsa",
   acessorio: "Acessório",
   sapato: "Sapato",
   conjunto: "Conjunto",

@@ -73,7 +73,7 @@ export const vestidoSchema = z.object({
   isConsignado: z.boolean(),
   precoAluguel: z.number().min(0, "Preço inválido").max(9_999_999),
   precoVenda: z.number().min(0, "Preço inválido").max(9_999_999),
-  imagemUrl: z.string().max(2_000_000, "Imagem muito grande").optional().or(z.literal("")),
+  imagensUrls: z.array(z.string().max(2_000_000, "Imagem muito grande")).max(10, "Máximo de 10 fotos por peça").default([]),
 });
 export type VestidoInput = z.infer<typeof vestidoSchema>;
 

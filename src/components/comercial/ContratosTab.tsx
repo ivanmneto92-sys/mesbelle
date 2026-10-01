@@ -17,6 +17,7 @@ import { LinkAssinaturaDialog } from "./LinkAssinaturaDialog";
 import { GerarContratoDoLeadDialog } from "./GerarContratoDoLeadDialog";
 import { TrilhaAuditoria } from "./TrilhaAuditoria";
 import { toast } from "sonner";
+import { ASSINATURA_MESBELLE_URL, ASSINANTE_MESBELLE_NOME } from "@/lib/assinaturaMesbelle";
 
 interface ContratosTabProps {
   contratos: Contrato[];
@@ -129,14 +130,16 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
     const sigBlock = sigOk
       ? `<div class="sig"><p style="font-size:14px;font-weight:bold">Assinatura da Cliente</p><img src="${esc(contrato.assinaturaBase64)}" alt="Assinatura"/><p class="sig-date">Assinado em: ${esc(contrato.dataAssinatura ? new Date(contrato.dataAssinatura).toLocaleString("pt-BR") : "—")}</p></div>`
       : '<div class="sig"><p>Pendente de assinatura</p></div>';
+    const mesbelleSigBlock = `<div class="sig"><p style="font-size:14px;font-weight:bold">Assinatura da Més Belle</p><img src="${esc(ASSINATURA_MESBELLE_URL)}" alt="Assinatura da Més Belle"/><p class="sig-date">${esc(ASSINANTE_MESBELLE_NOME)}</p></div>`;
     win.document.write(`<!DOCTYPE html><html><head><title>Contrato #${esc(contrato.numero)}</title>
       <style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:20px;color:#333}
       h1{text-align:center;color:#5A0019;font-size:20px}
       .info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
       .info div{font-size:14px}.label{color:#888;font-size:12px}
       .terms{background:#f9f9f9;padding:20px;border-radius:8px;white-space:pre-wrap;font-size:14px;line-height:1.6;margin:20px 0}
-      .sig{text-align:center;margin-top:30px;padding:20px;border-top:1px solid #ddd}
-      .sig img{max-width:300px;max-height:150px}
+      .sigs{display:flex;gap:16px;margin-top:30px}
+      .sig{flex:1;text-align:center;padding:20px;border-top:1px solid #ddd}
+      .sig img{max-width:220px;max-height:120px}
       .sig-date{font-size:12px;color:#888;margin-top:8px}
       @media print{body{margin:20px}}</style></head><body>
       <h1>CONTRATO #${esc(contrato.numero)}</h1>
@@ -148,7 +151,7 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
         <div><span class="label">Valor Total</span><br><strong>R$ ${esc(contrato.valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 }))}</strong></div>
       </div>
       <div class="terms">${esc(contrato.termosTexto)}</div>
-      ${sigBlock}
+      <div class="sigs">${mesbelleSigBlock}${sigBlock}</div>
       </body></html>`);
     win.document.close();
     win.print();
@@ -292,6 +295,11 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
 
                 <Separator />
 
+                <div className="border rounded-xl p-4 bg-white">
+                  <p className="text-xs text-muted-foreground mb-2">Assinatura da Més Belle</p>
+                  <img src={ASSINATURA_MESBELLE_URL} alt="Assinatura da Més Belle" className="max-h-[100px] mx-auto" />
+                  <p className="text-xs text-muted-foreground text-center mt-2">{ASSINANTE_MESBELLE_NOME}</p>
+                </div>
 
                 {previewContrato.statusAssinatura === "pendente" && (
                   <div className="space-y-2">

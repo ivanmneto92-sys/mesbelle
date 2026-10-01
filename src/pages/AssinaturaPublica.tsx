@@ -10,6 +10,7 @@ import { Loader2, ShieldCheck, AlertCircle, CheckCircle2, Download } from "lucid
 import { SEO } from "@/components/SEO";
 import { baixarContratoPDF } from "@/components/comercial/ContratoAssinadoPDF";
 import { toast } from "sonner";
+import { ASSINATURA_MESBELLE_URL, ASSINANTE_MESBELLE_NOME } from "@/lib/assinaturaMesbelle";
 
 interface PublicContrato {
   id: string;
@@ -218,17 +219,24 @@ export default function AssinaturaPublica() {
                       <h2 className="font-serif text-2xl text-primary">Contrato assinado com sucesso!</h2>
                       <p className="text-sm text-muted-foreground mt-1">Uma cópia ficou registrada com data, hora e dispositivo.</p>
                     </div>
-                    {contrato.assinatura_base64 && (
-                      <div className="border rounded-xl p-4 bg-white max-w-xs mx-auto">
-                        <p className="text-xs text-muted-foreground mb-2">Sua assinatura</p>
-                        <img src={contrato.assinatura_base64} alt="Assinatura" className="max-h-[120px] mx-auto" />
-                        {contrato.data_assinatura && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {new Date(contrato.data_assinatura).toLocaleString("pt-BR")}
-                          </p>
-                        )}
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <div className="border rounded-xl p-4 bg-white max-w-xs mx-auto flex-1">
+                        <p className="text-xs text-muted-foreground mb-2">Assinatura da Més Belle</p>
+                        <img src={ASSINATURA_MESBELLE_URL} alt="Assinatura da Més Belle" className="max-h-[100px] mx-auto" />
+                        <p className="text-xs text-muted-foreground mt-2">{ASSINANTE_MESBELLE_NOME}</p>
                       </div>
-                    )}
+                      {contrato.assinatura_base64 && (
+                        <div className="border rounded-xl p-4 bg-white max-w-xs mx-auto flex-1">
+                          <p className="text-xs text-muted-foreground mb-2">Sua assinatura</p>
+                          <img src={contrato.assinatura_base64} alt="Assinatura" className="max-h-[100px] mx-auto" />
+                          {contrato.data_assinatura && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {new Date(contrato.data_assinatura).toLocaleString("pt-BR")}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
                       <Button onClick={handleDownloadPDF} disabled={downloading} size="lg" className="gap-2">
                         {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}

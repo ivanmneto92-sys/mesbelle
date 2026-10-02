@@ -57,10 +57,11 @@ export function useDashboard(range: DateRange) {
       // KPIs do período selecionado
       supabase.from("transacoes_financeiras").select("valor, data, tipo").gte("data", range.from).lte("data", range.to),
       supabase.from("leads").select("id, status_funil, criado_em").gte("criado_em", range.from).lte("criado_em", range.to),
-      // Agendamentos: tabela real da Agenda (visita/prova/retirada/ajuste/devolucao),
-      // não mais leads.prova_data — o funil de leads antigo não sabe nada sobre a
-      // maior parte dos tipos de agendamento.
-      supabase.from("agendamentos").select("id").gte("data_hora", `${range.from}T00:00:00`).lte("data_hora", `${range.to}T23:59:59`),
+      // Agendamentos: só conta tipo "visita" — é o indicador comercial de
+      // quantas clientes novas vieram conhecer o ateliê no período; prova,
+      // retirada, ajuste e devolução são agendamentos de quem já comprou,
+      // não leads em prospecção, então inflavam esse número.
+      supabase.from("agendamentos").select("id").eq("tipo", "visita").gte("data_hora", `${range.from}T00:00:00`).lte("data_hora", `${range.to}T23:59:59`),
       supabase.from("agendamentos").select("id", { count: "exact", head: true }).gte("data_hora", `${hoje}T00:00:00`).lte("data_hora", `${hoje}T23:59:59`),
       // Aluguéis: negócios aprovados no período — é o clique em "Confirmar
       // aluguel" no Minha Venda que cria o negócio com status "aprovado",

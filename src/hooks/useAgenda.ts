@@ -138,6 +138,7 @@ export function useCriarAgendamento() {
             nome: payload.clienteNome,
             telefone: payload.clienteTelefone ?? "",
             email: payload.clienteEmail ?? "",
+            status_funil: "agendado",
             criado_por: user?.id ?? null,
             atendido_por: user?.id ?? null,
           })

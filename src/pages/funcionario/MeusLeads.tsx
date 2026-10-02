@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Users, FileSignature } from "lucide-react";
+import { Plus, Users, FileSignature, Pencil } from "lucide-react";
 import { useMeusLeads } from "@/hooks/useMeusLeads";
 import { NewLeadModal } from "@/components/crm/NewLeadModal";
+import { ClienteDetailPanel } from "@/components/crm/ClienteDetailPanel";
 
 const STATUS_LABELS: Record<string, string> = {
   novo_lead: "Novo Lead",
@@ -29,9 +30,15 @@ const StatusFunilBadge = ({ status }: { status?: string | null }) => (
 );
 
 const MeusLeads = () => {
-  const { leads, addLead } = useMeusLeads();
+  const { leads, addLead, updateLead, updateMedidas, getMedidas } = useMeusLeads();
   const [formOpen, setFormOpen] = useState(false);
+  const [leadEditarId, setLeadEditarId] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const leadEditar = useMemo(
+    () => leads.find((l) => l.id === leadEditarId) ?? null,
+    [leads, leadEditarId],
+  );
 
   const novos = leads.filter((l) => l.statusFunil === "novo_lead").length;
   const fechados = leads.filter((l) => l.enviadoComercial).length;
@@ -83,11 +90,16 @@ const MeusLeads = () => {
                         : <Badge variant="outline" className="text-xs">Não ainda</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {!l.enviadoComercial && (
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => navigate(`/meu-contrato?leadId=${l.id}`)}>
-                          <FileSignature className="h-3 w-3 mr-1" /> Gerar Contrato
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setLeadEditarId(l.id)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Editar
                         </Button>
-                      )}
+                        {!l.enviadoComercial && (
+                          <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => navigate(`/meu-contrato?leadId=${l.id}`)}>
+                            <FileSignature className="h-3 w-3 mr-1" /> Gerar Contrato
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -106,6 +118,15 @@ const MeusLeads = () => {
       </div>
 
       <NewLeadModal open={formOpen} onClose={() => setFormOpen(false)} onSave={addLead} />
+
+      <ClienteDetailPanel
+        lead={leadEditar}
+        medidas={leadEditar ? getMedidas(leadEditar.id) : undefined}
+        open={!!leadEditarId}
+        onClose={() => setLeadEditarId(null)}
+        onUpdateLead={updateLead}
+        onUpdateMedidas={updateMedidas}
+      />
     </>
   );
 };

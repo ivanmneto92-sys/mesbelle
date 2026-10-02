@@ -42,6 +42,15 @@ const FORMA_LABELS: Record<DadosPagamento["forma"], string> = {
  * em reservas_agenda (mesma tabela usada pela agenda do Acervo) para
  * bloquear a disponibilidade no período alugado.
  */
+// Se uma etapa depois do negócio falhar, desfaz o que já foi gravado — sem
+// isto um negócio "aprovado" (que já dispara comissão/imposto no financeiro)
+// podia sobrar no banco sem peça reservada nem entrega agendada.
+async function limparNegocioOrfao(negocioId: string) {
+  await supabase.from("transacoes_financeiras").delete().eq("negocio_id", negocioId);
+  await supabase.from("reservas_agenda").delete().eq("negocio_id", negocioId);
+  await supabase.from("negocios").delete().eq("id", negocioId);
+}
+
 export function useCriarVenda() {
   const { user } = useAuth();
 
@@ -91,7 +100,10 @@ export function useCriarVenda() {
       }));
 
       const { error: resErr } = await supabase.from("reservas_agenda").insert(reservas);
-      if (resErr) throw new Error("Erro ao reservar as peças: " + resErr.message);
+      if (resErr) {
+        await limparNegocioOrfao(negocio.id);
+        throw new Error("Erro ao reservar as peças: " + resErr.message);
+      }
 
       // Alimenta a tela de Logística (Operacional → Logística) — sem isto a
       // tabela alugueis_logistica nunca recebia uma linha sequer, e a tela
@@ -105,24 +117,32 @@ export function useCriarVenda() {
         data_retorno: item.dataDevolucao,
       }));
       const { error: logErr } = await supabase.from("alugueis_logistica").insert(entregas);
-      if (logErr) throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
-
-      // Primeiro Aluguel: a peça acabou de ser criada com status "producao"
-      // (fn_criar_vestido_primeiro_aluguel) — continua assim até a Produção
-      // concluir a etapa "Entrega Final" (trigger fn_entrega_final_libera_vestido
-      // marca "alugado" automaticamente nesse momento).
-      if (!ehPrimeiroAluguel) {
-        const vestidoIds = itens.map((i) => i.vestidoId);
-        await supabase.from("vestidos").update({ status: "alugado" }).in("id", vestidoIds);
+      if (logErr) {
+        await limparNegocioOrfao(negocio.id);
+        throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
       }
 
-      await supabase.from("leads").update({ enviado_comercial: true }).eq("id", lead.id);
+      // A venda em si já está garantida a partir daqui (negócio + reserva +
+      // entrega gravados) — as duas atualizações abaixo são complementares;
+      // se falharem, avisamos mas não desfazemos a venda, só a peça pode
+      // ficar com o status desatualizado até alguém corrigir manualmente.
+      let avisoSecundario: string | null = null;
 
-      return { negocioId: negocio.id as string };
+      if (!ehPrimeiroAluguel) {
+        const vestidoIds = itens.map((i) => i.vestidoId);
+        const { error: vestidoErr } = await supabase.from("vestidos").update({ status: "alugado" }).in("id", vestidoIds);
+        if (vestidoErr) avisoSecundario = "Venda registrada, mas não consegui marcar a peça como alugada — confira o status dela no Acervo.";
+      }
+
+      const { error: leadErr } = await supabase.from("leads").update({ enviado_comercial: true }).eq("id", lead.id);
+      if (leadErr && !avisoSecundario) avisoSecundario = "Venda registrada, mas não consegui atualizar o status do lead — confira em Leads.";
+
+      return { negocioId: negocio.id as string, avisoSecundario };
     },
 
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success("Aluguel registrado com sucesso! 🎉");
+      if (data.avisoSecundario) toast.warning(data.avisoSecundario);
     },
 
     onError: (e: Error) => {

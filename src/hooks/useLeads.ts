@@ -210,10 +210,13 @@ export function useLeads(range?: DateRange) {
     if (error) {
       if (anterior) setLeads((prev) => prev.map((l) => l.id === leadId ? anterior : l));
       toast.error("Não foi possível salvar as alterações: " + error.message);
+      return false;
     }
+    return true;
   }, [leads]);
 
   const updateMedidas = useCallback(async (leadId: string, data: Omit<MedidasCliente, "leadId">) => {
+    const anterior = medidas.find((m) => m.leadId === leadId);
     const payload = {
       lead_id: leadId,
       busto: data.busto, cintura: data.cintura, quadril: data.quadril,
@@ -225,8 +228,13 @@ export function useLeads(range?: DateRange) {
       return [...prev, { leadId, ...data }];
     });
     const { error } = await supabase.from("medidas").upsert(payload, { onConflict: "lead_id" });
-    if (error) toast.error("Não foi possível salvar as medidas: " + error.message);
-  }, []);
+    if (error) {
+      setMedidas((prev) => anterior ? prev.map((m) => m.leadId === leadId ? anterior : m) : prev.filter((m) => m.leadId !== leadId));
+      toast.error("Não foi possível salvar as medidas: " + error.message);
+      return false;
+    }
+    return true;
+  }, [medidas]);
 
   const getMedidas = useCallback((leadId: string) => medidas.find((m) => m.leadId === leadId), [medidas]);
 
@@ -270,7 +278,9 @@ export function useLeads(range?: DateRange) {
     if (error) {
       if (anterior) setNegocios((prev) => prev.map((n) => n.id === negocioId ? anterior : n));
       toast.error("Não foi possível atualizar o negócio: " + error.message);
+      return false;
     }
+    return true;
   }, [negocios]);
 
   // === CONTRATOS ===
@@ -313,11 +323,15 @@ export function useLeads(range?: DateRange) {
 
   const addContratoFromNegocio = useCallback(async (negocio: Negocio) => {
     const lead = leads.find((l) => l.id === negocio.clienteId);
-    if (!lead) return null;
+    if (!lead) {
+      toast.error("Não foi possível gerar o contrato: cliente não encontrado.");
+      return null;
+    }
     const existing = contratos.find((c) => c.leadId === negocio.clienteId && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
     // Validação mínima — evita contratos incompletos
     if (!negocio.clienteCpf?.trim() || !negocio.dataEvento || negocio.valorNegociado <= 0) {
+      toast.error("Não foi possível gerar o contrato: falta CPF, data do evento ou valor da negociação.");
       return null;
     }
     const valorFinal = negocio.valorNegociado - negocio.desconto;
@@ -339,7 +353,10 @@ export function useLeads(range?: DateRange) {
       vendedor_id: vendedorId,
     };
     const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
-    if (error || !data) return null;
+    if (error || !data) {
+      toast.error("Não foi possível gravar o contrato: " + (error?.message ?? "erro desconhecido"));
+      return null;
+    }
     const newContrato = rowToContrato(data as ContratoRow);
     setContratos((prev) => [newContrato, ...prev]);
     return newContrato;

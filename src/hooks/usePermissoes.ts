@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export interface RolePermissoes {
   dashboard: boolean;
@@ -116,8 +117,8 @@ export function usePermissoes() {
 
 
       if (error) {
-        console.error("[Permissoes] Falha ao salvar:", error.message);
         setPermissoes(previous);
+        toast.error("Não foi possível salvar a permissão: " + error.message);
       }
     },
     [permissoes]

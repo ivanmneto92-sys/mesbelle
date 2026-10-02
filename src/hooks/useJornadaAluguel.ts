@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { EtapaJornadaAluguel, JornadaAluguelItem } from "@/types/logistica";
+import { toast } from "sonner";
 
 type EtapaRow = { id: string; reserva_id: string; nome_etapa: string; is_concluido: boolean; ordem: number; updated_at: string };
 const rowToEtapa = (r: EtapaRow): EtapaJornadaAluguel => ({
@@ -78,7 +79,11 @@ export function useJornadaAluguel() {
     if (!current) return;
     const next = !current.isConcluido;
     setEtapas((prev) => prev.map((e) => (e.id === etapaId ? { ...e, isConcluido: next } : e)));
-    await supabase.from("jornada_aluguel").update({ is_concluido: next }).eq("id", etapaId);
+    const { error } = await supabase.from("jornada_aluguel").update({ is_concluido: next }).eq("id", etapaId);
+    if (error) {
+      setEtapas((prev) => prev.map((e) => (e.id === etapaId ? { ...e, isConcluido: current.isConcluido } : e)));
+      toast.error("Não foi possível atualizar a etapa: " + error.message);
+    }
   }, [etapas]);
 
   const getEtapasForReserva = useCallback((reservaId: string) =>

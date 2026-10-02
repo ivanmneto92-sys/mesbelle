@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { SEO } from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { BarChart3, RefreshCw, AlertCircle, Wallet, Users, Target, MousePointerClick, CalendarCheck, PercentCircle, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { KpiCard } from "@/components/common/KpiCard";
@@ -13,6 +15,9 @@ import { useMetaAds, type MetaCampanha } from "@/hooks/useMetaAds";
 import { useFunilConversao } from "@/hooks/useFunilConversao";
 import { MetaMediaSection } from "@/components/marketing/MetaMediaSection";
 import { formatBRL } from "@/lib/formatters";
+import { TIPO_CONFIG } from "@/types/agenda";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const STATUS_CONTA: Record<number, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   1: { label: "Ativa", variant: "default" },
@@ -67,6 +72,7 @@ const MetaAds = () => {
   const { range, setRange, setPreset } = useDateRange(getPreset("hoje"));
   const { data, isLoading, isError, error, refetch, isFetching } = useMetaAds(range);
   const { data: funil } = useFunilConversao(range);
+  const [agendamentosAbertos, setAgendamentosAbertos] = useState(false);
 
   return (
     <>
@@ -151,9 +157,10 @@ const MetaAds = () => {
                 <KpiCard
                   eyebrow="Volume de agendamento"
                   value={funil ? formatNum(funil.volumeAgendamento) : "—"}
-                  hint="Agendamentos marcados no período (agenda do site)"
+                  hint="Agendamentos marcados no período (agenda do site) — clique para ver quais"
                   icon={CalendarCheck}
                   accent="primary"
+                  onClick={funil && funil.volumeAgendamento > 0 ? () => setAgendamentosAbertos(true) : undefined}
                 />
                 <KpiCard
                   eyebrow="Custo do agendamento"
@@ -223,6 +230,38 @@ const MetaAds = () => {
           </>
         )}
       </div>
+
+      <Dialog open={agendamentosAbertos} onOpenChange={setAgendamentosAbertos}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Agendamentos do período</DialogTitle>
+            <DialogDescription>
+              {funil ? formatNum(funil.volumeAgendamento) : 0} agendamento(s) marcados na Agenda do site, no período selecionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 mt-1">
+            {(funil?.agendamentos ?? []).map((a) => {
+              const cfg = TIPO_CONFIG[a.tipo as keyof typeof TIPO_CONFIG];
+              return (
+                <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{a.clienteNome}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(parseISO(a.dataHora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <Badge variant="outline" style={cfg ? { borderColor: cfg.cor, color: cfg.cor } : undefined} className="shrink-0">
+                    {cfg?.label ?? a.tipo}
+                  </Badge>
+                </div>
+              );
+            })}
+            {(funil?.agendamentos ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum agendamento no período</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

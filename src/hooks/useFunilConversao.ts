@@ -2,9 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { DateRange } from "@/hooks/useDateRange";
 
+export interface AgendamentoDoFunil {
+  id: string;
+  tipo: string;
+  clienteNome: string;
+  dataHora: string;
+}
+
 export interface FunilConversaoData {
   volumeAgendamento: number;
   totalClientes: number;
+  agendamentos: AgendamentoDoFunil[];
 }
 
 // Dados reais do site (fora do Meta Ads) para cruzar com o gasto/resultados
@@ -21,10 +29,11 @@ export function useFunilConversao(range: DateRange) {
       const [agendamentosRes, negociosRes] = await Promise.all([
         supabase
           .from("agendamentos")
-          .select("id", { count: "exact", head: true })
+          .select("id, tipo, cliente_nome, data_hora")
           .gte("data_hora", desde)
           .lte("data_hora", ate)
-          .neq("status", "cancelada"),
+          .neq("status", "cancelada")
+          .order("data_hora", { ascending: false }),
         supabase
           .from("negocios")
           .select("id", { count: "exact", head: true })
@@ -36,9 +45,17 @@ export function useFunilConversao(range: DateRange) {
       if (agendamentosRes.error) throw agendamentosRes.error;
       if (negociosRes.error) throw negociosRes.error;
 
+      const agendamentos = (agendamentosRes.data ?? []).map((a) => ({
+        id: a.id as string,
+        tipo: a.tipo as string,
+        clienteNome: a.cliente_nome as string,
+        dataHora: a.data_hora as string,
+      }));
+
       return {
-        volumeAgendamento: agendamentosRes.count ?? 0,
+        volumeAgendamento: agendamentos.length,
         totalClientes: negociosRes.count ?? 0,
+        agendamentos,
       };
     },
     staleTime: 5 * 60 * 1000,

@@ -1,5 +1,5 @@
 import {
-  PackageOpen, Scissors, Gem, Shirt, Ruler, Sparkles, Gift,
+  Eye, PackageOpen, Scissors, Gem, Shirt, Ruler, Sparkles, Gift,
   CircleDot, Undo2, Store, Check, PartyPopper,
 } from "lucide-react";
 import { EtapaProducao } from "@/types/acervo";
@@ -13,6 +13,7 @@ interface Props {
 }
 
 const ETAPA_ICONS: Record<string, typeof PackageOpen> = {
+  "Aprovação de Amostra": Eye,
   "Compra de Material": PackageOpen,
   "Modelista": Scissors,
   "Bordadeira": Gem,
@@ -25,7 +26,7 @@ const ETAPA_ICONS: Record<string, typeof PackageOpen> = {
 // Índice (0-based) da etapa "Segunda Prova" — é onde mostramos o ciclo
 // opcional de novo ajuste, sem transformá-lo numa etapa obrigatória da
 // jornada principal.
-const INDICE_SEGUNDA_PROVA = 5;
+const INDICE_SEGUNDA_PROVA = 6;
 
 function iconePara(nomeEtapa: string) {
   return ETAPA_ICONS[nomeEtapa] ?? CircleDot;

@@ -18,6 +18,7 @@ const ETAPA_LABELS: Record<string, string> = {
   "Envio à Lavanderia": "A caminho da lavanderia",
   "Na Lavanderia": "Na lavanderia",
   // Jornada do Primeiro Aluguel
+  "Aprovação de Amostra": "Aguardando aprovação da amostra",
   "Compra de Material": "Comprando material",
   "Modelista": "Na modelista",
   "Bordadeira": "Na costureira/bordadeira",

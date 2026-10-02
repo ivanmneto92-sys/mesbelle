@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type KeyboardEvent } from "react";
 import { Card } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -11,6 +11,7 @@ interface KpiCardProps {
   icon?: LucideIcon;
   sparkline?: number[];
   accent?: "primary" | "success" | "warning" | "info";
+  onClick?: () => void;
 }
 
 const accentMap = {
@@ -47,10 +48,13 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-export function KpiCard({ eyebrow, value, hint, trend, icon: Icon, sparkline, accent = "primary" }: KpiCardProps) {
+export function KpiCard({ eyebrow, value, hint, trend, icon: Icon, sparkline, accent = "primary", onClick }: KpiCardProps) {
   const a = accentMap[accent];
   return (
-    <Card className="card-editorial p-5 overflow-hidden group">
+    <Card
+      className={`card-editorial p-5 overflow-hidden group ${onClick ? "cursor-pointer hover:border-primary/40 hover:shadow-sm transition-all" : ""}`}
+      {...(onClick ? { role: "button", tabIndex: 0, onClick, onKeyDown: (e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") onClick(); } } : {})}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="label-eyebrow">{eyebrow}</p>

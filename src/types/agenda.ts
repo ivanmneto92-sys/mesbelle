@@ -42,6 +42,7 @@ export interface Agendamento {
   // Dados desnormalizados para exibição
   funcionariaNome?: string | null;
   vestidoNome?: string | null;
+  vestidoImagemUrl?: string | null;
 }
 
 export interface NovoAgendamento {

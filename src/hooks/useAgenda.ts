@@ -23,7 +23,7 @@ interface AgendamentoRow {
   observacoes: string | null;
   status: string;
   criado_em: string;
-  vestidos: { nome: string } | null;
+  vestidos: { nome: string; imagem_url: string | null } | null;
 }
 
 function mapRow(row: AgendamentoRow): Agendamento {
@@ -44,6 +44,7 @@ function mapRow(row: AgendamentoRow): Agendamento {
     status: (row.status as StatusAgendamento) ?? "agendado",
     criadoEm: row.criado_em,
     vestidoNome: row.vestidos?.nome ?? null,
+    vestidoImagemUrl: row.vestidos?.imagem_url || null,
   };
 }
 
@@ -58,7 +59,7 @@ export function useAgenda(dataInicio: Date, dataFim: Date, funcionariaId?: strin
     queryFn: async () => {
       let query = supabase
         .from("agendamentos")
-        .select("*, vestidos (nome)")
+        .select("*, vestidos (nome, imagem_url)")
         .gte("data_hora", dataInicio.toISOString())
         .lte("data_hora", dataFim.toISOString())
         .order("data_hora", { ascending: true });
@@ -164,6 +165,7 @@ export function useEditarAgendamento() {
       if (payload.clienteEmail !== undefined) update.cliente_email = payload.clienteEmail || null;
       if (payload.clienteTelefone !== undefined) update.cliente_telefone = payload.clienteTelefone || null;
       if (payload.leadId !== undefined) update.lead_id = payload.leadId || null;
+      if (payload.vestidoId !== undefined) update.vestido_id = payload.vestidoId || null;
       if (payload.funcionariaId !== undefined) update.funcionaria_id = payload.funcionariaId || null;
       if (payload.observacoes !== undefined) update.observacoes = payload.observacoes || null;
 

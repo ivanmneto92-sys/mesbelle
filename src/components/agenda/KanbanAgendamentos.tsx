@@ -114,7 +114,18 @@ function KanbanCard({
       </p>
 
       {agendamento.vestidoNome && (
-        <p className="text-xs text-muted-foreground/80 mt-0.5 truncate">🎀 {agendamento.vestidoNome}</p>
+        <div className="flex items-center gap-1.5 mt-1">
+          {agendamento.vestidoImagemUrl ? (
+            <img
+              src={agendamento.vestidoImagemUrl}
+              alt=""
+              className="h-6 w-6 rounded object-cover shrink-0"
+            />
+          ) : (
+            <span>🎀</span>
+          )}
+          <p className="text-xs text-muted-foreground/80 truncate">{agendamento.vestidoNome}</p>
+        </div>
       )}
     </div>
   );

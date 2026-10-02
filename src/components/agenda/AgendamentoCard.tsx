@@ -49,8 +49,16 @@ export function AgendamentoCard({ agendamento, onClick, compacto = false }: Prop
           </div>
 
           {agendamento.vestidoNome && (
-            <div className="flex items-center gap-1">
-              <Package className="h-3 w-3" />
+            <div className="flex items-center gap-2">
+              {agendamento.vestidoImagemUrl ? (
+                <img
+                  src={agendamento.vestidoImagemUrl}
+                  alt=""
+                  className="h-6 w-6 rounded object-cover shrink-0"
+                />
+              ) : (
+                <Package className="h-3 w-3 shrink-0" />
+              )}
               <span className="truncate max-w-[180px]">{agendamento.vestidoNome}</span>
             </div>
           )}

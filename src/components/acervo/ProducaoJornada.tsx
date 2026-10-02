@@ -25,8 +25,11 @@ const ETAPA_ICONS: Record<string, typeof PackageOpen> = {
 
 // Índice (0-based) da etapa "Segunda Prova" — é onde mostramos o ciclo
 // opcional de novo ajuste, sem transformá-lo numa etapa obrigatória da
-// jornada principal.
-const INDICE_SEGUNDA_PROVA = 6;
+// jornada principal. Calculado a partir do nome em vez de fixo, pra não
+// quebrar de novo se a jornada ganhar outra etapa antes dela.
+function indiceDaEtapa(etapas: EtapaProducao[], nome: string): number {
+  return etapas.findIndex((e) => e.nomeEtapa === nome);
+}
 
 function iconePara(nomeEtapa: string) {
   return ETAPA_ICONS[nomeEtapa] ?? CircleDot;
@@ -161,6 +164,7 @@ export function ProducaoJornada({ etapas, canManage, onToggleEtapa }: Props) {
   const concluidas = etapas.filter((e) => e.isConcluido).length;
   const ultimaEtapaConcluida = etapas[etapas.length - 1]?.isConcluido;
   const modelistaEtapa = etapas.find((e) => e.nomeEtapa === "Modelista");
+  const indiceSegundaProva = indiceDaEtapa(etapas, "Segunda Prova");
 
   const handleClick = (etapaId: string) => {
     if (canManage) onToggleEtapa(etapaId);
@@ -186,7 +190,7 @@ export function ProducaoJornada({ etapas, canManage, onToggleEtapa }: Props) {
           nodes.push(
             <div key={etapa.id} className="flex flex-col items-center pt-2">
               <Cartao etapa={etapa} numero={i + 1} estado={estado} canManage={canManage} onClick={() => handleClick(etapa.id)} />
-              {i === INDICE_SEGUNDA_PROVA && (
+              {i === indiceSegundaProva && (
                 <NovoAjusteCallout modelistaEtapa={modelistaEtapa} canManage={canManage} onToggleEtapa={onToggleEtapa} />
               )}
             </div>,
@@ -207,7 +211,7 @@ export function ProducaoJornada({ etapas, canManage, onToggleEtapa }: Props) {
                 </div>
               )}
               <Cartao etapa={etapa} numero={i + 1} estado={estado} canManage={canManage} onClick={() => handleClick(etapa.id)} />
-              {i === INDICE_SEGUNDA_PROVA && (
+              {i === indiceSegundaProva && (
                 <NovoAjusteCallout modelistaEtapa={modelistaEtapa} canManage={canManage} onToggleEtapa={onToggleEtapa} />
               )}
             </div>

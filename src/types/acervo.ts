@@ -92,6 +92,7 @@ export const PRODUCAO_STATUS_LABELS: Record<ProducaoStatus, string> = {
 // (ProducaoJornada). A 6ª etapa (Segunda Prova) pode abrir um ciclo
 // opcional de novo ajuste antes da Entrega Final — ver ProducaoJornada.
 export const DEFAULT_ETAPAS = [
+  "Aprovação de Amostra",
   "Compra de Material",
   "Modelista",
   "Bordadeira",

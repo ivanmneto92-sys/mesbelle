@@ -113,7 +113,7 @@ const navGroupsAdmin: { label: string; items: NavEntry[] }[] = [
           { title: "Geral", url: "/configuracoes", icon: Settings, roles: ["admin"] },
           { title: "Time & Performance", url: "/equipe", icon: UserCog, roles: ["admin"] },
           { title: "Portal de Sócios", url: "/socios", icon: Briefcase, roles: ["admin", "socio"] },
-          { title: "Funcionários", url: "/admin/funcionarios", icon: Users, roles: ["admin"] },
+          { title: "Vendedoras", url: "/admin/funcionarios", icon: Users, roles: ["admin"] },
         ],
       },
     ],

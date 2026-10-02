@@ -43,7 +43,7 @@ async function invocarFuncao<T>(nome: string, body: object): Promise<T> {
 function mensagemErroFuncionario(msg: string | undefined): string {
   const texto = msg ?? "";
   if (/já existe|already|exists|409/i.test(texto)) {
-    return "Já existe um funcionário cadastrado com este e-mail.";
+    return "Já existe uma vendedora cadastrada com este e-mail.";
   }
   if (/site_url/i.test(texto)) {
     return "Configuração do servidor incompleta. Contate o suporte técnico.";
@@ -87,7 +87,7 @@ export function useFuncionarios() {
         );
       }
       qc.invalidateQueries({ queryKey: ["funcionarios"] });
-      toast.success("Convite enviado! O funcionário receberá um e-mail para definir a senha.");
+      toast.success("Convite enviado! A vendedora receberá um e-mail para definir a senha.");
     },
     onError: (e: Error, _vars, context) => {
       if (context?.anterior !== undefined) qc.setQueryData(["funcionarios"], context.anterior);
@@ -104,10 +104,10 @@ export function useFuncionarios() {
       }
       qc.invalidateQueries({ queryKey: ["funcionarios"] });
       const msgs: Record<FuncionarioAction, string> = {
-        desativar: "Funcionário desativado.",
-        reativar: "Funcionário reativado.",
+        desativar: "Vendedora desativada.",
+        reativar: "Vendedora reativada.",
         reenviar_convite: "Convite reenviado com sucesso!",
-        excluir: "Funcionário excluído permanentemente.",
+        excluir: "Vendedora excluída permanentemente.",
       };
       toast.success(msgs[action]);
     },

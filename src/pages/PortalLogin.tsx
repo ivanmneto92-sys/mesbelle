@@ -51,7 +51,7 @@ const PortalLogin = () => {
 
     if (roleRow?.role !== "vendedor") {
       await supabase.auth.signOut();
-      toast.error("Este link é exclusivo para funcionários. Administradores devem entrar em crm.mesbelle.com.br/login.");
+      toast.error("Este link é exclusivo para vendedoras. Administradores devem entrar em crm.mesbelle.com.br/login.");
       setIsLoading(false);
       return;
     }
@@ -62,7 +62,7 @@ const PortalLogin = () => {
 
   return (
     <>
-    <SEO title="Portal do Funcionário — Més Belle" description="Acesso ao portal de funcionários do ateliê Més Belle." path="/portal" />
+    <SEO title="Portal da Vendedora — Més Belle" description="Acesso ao portal de vendedoras do ateliê Més Belle." path="/portal" />
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "hsl(340, 83%, 6%)" }}>
       <div className="w-full max-w-[420px]">
         <div className="flex justify-center mb-10">
@@ -76,7 +76,7 @@ const PortalLogin = () => {
           </div>
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="text-xs uppercase tracking-[0.2em] font-medium" style={{ color: "hsl(0, 0%, 50%)" }}>
-              {mode === "login" ? "Portal do Funcionário" : "Recuperar senha"}
+              {mode === "login" ? "Portal da Vendedora" : "Recuperar senha"}
             </span>
           </div>
           <h2 className="text-2xl font-serif" style={{ color: "hsl(0, 0%, 92%)" }}>

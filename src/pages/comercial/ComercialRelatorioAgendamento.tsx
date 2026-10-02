@@ -108,7 +108,7 @@ const ComercialRelatorioAgendamento = () => {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead>Funcionária</TableHead>
+                    <TableHead>Vendedora</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>

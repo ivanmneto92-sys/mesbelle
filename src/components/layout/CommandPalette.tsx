@@ -68,7 +68,7 @@ const items: CmdItem[] = [
 
   { label: "Time & Performance", icon: UserCog, url: "/equipe", roles: ["admin"], group: "Navegar" },
   { label: "Portal de Sócios", icon: Briefcase, url: "/socios", roles: ["admin", "socio"], group: "Navegar" },
-  { label: "Funcionários", icon: Users, url: "/admin/funcionarios", roles: ["admin"], group: "Navegar" },
+  { label: "Vendedoras", icon: Users, url: "/admin/funcionarios", roles: ["admin"], group: "Navegar" },
   { label: "Configurações", icon: Settings, url: "/configuracoes", roles: ["admin"], group: "Navegar" },
   { label: "Meu Perfil", icon: UserCircle, url: "/perfil", roles: ["admin", "vendedor", "socio"], group: "Navegar" },
 

@@ -146,10 +146,10 @@ export default function Agenda() {
                 onValueChange={(v) => setFiltroFuncionaria(v === "todas" ? null : v)}
               >
                 <SelectTrigger className="w-44 h-8 text-xs">
-                  <SelectValue placeholder="Todas as funcionárias" />
+                  <SelectValue placeholder="Todas as vendedoras" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todas">Todas as funcionárias</SelectItem>
+                  <SelectItem value="todas">Todas as vendedoras</SelectItem>
                   {funcionarios.map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                   ))}

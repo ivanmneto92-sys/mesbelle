@@ -45,7 +45,7 @@ const Equipe = () => {
   // New member modal
   const [newMemberOpen, setNewMemberOpen] = useState(false);
   const [newMember, setNewMember] = useState({
-    nome: "", email: "", role: "vendedor" as "vendedor" | "socio",
+    nome: "", email: "", role: "vendedor" as "vendedor" | "socio" | "admin",
     cargo: "", tipo_contrato: "CLT", telefone: "",
   });
   const [creatingMember, setCreatingMember] = useState(false);
@@ -61,6 +61,9 @@ const Equipe = () => {
     const parsed = novoFuncionarioSchema.safeParse(newMember);
     if (!parsed.success) {
       toast.error(firstZodError(parsed.error));
+      return;
+    }
+    if (parsed.data.role === "admin" && !confirm(`Confirma que "${parsed.data.nome}" deve ter acesso total de administrador ao sistema?`)) {
       return;
     }
     setCreatingMember(true);
@@ -304,11 +307,12 @@ const Equipe = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Perfil</Label>
-                <Select value={newMember.role} onValueChange={v => setNewMember(p => ({ ...p, role: v as "vendedor" | "socio" }))}>
+                <Select value={newMember.role} onValueChange={v => setNewMember(p => ({ ...p, role: v as "vendedor" | "socio" | "admin" }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="vendedor">Vendedor</SelectItem>
                     <SelectItem value="socio">Sócio</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -331,9 +335,15 @@ const Equipe = () => {
               <Label>Telefone</Label>
               <Input value={newMember.telefone} onChange={e => setNewMember(p => ({ ...p, telefone: e.target.value }))} placeholder="(11) 99999-0000" />
             </div>
-            <p className="text-xs text-muted-foreground">
-              A comissão segue automaticamente a tabela padrão da empresa (por faixa de faturamento do mês) — não precisa ser cadastrada aqui.
-            </p>
+            {newMember.role === "admin" ? (
+              <p className="text-xs text-warning font-medium">
+                ⚠️ Administrador tem acesso total ao sistema — financeiro, sócios, contratos e pode criar, desativar ou excluir qualquer conta, inclusive outros administradores. Só cadastre quem realmente precisa desse nível de acesso.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                A comissão segue automaticamente a tabela padrão da empresa (por faixa de faturamento do mês) — não precisa ser cadastrada aqui.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewMemberOpen(false)}>Cancelar</Button>

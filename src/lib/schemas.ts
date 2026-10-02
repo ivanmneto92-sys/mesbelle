@@ -97,7 +97,7 @@ export const transacaoArraySchema = z
 export const novoFuncionarioSchema = z.object({
   nome: nonEmpty("Nome", 120),
   email: emailReq,
-  role: z.enum(["vendedor", "socio"], { errorMap: () => ({ message: "Cargo inválido" }) }),
+  role: z.enum(["vendedor", "socio", "admin"], { errorMap: () => ({ message: "Cargo inválido" }) }),
   cargo: optionalStr(60),
   tipo_contrato: z.enum(["CLT", "PJ", "Freelancer", "Estágio"]).default("CLT"),
   telefone: telefoneSchema.optional().or(z.literal("")),

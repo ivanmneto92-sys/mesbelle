@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,7 +32,7 @@ export function GerarContratoDoLeadDialog({ open, onOpenChange, leads, vestidos,
   const [leadId, setLeadId] = useState<string | null>(null);
   const [buscaPeca, setBuscaPeca] = useState("");
   const [vestidoId, setVestidoId] = useState<string | null>(null);
-  const [valor, setValor] = useState("");
+  const [valor, setValor] = useState(0);
   const [metodoPagamento, setMetodoPagamento] = useState("");
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
@@ -56,7 +57,7 @@ export function GerarContratoDoLeadDialog({ open, onOpenChange, leads, vestidos,
 
   const reset = () => {
     setBuscaLead(""); setLeadId(null); setBuscaPeca(""); setVestidoId(null);
-    setValor(""); setMetodoPagamento(""); setNome(""); setCpf(""); setTelefone(""); setEmail("");
+    setValor(0); setMetodoPagamento(""); setNome(""); setCpf(""); setTelefone(""); setEmail("");
   };
 
   const handleSelecionarLead = (l: Lead) => {
@@ -71,16 +72,15 @@ export function GerarContratoDoLeadDialog({ open, onOpenChange, leads, vestidos,
   const handleSelecionarPeca = (v: Vestido) => {
     setVestidoId(v.id);
     setBuscaPeca("");
-    setValor(String(v.precoAluguel || v.precoVenda || ""));
+    setValor(v.precoAluguel || v.precoVenda || 0);
   };
 
   const faltamDados = !nome.trim() || !cpf.trim() || !telefone.trim() || !email.trim();
-  const podeGerar = !!lead && !!vestido && Number(valor) > 0 && !!metodoPagamento && !faltamDados;
+  const podeGerar = !!lead && !!vestido && valor > 0 && !!metodoPagamento && !faltamDados;
 
   const handleGerar = async () => {
     if (!lead || !vestido) return;
-    const valorNum = Number(valor);
-    if (!(valorNum > 0)) { toast.error("Informe o valor do produto."); return; }
+    if (!(valor > 0)) { toast.error("Informe o valor do produto."); return; }
     if (!metodoPagamento) { toast.error("Selecione a forma de pagamento."); return; }
     if (faltamDados) { toast.error("Complete nome, CPF, celular e e-mail da cliente."); return; }
 
@@ -88,7 +88,7 @@ export function GerarContratoDoLeadDialog({ open, onOpenChange, leads, vestidos,
     const contrato = await onGerar({
       leadId: lead.id,
       produtoDescricao: `${vestido.nome}${vestido.sku ? ` (${vestido.sku})` : ""}`,
-      valor: valorNum,
+      valor,
       metodoPagamento,
       dadosComplementares: { nome, cpf, telefone, email },
     });
@@ -191,8 +191,8 @@ export function GerarContratoDoLeadDialog({ open, onOpenChange, leads, vestidos,
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Valor (R$)</Label>
-                      <Input type="number" min="0" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} />
+                      <Label>Valor</Label>
+                      <CurrencyInput value={valor} onChange={setValor} />
                     </div>
                     <div>
                       <Label>Forma de Pagamento</Label>

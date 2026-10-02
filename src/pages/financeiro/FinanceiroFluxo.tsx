@@ -62,13 +62,12 @@ const FinanceiroFluxo = () => {
   const chartData = useMemo(() => fluxoPorSemana(transacoes), [transacoes]);
 
   const handleSalvar = (form: TransacaoFormValue) => {
-    const valor = parseFloat(form.valor.replace(",", "."));
     const candidate = {
       tipo: form.tipo,
       data: form.data,
       descricao: form.descricao,
       categoria: form.categoria,
-      valor: Number.isNaN(valor) ? 0 : valor,
+      valor: form.valor,
       status: "pago" as const,
     };
     const parsed = transacaoSchema.safeParse(candidate);

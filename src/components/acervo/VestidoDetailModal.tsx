@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CategoriaPeca, CATEGORIA_LABELS, Vestido, VestidoStatus, STATUS_LABELS } from "@/types/acervo";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -29,8 +30,8 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
   const [cor, setCor] = useState(vestido.cor);
   const [tamanho, setTamanho] = useState(vestido.tamanho);
   const [comprimento, setComprimento] = useState(vestido.comprimento);
-  const [precoAluguel, setPrecoAluguel] = useState(String(vestido.precoAluguel));
-  const [precoVenda, setPrecoVenda] = useState(String(vestido.precoVenda));
+  const [precoAluguel, setPrecoAluguel] = useState(vestido.precoAluguel);
+  const [precoVenda, setPrecoVenda] = useState(vestido.precoVenda);
   const [descricao, setDescricao] = useState(vestido.descricao ?? "");
   const [status, setStatus] = useState<VestidoStatus>(vestido.status);
   const [imagens, setImagens] = useState<string[]>(vestido.imagensUrls.length > 0 ? vestido.imagensUrls : (vestido.imagemUrl ? [vestido.imagemUrl] : []));
@@ -42,8 +43,8 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
       nome, categoriaPeca, cor, tamanho, comprimento, status,
       imagensUrls: imagens,
       imagemUrl: imagens[0] || "/placeholder.svg",
-      precoAluguel: Number(precoAluguel) || 0,
-      precoVenda: Number(precoVenda) || 0,
+      precoAluguel,
+      precoVenda,
       descricao: descricao || null,
     });
     onClose();
@@ -188,12 +189,12 @@ export function VestidoDetailModal({ vestido, open, canManage, onClose, onUpdate
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Preço Aluguel (R$)</Label>
-              <Input type="number" value={precoAluguel} onChange={(e) => setPrecoAluguel(e.target.value)} className="mt-1" disabled={!canManage} />
+              <Label className="text-xs text-muted-foreground">Preço Aluguel</Label>
+              <CurrencyInput value={precoAluguel} onChange={setPrecoAluguel} className="mt-1" disabled={!canManage} />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Preço Venda (R$)</Label>
-              <Input type="number" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} className="mt-1" disabled={!canManage} />
+              <Label className="text-xs text-muted-foreground">Preço Venda</Label>
+              <CurrencyInput value={precoVenda} onChange={setPrecoVenda} className="mt-1" disabled={!canManage} />
             </div>
           </div>
 

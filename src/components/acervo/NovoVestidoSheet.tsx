@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CategoriaPeca, CATEGORIA_LABELS, Vestido } from "@/types/acervo";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -25,8 +26,8 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
   const [cor, setCor] = useState("");
   const [tamanho, setTamanho] = useState("M");
   const [comprimento, setComprimento] = useState("Longo");
-  const [precoAluguel, setPrecoAluguel] = useState("");
-  const [precoVenda, setPrecoVenda] = useState("");
+  const [precoAluguel, setPrecoAluguel] = useState(0);
+  const [precoVenda, setPrecoVenda] = useState(0);
   const [descricao, setDescricao] = useState("");
   const [isConsignado, setIsConsignado] = useState(false);
   const [imagens, setImagens] = useState<string[]>([]);
@@ -65,8 +66,8 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
   const handleSave = async () => {
     const candidate = {
       nome, cor, tamanho, comprimento, isConsignado,
-      precoAluguel: Number(precoAluguel) || 0,
-      precoVenda: Number(precoVenda) || 0,
+      precoAluguel,
+      precoVenda,
       imagensUrls: imagens,
     };
     const parsed = vestidoSchema.safeParse(candidate);
@@ -150,12 +151,12 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Preço Aluguel (R$)</Label>
-              <Input type="number" value={precoAluguel} onChange={(e) => setPrecoAluguel(e.target.value)} placeholder="1200" className="mt-1" />
+              <Label>Preço Aluguel</Label>
+              <CurrencyInput value={precoAluguel} onChange={setPrecoAluguel} className="mt-1" />
             </div>
             <div>
-              <Label>Preço Venda (R$)</Label>
-              <Input type="number" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} placeholder="4800" className="mt-1" />
+              <Label>Preço Venda</Label>
+              <CurrencyInput value={precoVenda} onChange={setPrecoVenda} className="mt-1" />
             </div>
           </div>
 

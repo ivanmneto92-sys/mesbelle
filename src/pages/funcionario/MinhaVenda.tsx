@@ -5,6 +5,7 @@ import { SEO } from "@/components/SEO";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -73,7 +74,7 @@ const MinhaVenda = () => {
   // existe no Acervo, feito sob medida pra essa cliente.
   const [novaPeca, setNovaPeca] = useState({
     categoria: "vestido" as CategoriaPeca, cor: "", tamanho: "", comprimento: "",
-    valor: "", descricao: "", dataRetirada: "", dataDevolucao: "",
+    valor: 0, descricao: "", dataRetirada: "", dataDevolucao: "",
   });
   const [criandoPeca, setCriandoPeca] = useState(false);
 
@@ -83,7 +84,7 @@ const MinhaVenda = () => {
   };
 
   const adicionarPecaNova = async () => {
-    const valor = Number(novaPeca.valor);
+    const valor = novaPeca.valor;
     if (!valor || valor <= 0 || !novaPeca.dataRetirada || !novaPeca.dataDevolucao) {
       toast.error("Preencha o valor e as datas da peça.");
       return;
@@ -507,13 +508,10 @@ const MinhaVenda = () => {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Valor do aluguel (R$) *</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={10}
+                    <Label className="text-xs text-muted-foreground">Valor do aluguel *</Label>
+                    <CurrencyInput
                       value={novaPeca.valor}
-                      onChange={(e) => setNovaPeca((p) => ({ ...p, valor: e.target.value }))}
+                      onChange={(v) => setNovaPeca((p) => ({ ...p, valor: v }))}
                       className="h-9 text-sm"
                     />
                   </div>
@@ -876,19 +874,13 @@ const ItemCarrinhoCard = ({
 
       <div className="flex items-center gap-3">
         <Label className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
-          <Tag className="h-3 w-3" /> Desconto (R$)
+          <Tag className="h-3 w-3" /> Desconto
         </Label>
-        <div className="relative w-32">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
-          <Input
-            type="number"
-            min={0}
-            max={item.valorOriginal}
-            step={10}
-            className="pl-8 h-8 text-sm"
-            value={item.desconto || ""}
-            onChange={(e) => onAtualizar({ desconto: Math.max(0, Number(e.target.value)) })}
-            placeholder="0"
+        <div className="w-36">
+          <CurrencyInput
+            className="h-8 text-sm"
+            value={item.desconto}
+            onChange={(v) => onAtualizar({ desconto: Math.max(0, Math.min(v, item.valorOriginal)) })}
           />
         </div>
         {item.desconto > 0 && (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +8,41 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Trash2, Check, ChevronsUpDown, X } from "lucide-react";
+import { Trash2, Check, ChevronsUpDown, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Agendamento, NovoAgendamento, TipoAgendamento, TIPO_CONFIG } from "@/types/agenda";
 import { useCriarAgendamento, useEditarAgendamento, useExcluirAgendamento } from "@/hooks/useAgenda";
 import { useLeadsBusca } from "@/hooks/useLeadsBusca";
+
+// Horários fechados de 30 em 30 min (00:00, 00:30, ... 23:30) — antes era um
+// <input type="time"> nativo, que deixava escolher qualquer minuto (10:57,
+// 14:28...) e tinha um layout de rolagem ruim no desktop.
+const OPCOES_HORARIO = Array.from({ length: 48 }, (_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, "0");
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h}:${m}`;
+});
+
+function arredondarParaMeiaHora(data: Date): Date {
+  const arredondada = new Date(data);
+  const minutos = arredondada.getMinutes();
+  const minutosArredondados = Math.round(minutos / 30) * 30;
+  arredondada.setMinutes(minutosArredondados, 0, 0);
+  return arredondada;
+}
+
+function parseLocalDateTime(dataHora: string): { data: Date | undefined; hora: string } {
+  if (!dataHora) return { data: undefined, hora: "" };
+  const [dataParte, horaParte] = dataHora.split("T");
+  const [y, m, d] = dataParte.split("-").map(Number);
+  return { data: new Date(y, m - 1, d), hora: horaParte ?? "" };
+}
+
+function combinarDataHora(data: Date, hora: string): string {
+  return `${format(data, "yyyy-MM-dd")}T${hora}`;
+}
 
 interface FuncionariaOpcao {
   id: string;
@@ -49,11 +79,12 @@ export function NovoAgendamentoDialog({
   const [obs, setObs] = useState("");
   const [leadId, setLeadId] = useState<string | null>(null);
   const [leadPopoverAberto, setLeadPopoverAberto] = useState(false);
+  const [dataPopoverAberto, setDataPopoverAberto] = useState(false);
 
   useEffect(() => {
     if (agendamentoEditar) {
       setTipo(agendamentoEditar.tipo);
-      setDataHora(format(new Date(agendamentoEditar.dataHora), "yyyy-MM-dd'T'HH:mm"));
+      setDataHora(format(arredondarParaMeiaHora(new Date(agendamentoEditar.dataHora)), "yyyy-MM-dd'T'HH:mm"));
       setDuracao(agendamentoEditar.duracaoMinutos);
       setCliente(agendamentoEditar.clienteNome);
       setEmail(agendamentoEditar.clienteEmail ?? "");
@@ -62,7 +93,7 @@ export function NovoAgendamentoDialog({
       setObs(agendamentoEditar.observacoes ?? "");
       setLeadId(agendamentoEditar.leadId ?? null);
     } else if (dataHoraInicial) {
-      setDataHora(format(dataHoraInicial, "yyyy-MM-dd'T'HH:mm"));
+      setDataHora(format(arredondarParaMeiaHora(dataHoraInicial), "yyyy-MM-dd'T'HH:mm"));
       setTipo("visita");
       setDuracao(60);
       setCliente("");
@@ -141,19 +172,62 @@ export function NovoAgendamentoDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Data e hora</Label>
-              <Input type="datetime-local" value={dataHora} onChange={(e) => setDataHora(e.target.value)} />
+              <Label>Data</Label>
+              <Popover open={dataPopoverAberto} onOpenChange={setDataPopoverAberto}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start font-normal gap-2">
+                    <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    {parseLocalDateTime(dataHora).data
+                      ? format(parseLocalDateTime(dataHora).data!, "d 'de' MMM 'de' yyyy", { locale: ptBR })
+                      : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    locale={ptBR}
+                    selected={parseLocalDateTime(dataHora).data}
+                    defaultMonth={parseLocalDateTime(dataHora).data}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      const horaAtual = parseLocalDateTime(dataHora).hora || "09:00";
+                      setDataHora(combinarDataHora(d, horaAtual));
+                      setDataPopoverAberto(false);
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1">
-              <Label>Duração (min)</Label>
-              <Input
-                type="number"
-                min={15}
-                step={15}
-                value={duracao}
-                onChange={(e) => setDuracao(Number(e.target.value))}
-              />
+              <Label>Horário</Label>
+              <Select
+                value={parseLocalDateTime(dataHora).hora}
+                onValueChange={(hora) => {
+                  const dataAtual = parseLocalDateTime(dataHora).data ?? new Date();
+                  setDataHora(combinarDataHora(dataAtual, hora));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {OPCOES_HORARIO.map((h) => (
+                    <SelectItem key={h} value={h}>{h}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Duração (min)</Label>
+            <Input
+              type="number"
+              min={15}
+              step={15}
+              value={duracao}
+              onChange={(e) => setDuracao(Number(e.target.value))}
+            />
           </div>
 
           <div className="space-y-1">

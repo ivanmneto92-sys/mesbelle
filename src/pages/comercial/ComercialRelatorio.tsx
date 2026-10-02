@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Handshake, BarChart3 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useLeads } from "@/hooks/useLeads";
+import { useAgenda } from "@/hooks/useAgenda";
 import { useDateRange } from "@/hooks/useDateRange";
 import { useComercialKpis } from "@/hooks/useComercialKpis";
 import { ComercialKpiStrip } from "@/components/comercial/ComercialKpiStrip";
@@ -19,7 +20,11 @@ const ComercialRelatorio = () => {
   const [tab, setTab] = useState("negociacoes");
 
   const negociosNoPeriodo = negocios.filter((n) => n.criadoEm >= range.from && n.criadoEm <= range.to);
-  const kpis = useComercialKpis(leads, contratos, negocios, range);
+  const { data: agendamentosPeriodo } = useAgenda(
+    new Date(`${range.from}T00:00:00`),
+    new Date(`${range.to}T23:59:59`),
+  );
+  const kpis = useComercialKpis(leads, contratos, negocios, agendamentosPeriodo ?? [], range);
 
   const handleSwitchToContratos = (contratoId?: string) => {
     navigate("/comercial/contratos", { state: contratoId ? { autoOpenContratoId: contratoId } : undefined });

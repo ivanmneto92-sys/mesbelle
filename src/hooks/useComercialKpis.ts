@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Lead, Contrato, Negocio } from "@/types/comercial";
+import { Agendamento } from "@/types/agenda";
 import { DateRange } from "@/hooks/useDateRange";
 
 export interface ComercialKpis {
@@ -21,6 +22,7 @@ export function useComercialKpis(
   leads: Lead[],
   contratos: Contrato[],
   negocios: Negocio[],
+  agendamentosTodos: Agendamento[],
   range: DateRange,
 ): ComercialKpis {
   return useMemo(() => {
@@ -36,40 +38,25 @@ export function useComercialKpis(
     const leadsNoPeriodo = leads.filter((l) => inRange(l.criadoEm));
     const volumeLeads = leadsNoPeriodo.length;
 
-    // 2. Agendamentos no período (prova_data dentro do range)
-    const leadsAgendados = leads.filter((l) => inRange(l.provaData));
-    const agendamentos = leadsAgendados.length;
+    // 2. Agendamentos no período — tabela real da Agenda (não mais
+    // leads.provaData, que o fluxo atual de agendamento não preenche).
+    const agendamentosPeriodo = agendamentosTodos.filter((ag) => inRange(ag.dataHora));
+    const agendamentos = agendamentosPeriodo.length;
 
     // 3. Taxa lead → agendamento
     const taxaLeadAgendamento = volumeLeads > 0
       ? Math.round((agendamentos / volumeLeads) * 100)
       : 0;
 
-    // 4/6. Clientes que estiveram na loja / agendamentos fechados
-    // Prioridade: novos status do funil de Agendamento; fallback: enviado_comercial + negócios aprovados
-    const hasNewStatuses = leads.some(
-      (l) => l.statusFunil === "compareceu_alugou" || l.statusFunil === "compareceu_nao_alugou"
-    );
-
-    let clientesNaLoja: number;
-    let agendamentosFechados: number;
-
-    if (hasNewStatuses) {
-      clientesNaLoja = leads.filter(
-        (l) =>
-          ["compareceu_alugou", "compareceu_nao_alugou"].includes(l.statusFunil) &&
-          inRange(l.provaData)
-      ).length;
-      agendamentosFechados = leads.filter(
-        (l) => l.statusFunil === "compareceu_alugou" && inRange(l.provaData)
-      ).length;
-    } else {
-      const negociosPeriodo = negocios.filter((n) => inRange(n.criadoEm));
-      agendamentosFechados = negociosPeriodo.filter(
-        (n) => n.statusNegociacao === "aprovado"
-      ).length;
-      clientesNaLoja = negociosPeriodo.length;
-    }
+    // 4/6. Clientes que estiveram na loja / agendamentos fechados — pelo
+    // status do próprio agendamento (mesma fonte usada no Relatório de
+    // Agendamento / Kanban), não mais pelo funil do lead.
+    const clientesNaLoja = agendamentosPeriodo.filter(
+      (ag) => ag.status === "compareceu_alugou" || ag.status === "compareceu_nao_alugou"
+    ).length;
+    const agendamentosFechados = agendamentosPeriodo.filter(
+      (ag) => ag.status === "compareceu_alugou"
+    ).length;
 
     // 5. Taxa de comparecimento
     const taxaComparecimento = agendamentos > 0
@@ -101,5 +88,5 @@ export function useComercialKpis(
       agendamentosFechados, taxaFechamento,
       faturamentoPeriodo, ticketMedio, negociosAprovados,
     };
-  }, [leads, contratos, negocios, range]);
+  }, [leads, contratos, negocios, agendamentosTodos, range]);
 }

@@ -48,7 +48,7 @@ export function useDashboard(range: DateRange) {
 
     const [
       receitasHojeRes, leadsNovosRes, leadsMesRes, logisticaRes,
-      txPeriodoRes, leadsPeriodoRes, agendamentosPeriodoRes, agendamentosHojeRes, alugueisPeriodoRes, negociosPeriodoRes,
+      txPeriodoRes, leadsPeriodoRes, agendamentosPeriodoRes, agendamentosHojeRes, negociosPeriodoRes,
     ] = await Promise.all([
       supabase.from("transacoes_financeiras").select("valor, data, tipo").gte("data", ontem).lte("data", hoje).eq("tipo", "entrada"),
       supabase.from("leads").select("id", { count: "exact", head: true }).eq("criado_em", hoje),
@@ -62,7 +62,11 @@ export function useDashboard(range: DateRange) {
       // maior parte dos tipos de agendamento.
       supabase.from("agendamentos").select("id").gte("data_hora", `${range.from}T00:00:00`).lte("data_hora", `${range.to}T23:59:59`),
       supabase.from("agendamentos").select("id", { count: "exact", head: true }).gte("data_hora", `${hoje}T00:00:00`).lte("data_hora", `${hoje}T23:59:59`),
-      supabase.from("alugueis_logistica").select("id, data_saida").gte("data_saida", range.from).lte("data_saida", range.to),
+      // Aluguéis: negócios aprovados no período — é o clique em "Confirmar
+      // aluguel" no Minha Venda que cria o negócio com status "aprovado",
+      // então esse é o momento real de contar um aluguel (não a data de
+      // retirada da peça, que pode cair num período diferente ou nem ter
+      // sido preenchida ainda).
       supabase.from("negocios").select("id, status_negociacao, criado_em").eq("status_negociacao", "aprovado").gte("criado_em", range.from).lte("criado_em", range.to),
     ]);
 
@@ -93,7 +97,6 @@ export function useDashboard(range: DateRange) {
     const convertidosPeriodo = leadsPeriodo.filter(l => ["convertido", "fechado", "aprovado"].includes(l.status_funil)).length;
 
     const agendamentos = (agendamentosPeriodoRes.data ?? []).length;
-    const alugueisPeriodo = (alugueisPeriodoRes.data ?? []).length;
     const negociosAprovados = (negociosPeriodoRes.data ?? []).length;
 
     const ticketMedio = negociosAprovados > 0 ? faturamentoPeriodo / negociosAprovados : 0;
@@ -102,7 +105,7 @@ export function useDashboard(range: DateRange) {
     const custoDeAquisicao = volumeLeads > 0 ? despesasPeriodo / volumeLeads : 0;
 
     setKpis({
-      faturamentoPeriodo, volumeLeads, agendamentos, alugueis: alugueisPeriodo,
+      faturamentoPeriodo, volumeLeads, agendamentos, alugueis: negociosAprovados,
       ticketMedio, conversaoPorAgendamento, custoPorAgendamento, custoDeAquisicao,
       faturamentoHoje, faturamentoOntem, agendamentosHoje: agendamentosHojeRes.count ?? 0,
       leadsNovosHoje, entregasPendentes, entregasAtrasadas, conversaoMes,

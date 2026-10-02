@@ -64,7 +64,7 @@ function CampanhaRow({ c }: { c: MetaCampanha }) {
 }
 
 const MetaAds = () => {
-  const { range, setRange, setPreset } = useDateRange(getPreset("ultimos_30"));
+  const { range, setRange, setPreset } = useDateRange(getPreset("hoje"));
   const { data, isLoading, isError, error, refetch, isFetching } = useMetaAds(range);
   const { data: funil } = useFunilConversao(range);
 

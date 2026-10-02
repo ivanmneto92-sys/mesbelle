@@ -492,22 +492,6 @@ const MinhaVenda = () => {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Categoria</Label>
-                    <Select
-                      value={novaPeca.categoria}
-                      onValueChange={(v) => setNovaPeca((p) => ({ ...p, categoria: v as CategoriaPeca }))}
-                    >
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CATEGORIA_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Valor do aluguel *</Label>
                     <CurrencyInput
                       value={novaPeca.valor}

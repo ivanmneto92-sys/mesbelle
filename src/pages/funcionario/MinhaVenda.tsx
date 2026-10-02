@@ -38,7 +38,7 @@ const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string; icon: string }[]
   { value: "misto", label: "Misto (PIX + Cartão)", icon: "🔀" },
 ];
 
-const OPCOES_PARCELAS = Array.from({ length: 18 }, (_, i) => i + 1);
+const OPCOES_PARCELAS = Array.from({ length: 5 }, (_, i) => i + 1);
 
 const BANDEIRAS: { value: BandeiraCartao; label: string }[] = [
   { value: "visa_master", label: "Visa / Master" },

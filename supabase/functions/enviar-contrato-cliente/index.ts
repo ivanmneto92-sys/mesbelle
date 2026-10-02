@@ -84,6 +84,48 @@ Deno.serve(async (req) => {
 
     await supabase.from("contratos").update({ email_enviado_em: new Date().toISOString() }).eq("id", contrato.id);
 
+    // Cópia para a mesbelle: todos os admins recebem a confirmação também,
+    // para acompanhar as assinaturas sem precisar entrar no sistema.
+    const htmlAdmin = templateBase(`
+      <h2 style="color:#4a1535;font-size:20px;margin:0 0 16px;">
+        ✅ Contrato assinado pela cliente
+      </h2>
+      <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px;">
+        <strong>${escapeHtml(contrato.nome_cliente)}</strong> assinou o contrato de locação
+        <strong>#${escapeHtml(contrato.numero)}</strong>.
+      </p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+        <tr style="background:#f9f5f1;">
+          <td style="padding:10px 12px;color:#6b7280;">Contrato</td>
+          <td style="padding:10px 12px;font-weight:600;color:#111827;">#${escapeHtml(contrato.numero)}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px;color:#6b7280;">Data do evento</td>
+          <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHtml(dataEventoFmt)}</td>
+        </tr>
+        <tr style="background:#f9f5f1;">
+          <td style="padding:10px 12px;color:#6b7280;">Valor</td>
+          <td style="padding:10px 12px;font-weight:600;color:#4a1535;">${escapeHtml(valorFmt)}</td>
+        </tr>
+      </table>
+      ${botaoCTA("Ver contrato", linkContrato)}
+    `);
+
+    const { data: adminRoles } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
+    for (const ar of adminRoles ?? []) {
+      const { data: adminUser } = await supabase.auth.admin.getUserById(ar.user_id);
+      if (!adminUser?.user?.email) continue;
+      try {
+        await enviarEmail({
+          para: adminUser.user.email,
+          assunto: `Contrato assinado — Més Belle #${contrato.numero}`,
+          html: htmlAdmin,
+        });
+      } catch (err) {
+        console.error(`[enviar-contrato-cliente] falha ao notificar admin ${adminUser.user.email}:`, err);
+      }
+    }
+
     return json({ ok: true });
   } catch (err) {
     console.error("[enviar-contrato-cliente]", err);

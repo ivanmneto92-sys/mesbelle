@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Search, FileSignature, Eye, Printer, Link2, UserSearch } from "lucide-react";
 import { Contrato, ContratoStatus, Lead, Negocio } from "@/types/comercial";
@@ -271,13 +270,13 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
         </DialogContent>
       </Dialog>
 
-      <Sheet open={!!previewContrato} onOpenChange={() => setPreviewContrato(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+      <Dialog open={!!previewContrato} onOpenChange={() => setPreviewContrato(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {previewContrato && (
             <>
-              <SheetHeader>
-                <SheetTitle className="font-serif">Contrato #{previewContrato.numero}</SheetTitle>
-              </SheetHeader>
+              <DialogHeader>
+                <DialogTitle className="font-serif">Contrato #{previewContrato.numero}</DialogTitle>
+              </DialogHeader>
               <div className="mt-4 space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -342,6 +341,10 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
                   </div>
                 )}
               </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <LinkAssinaturaDialog
         open={!!linkContrato}
@@ -349,10 +352,6 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
         contrato={linkContrato}
         onGerar={onGerarLink}
       />
-    </>
-          )}
-        </SheetContent>
-      </Sheet>
 
       {usaFluxoDoLead && (
         <GerarContratoDoLeadDialog

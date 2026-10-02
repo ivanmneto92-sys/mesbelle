@@ -230,7 +230,7 @@ export function NovoAgendamentoDialog({
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent className="max-h-64">
+                <SelectContent className="max-h-64" position="item-aligned">
                   {OPCOES_HORARIO.map((h) => (
                     <SelectItem key={h} value={h}>{h}</SelectItem>
                   ))}

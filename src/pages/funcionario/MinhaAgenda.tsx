@@ -184,7 +184,7 @@ const MinhaAgenda = () => {
             size="sm"
             className="ml-auto lg:ml-0"
             onClick={() => {
-              setDataHoraSelecionada(new Date());
+              setDataHoraSelecionada(dataReferencia);
               setAgendamentoEditar(undefined);
               setDialogAberto(true);
             }}

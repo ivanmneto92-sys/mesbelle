@@ -149,7 +149,7 @@ export function NovoAgendamentoDialog({
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>{modoEditar ? "Editar agendamento" : "Novo agendamento"}</DialogTitle>
         </DialogHeader>

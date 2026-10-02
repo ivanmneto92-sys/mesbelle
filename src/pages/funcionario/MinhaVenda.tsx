@@ -860,12 +860,20 @@ const ItemCarrinhoCard = ({
         <Label className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
           <Tag className="h-3 w-3" /> Desconto
         </Label>
-        <div className="w-36">
-          <CurrencyInput
-            className="h-8 text-sm"
-            value={item.desconto}
-            onChange={(v) => onAtualizar({ desconto: Math.max(0, Math.min(v, item.valorOriginal)) })}
+        <div className="relative w-24">
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            className="h-8 text-sm pr-7"
+            value={item.valorOriginal > 0 ? Math.round((item.desconto / item.valorOriginal) * 100) : 0}
+            onChange={(e) => {
+              const pct = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+              onAtualizar({ desconto: Math.round(item.valorOriginal * (pct / 100)) });
+            }}
           />
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
         </div>
         {item.desconto > 0 && (
           <span className="text-sm font-semibold text-primary">

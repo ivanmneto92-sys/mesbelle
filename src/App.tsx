@@ -83,7 +83,7 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
 // /operacional/acervo já era.
 const ROTAS_FUNCIONARIO = ["/meu-painel", "/meus-leads", "/minha-agenda", "/meu-contrato", "/meu-termo-retirada", "/minhas-metricas"];
 
-const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: string }) => {
+const ProtectedRoute = ({ children, path, fullWidth }: { children: React.ReactNode; path?: string; fullWidth?: boolean }) => {
   const { isAuthenticated, user, loading } = useAuth();
   const location = useLocation();
 
@@ -120,7 +120,7 @@ const ProtectedRoute = ({ children, path }: { children: React.ReactNode; path?: 
   }
 
   return (
-    <AppLayout>
+    <AppLayout fullWidth={fullWidth}>
       <ErrorBoundary fallbackTitle="Erro nesta página">
         {children}
       </ErrorBoundary>
@@ -152,7 +152,7 @@ const AppRoutes = () => {
       <Route path="/comercial" element={<Navigate to="/comercial/relatorio" replace />} />
       <Route path="/comercial/relatorio" element={<ProtectedRoute path="/comercial/relatorio"><ComercialRelatorio /></ProtectedRoute>} />
       <Route path="/comercial/relatorio-agendamento" element={<ProtectedRoute path="/comercial/relatorio-agendamento"><ComercialRelatorioAgendamento /></ProtectedRoute>} />
-      <Route path="/comercial/calendario" element={<ProtectedRoute path="/comercial/calendario"><Agenda /></ProtectedRoute>} />
+      <Route path="/comercial/calendario" element={<ProtectedRoute path="/comercial/calendario" fullWidth><Agenda /></ProtectedRoute>} />
       <Route path="/comercial/contratos" element={<ProtectedRoute path="/comercial/contratos"><ComercialContratos /></ProtectedRoute>} />
       <Route path="/acervo" element={<Navigate to="/operacional/acervo" replace />} />
       <Route path="/logistica" element={<Navigate to="/operacional/logistica" replace />} />
@@ -176,7 +176,7 @@ const AppRoutes = () => {
       <Route path="/meu-painel" element={<ProtectedRoute path="/meu-painel"><MeuPainel /></ProtectedRoute>} />
       <Route path="/meus-leads" element={<ProtectedRoute path="/meus-leads"><MeusLeads /></ProtectedRoute>} />
       <Route path="/minha-venda" element={<ProtectedRoute path="/minha-venda"><MinhaVenda /></ProtectedRoute>} />
-      <Route path="/minha-agenda" element={<ProtectedRoute path="/minha-agenda"><MinhaAgenda /></ProtectedRoute>} />
+      <Route path="/minha-agenda" element={<ProtectedRoute path="/minha-agenda" fullWidth><MinhaAgenda /></ProtectedRoute>} />
       <Route path="/meu-contrato" element={<ProtectedRoute path="/meu-contrato"><MeuContrato /></ProtectedRoute>} />
       <Route path="/meu-termo-retirada" element={<ProtectedRoute path="/meu-termo-retirada"><MeuTermoRetirada /></ProtectedRoute>} />
       <Route path="/minhas-metricas" element={<ProtectedRoute path="/minhas-metricas"><MinhasMetricas /></ProtectedRoute>} />

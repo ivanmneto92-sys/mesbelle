@@ -50,7 +50,7 @@ export function CalendarioMes({ dataReferencia, agendamentos, onClickDia }: Prop
               key={chave}
               onClick={() => onClickDia?.(dia)}
               className={cn(
-                "min-h-[90px] border-r border-b p-1.5 cursor-pointer",
+                "min-h-[120px] border-r border-b p-2 cursor-pointer",
                 "hover:bg-muted/50 transition-colors",
                 !doMes && "bg-muted/30",
                 isToday(dia) && "bg-primary/5",
@@ -58,7 +58,7 @@ export function CalendarioMes({ dataReferencia, agendamentos, onClickDia }: Prop
             >
               <span
                 className={cn(
-                  "text-xs font-semibold",
+                  "text-sm font-semibold",
                   !doMes && "text-muted-foreground/40",
                   isToday(dia) && "text-primary",
                   doMes && !isToday(dia) && "text-foreground",
@@ -67,7 +67,25 @@ export function CalendarioMes({ dataReferencia, agendamentos, onClickDia }: Prop
                 {format(dia, "d")}
               </span>
 
-              <div className="mt-1 flex flex-wrap gap-0.5">
+              <div className="mt-1 space-y-0.5 hidden sm:block">
+                {eventos.slice(0, 4).map((ag) => (
+                  <p
+                    key={ag.id}
+                    className="text-xs leading-tight truncate rounded px-1.5 py-0.5"
+                    style={{
+                      backgroundColor: `${TIPO_CONFIG[ag.tipo].cor}22`,
+                      color: TIPO_CONFIG[ag.tipo].cor,
+                    }}
+                  >
+                    {format(parseISO(ag.dataHora), "HH:mm")} {ag.clienteNome}
+                  </p>
+                ))}
+                {eventos.length > 4 && (
+                  <p className="text-xs text-muted-foreground">+{eventos.length - 4} mais</p>
+                )}
+              </div>
+
+              <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
                 {eventos.slice(0, 3).map((ag) => (
                   <span
                     key={ag.id}
@@ -80,24 +98,6 @@ export function CalendarioMes({ dataReferencia, agendamentos, onClickDia }: Prop
                   <span className="text-[10px] text-muted-foreground leading-none mt-0.5">
                     +{eventos.length - 3}
                   </span>
-                )}
-              </div>
-
-              <div className="mt-0.5 space-y-0.5 hidden sm:block">
-                {eventos.slice(0, 2).map((ag) => (
-                  <p
-                    key={ag.id}
-                    className="text-[10px] leading-tight truncate rounded px-1"
-                    style={{
-                      backgroundColor: `${TIPO_CONFIG[ag.tipo].cor}22`,
-                      color: TIPO_CONFIG[ag.tipo].cor,
-                    }}
-                  >
-                    {format(parseISO(ag.dataHora), "HH:mm")} {ag.clienteNome}
-                  </p>
-                ))}
-                {eventos.length > 2 && (
-                  <p className="text-[10px] text-muted-foreground">+{eventos.length - 2} mais</p>
                 )}
               </div>
             </div>

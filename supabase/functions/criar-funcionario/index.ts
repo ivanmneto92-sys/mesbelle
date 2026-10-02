@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const { nome, email, role, cargo, tipo_contrato, percentual_comissao, telefone } = await req.json();
     if (!nome || !email) return json({ error: "nome e email são obrigatórios" }, 400);
 
-    const roleFinal = role === "socio" ? "socio" : "vendedor";
+    const roleFinal = role === "socio" ? "socio" : role === "admin" ? "admin" : "vendedor";
 
     const { data: existentes } = await adminClient.auth.admin.listUsers();
     const jaExiste = existentes?.users.find((u) => u.email === email);
@@ -100,7 +100,9 @@ Deno.serve(async (req) => {
             Olá, ${primeiroNome}! 👗
           </h2>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 12px;">
-            Você foi adicionada à equipe da <strong>MesBelle Atelier</strong>${roleFinal === "socio" ? "" : " como consultora de vendas"}.
+            Você foi adicionada à equipe da <strong>MesBelle Atelier</strong>${
+              roleFinal === "admin" ? " como administradora" : roleFinal === "socio" ? "" : " como consultora de vendas"
+            }.
           </p>
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 24px;">
             Clique no botão abaixo para criar sua senha e começar a usar a plataforma:

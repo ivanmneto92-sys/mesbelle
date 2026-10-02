@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +22,7 @@ export interface TransacaoFormValue {
   categoria: string;
   tipoCusto: "fixo" | "variavel" | null;
   descricao: string;
-  valor: string;
+  valor: number;
   data: string;
   leadId: string | null;
   observacoes: string;
@@ -42,7 +43,7 @@ const emptyForm: TransacaoFormValue = {
   categoria: "",
   tipoCusto: null,
   descricao: "",
-  valor: "",
+  valor: 0,
   data: hoje(),
   leadId: null,
   observacoes: "",
@@ -128,7 +129,7 @@ export function TransacaoDialog({ open, onOpenChange, transacao, leads, onSalvar
         categoria: transacao.categoria,
         tipoCusto: transacao.tipoCusto ?? null,
         descricao: transacao.descricao,
-        valor: String(transacao.valor),
+        valor: transacao.valor,
         data: transacao.data,
         leadId: transacao.leadId ?? null,
         observacoes: transacao.observacoes ?? "",
@@ -149,7 +150,7 @@ export function TransacaoDialog({ open, onOpenChange, transacao, leads, onSalvar
   };
 
   const handleSalvar = () => onSalvar(form);
-  const valorValido = parseFloat(form.valor.replace(",", ".")) > 0;
+  const valorValido = form.valor > 0;
   const podeSalvar = !!form.descricao && !!form.categoria && valorValido;
 
   const receitas = CATEGORIAS.filter((c) => c.tipo === "entrada");
@@ -251,8 +252,8 @@ export function TransacaoDialog({ open, onOpenChange, transacao, leads, onSalvar
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Valor (R$) *</Label>
-              <Input type="number" step="0.01" value={form.valor} onChange={(e) => setForm((f) => ({ ...f, valor: e.target.value }))} placeholder="0,00" />
+              <Label>Valor *</Label>
+              <CurrencyInput value={form.valor} onChange={(v) => setForm((f) => ({ ...f, valor: v }))} />
             </div>
             <div className="space-y-1.5">
               <Label>Data *</Label>

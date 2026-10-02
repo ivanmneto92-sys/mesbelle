@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, Edit, DollarSign, Calendar } from "lucide-react";
@@ -21,7 +22,7 @@ const metodosPagamento = ["Cartão 1x", "Cartão 2x", "Cartão 3x", "Cartão 6x"
 
 export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento, onSwitchToContratos }: NegociacoesTabProps) {
   const [editModal, setEditModal] = useState<{ open: boolean; negocio: Negocio | null }>({ open: false, negocio: null });
-  const [editForm, setEditForm] = useState({ vestidoNome: "", valorNegociado: "", desconto: "", metodoPagamento: "" });
+  const [editForm, setEditForm] = useState({ vestidoNome: "", valorNegociado: 0, desconto: 0, metodoPagamento: "" });
 
   const abertas = negocios.filter((n) => n.statusNegociacao === "aberto");
   const aprovadas = negocios.filter((n) => n.statusNegociacao === "aprovado");
@@ -29,8 +30,8 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
   const openEdit = (n: Negocio) => {
     setEditForm({
       vestidoNome: n.vestidoNome || "",
-      valorNegociado: String(n.valorNegociado || ""),
-      desconto: String(n.desconto || ""),
+      valorNegociado: n.valorNegociado || 0,
+      desconto: n.desconto || 0,
       metodoPagamento: n.metodoPagamento || "",
     });
     setEditModal({ open: true, negocio: n });
@@ -40,8 +41,8 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
     if (!editModal.negocio) return;
     const ok = await onUpdateNegocio(editModal.negocio.id, {
       vestidoNome: editForm.vestidoNome,
-      valorNegociado: Number(editForm.valorNegociado) || 0,
-      desconto: Number(editForm.desconto) || 0,
+      valorNegociado: editForm.valorNegociado,
+      desconto: editForm.desconto,
       metodoPagamento: editForm.metodoPagamento,
     });
     if (ok === false) return; // erro já avisado pelo hook — mantém o modal aberto com os dados preenchidos
@@ -160,12 +161,12 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Valor (R$)</Label>
-                <Input type="number" value={editForm.valorNegociado} onChange={(e) => setEditForm({ ...editForm, valorNegociado: e.target.value })} />
+                <Label>Valor</Label>
+                <CurrencyInput value={editForm.valorNegociado} onChange={(v) => setEditForm({ ...editForm, valorNegociado: v })} />
               </div>
               <div>
-                <Label>Desconto (R$)</Label>
-                <Input type="number" value={editForm.desconto} onChange={(e) => setEditForm({ ...editForm, desconto: e.target.value })} />
+                <Label>Desconto</Label>
+                <CurrencyInput value={editForm.desconto} onChange={(v) => setEditForm({ ...editForm, desconto: v })} />
               </div>
             </div>
             <div>

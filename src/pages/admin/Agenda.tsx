@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarRange, LayoutGrid } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, CalendarRange, LayoutGrid, Search } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarioDia } from "@/components/agenda/CalendarioDia";
 import { CalendarioSemana } from "@/components/agenda/CalendarioSemana";
@@ -22,6 +23,7 @@ export default function Agenda() {
   const [view, setView] = useState<ViewMode>("semana");
   const [dataReferencia, setDataReferencia] = useState(new Date());
   const [filtroFuncionaria, setFiltroFuncionaria] = useState<string | null>(null);
+  const [buscaKanban, setBuscaKanban] = useState("");
   const [dialogAberto, setDialogAberto] = useState(false);
   const [dataHoraSelecionada, setDataHoraSelecionada] = useState<Date | undefined>();
   const [agendamentoEditar, setAgendamentoEditar] = useState<Agendamento | undefined>();
@@ -50,6 +52,22 @@ export default function Agenda() {
   // todos os agendamentos de todos os clientes, independente de quem cadastrou
   // ou está responsável (a RLS de admin já dá acesso total).
   const { data: agKanban } = useAgendaKanban();
+
+  // Busca por nome do lead (ignora acento/caixa) ou pelos últimos dígitos do
+  // telefone cadastrado — útil quando o Kanban acumula muitos cartões.
+  const agKanbanFiltrado = useMemo(() => {
+    const termo = buscaKanban.trim().toLowerCase();
+    if (!termo) return agKanban ?? [];
+    const apenasDigitos = /^\d+$/.test(termo);
+    const normalizar = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    return (agKanban ?? []).filter((ag) => {
+      if (apenasDigitos) {
+        const telefone = (ag.clienteTelefone ?? "").replace(/\D/g, "");
+        return telefone.includes(termo);
+      }
+      return normalizar(ag.clienteNome).includes(normalizar(termo));
+    });
+  }, [agKanban, buscaKanban]);
 
   const navAnterior = () => {
     setDataReferencia((prev) =>
@@ -167,6 +185,18 @@ export default function Agenda() {
             </>
           )}
 
+          {modo === "kanban" && (
+            <div className="relative w-56">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={buscaKanban}
+                onChange={(e) => setBuscaKanban(e.target.value)}
+                placeholder="Buscar por nome ou telefone"
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
+          )}
+
           <Button
             size="sm"
             className="ml-auto lg:ml-0"
@@ -184,7 +214,7 @@ export default function Agenda() {
         <div className="flex-1 overflow-hidden">
           {modo === "kanban" ? (
             <div className="p-4 overflow-auto h-full">
-              <KanbanAgendamentos agendamentos={agKanban ?? []} />
+              <KanbanAgendamentos agendamentos={agKanbanFiltrado} />
             </div>
           ) : (
             <>

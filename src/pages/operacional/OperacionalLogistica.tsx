@@ -17,10 +17,17 @@ import { AluguelTab } from "@/components/logistica/AluguelTab";
 import { useState } from "react";
 import type { AluguelLogistica } from "@/types/logistica";
 
+// A Logística lista entregas pela data de retirada (data_saida), que muitas
+// vezes é marcada meses à frente (evento bem distante da venda) — filtrar
+// por "este mês" por padrão escondia pedidos reais recém-criados sempre que
+// a retirada caía fora do mês corrente. Aqui o período inicial cobre tudo
+// (passado e futuro); o filtro continua disponível pra quem quiser restringir.
+const PERIODO_INICIAL_LOGISTICA = { from: "2000-01-01", to: "2100-12-31" };
+
 const OperacionalLogistica = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const { range, setRange } = useDateRange();
+  const { range, setRange } = useDateRange(PERIODO_INICIAL_LOGISTICA);
   const { items, updateStatus, assinarTermo } = useLogistica(range);
   const { producoes, addProducao, updateProducao, toggleEtapa: toggleEtapaProducao, getEtapasForProducao } = useAcervo();
   const { itens: itensAluguel, toggleEtapa: toggleEtapaAluguel, getEtapasForReserva } = useJornadaAluguel();

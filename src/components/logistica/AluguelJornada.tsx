@@ -15,6 +15,10 @@ interface Props {
 const ETAPA_ICONS: Record<string, typeof Scissors> = {
   "Envio à Costureira": Scissors,
   "Ajustes": Ruler,
+  "Envio à Lavanderia (1ª)": Droplets,
+  "Na Lavanderia (1ª)": Sparkles,
+  "Envio à Lavanderia (2ª)": Droplets,
+  "Na Lavanderia (2ª)": Sparkles,
   "Pronto para a Loja": Store,
   "Agendar Prova": Shirt,
   "Retirada": Package,
@@ -27,7 +31,7 @@ const ETAPA_ICONS: Record<string, typeof Scissors> = {
 // Índice (0-based) da etapa "Agendar Prova" — é onde mostramos o ciclo
 // opcional de novo ajuste (prova não deu certo), sem transformá-lo numa
 // etapa obrigatória da jornada principal.
-const INDICE_AGENDAR_PROVA = 3;
+const INDICE_AGENDAR_PROVA = 7;
 
 function iconePara(nomeEtapa: string) {
   return ETAPA_ICONS[nomeEtapa] ?? CircleDot;

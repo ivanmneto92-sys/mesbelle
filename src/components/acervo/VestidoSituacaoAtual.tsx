@@ -11,6 +11,10 @@ const ETAPA_LABELS: Record<string, string> = {
   // Jornada do Aluguel normal
   "Envio à Costureira": "Na costureira",
   "Ajustes": "Em ajustes",
+  "Envio à Lavanderia (1ª)": "A caminho da lavanderia (1ª lavagem)",
+  "Na Lavanderia (1ª)": "Na lavanderia (1ª lavagem)",
+  "Envio à Lavanderia (2ª)": "A caminho da lavanderia (2ª lavagem)",
+  "Na Lavanderia (2ª)": "Na lavanderia (2ª lavagem)",
   "Pronto para a Loja": "Pronta, aguardando prova",
   "Agendar Prova": "Aguardando prova",
   "Retirada": "Aguardando retirada",

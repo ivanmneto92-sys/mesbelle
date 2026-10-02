@@ -72,7 +72,7 @@ const MinhaVenda = () => {
   // Formulário da peça nova (Primeiro Aluguel) — vestido que ainda não
   // existe no Acervo, feito sob medida pra essa cliente.
   const [novaPeca, setNovaPeca] = useState({
-    nome: "", categoria: "vestido" as CategoriaPeca, cor: "", tamanho: "", comprimento: "",
+    categoria: "vestido" as CategoriaPeca, cor: "", tamanho: "", comprimento: "",
     valor: "", descricao: "", dataRetirada: "", dataDevolucao: "",
   });
   const [criandoPeca, setCriandoPeca] = useState(false);
@@ -84,8 +84,8 @@ const MinhaVenda = () => {
 
   const adicionarPecaNova = async () => {
     const valor = Number(novaPeca.valor);
-    if (!novaPeca.nome.trim() || !valor || valor <= 0 || !novaPeca.dataRetirada || !novaPeca.dataDevolucao) {
-      toast.error("Preencha nome, valor e as datas da peça.");
+    if (!valor || valor <= 0 || !novaPeca.dataRetirada || !novaPeca.dataDevolucao) {
+      toast.error("Preencha o valor e as datas da peça.");
       return;
     }
     if (novaPeca.dataRetirada >= novaPeca.dataDevolucao) {
@@ -94,8 +94,12 @@ const MinhaVenda = () => {
     }
     setCriandoPeca(true);
     try {
+      // Nome gerado a partir da categoria + cor (ex: "Vestido Azul") — a
+      // vendedora não precisa mais digitar uma descrição curta à parte,
+      // já tem categoria e cor no formulário.
+      const nomeGerado = [CATEGORIA_LABELS[novaPeca.categoria], novaPeca.cor.trim()].filter(Boolean).join(" ");
       const { data: vestidoId, error } = await supabase.rpc("fn_criar_vestido_primeiro_aluguel", {
-        p_nome: novaPeca.nome.trim(),
+        p_nome: nomeGerado,
         p_categoria: novaPeca.categoria,
         p_cor: novaPeca.cor,
         p_tamanho: novaPeca.tamanho,
@@ -108,7 +112,7 @@ const MinhaVenda = () => {
       const item: ItemCarrinho = {
         id: crypto.randomUUID(),
         vestidoId: vestidoId as string,
-        nome: novaPeca.nome.trim(),
+        nome: nomeGerado,
         sku: "",
         fotoUrl: null,
         categoria: novaPeca.categoria,
@@ -486,15 +490,6 @@ const MinhaVenda = () => {
                   Vestido feito sob medida — essas informações vão para o contrato e para a Produção.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1 sm:col-span-2">
-                    <Label className="text-xs text-muted-foreground">Nome/descrição curta da peça *</Label>
-                    <Input
-                      value={novaPeca.nome}
-                      onChange={(e) => setNovaPeca((p) => ({ ...p, nome: e.target.value }))}
-                      placeholder="Ex: Vestido sereia bordado"
-                      className="h-9 text-sm"
-                    />
-                  </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Categoria</Label>
                     <Select

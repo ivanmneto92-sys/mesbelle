@@ -34,12 +34,12 @@ const GestaoFuncionarios = () => {
 
   return (
     <>
-      <SEO title="Gestão de Funcionários — Més Belle" description="Gerencie o acesso da equipe de vendas." path="/admin/funcionarios" />
+      <SEO title="Gestão de Vendedoras — Més Belle" description="Gerencie o acesso da equipe de vendas." path="/admin/funcionarios" />
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <PageHeader icon={Users} title="Funcionários" description="Gerencie o acesso da equipe de vendas" />
+          <PageHeader icon={Users} title="Vendedoras" description="Gerencie o acesso da equipe de vendas" />
           <Button onClick={() => setNovoOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Adicionar Funcionário
+            <Plus className="h-4 w-4 mr-2" /> Adicionar Vendedora
           </Button>
         </div>
 
@@ -93,7 +93,7 @@ const GestaoFuncionarios = () => {
                         )}
                         <Button
                           size="sm" variant="ghost" className="text-xs h-7 w-7 p-0 text-destructive hover:bg-destructive hover:text-white"
-                          onClick={() => setExcluirAlvo(f)} aria-label="Excluir funcionário"
+                          onClick={() => setExcluirAlvo(f)} aria-label="Excluir vendedora"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -104,7 +104,7 @@ const GestaoFuncionarios = () => {
                 {funcionarios.length === 0 && !isLoading && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                      Nenhum funcionário cadastrado. Adicione o primeiro clicando no botão acima.
+                      Nenhuma vendedora cadastrada. Adicione a primeira clicando no botão acima.
                     </TableCell>
                   </TableRow>
                 )}
@@ -119,11 +119,11 @@ const GestaoFuncionarios = () => {
               <Info className="h-4 w-4 text-primary" /> Como funciona
             </p>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Ao adicionar um funcionário, ele recebe um e-mail com um link para definir a própria senha.</li>
-              <li>O funcionário sempre entra por <strong>crm.mesbelle.com.br/portal</strong> — um link separado do login do admin (crm.mesbelle.com.br/login). Cada um só consegue entrar pelo link certo.</li>
-              <li>Funcionários veem apenas os próprios leads, agendamentos e métricas.</li>
-              <li>Você pode desativar o acesso a qualquer momento; o funcionário não consegue mais entrar.</li>
-              <li>Excluir remove o acesso permanentemente; os leads/negócios já feitos por ele continuam no sistema, sem vendedor responsável.</li>
+              <li>Ao adicionar uma vendedora, ela recebe um e-mail com um link para definir a própria senha.</li>
+              <li>A vendedora sempre entra por <strong>crm.mesbelle.com.br/portal</strong> — um link separado do login do admin (crm.mesbelle.com.br/login). Cada uma só consegue entrar pelo link certo.</li>
+              <li>Vendedoras veem apenas os próprios leads, agendamentos e métricas.</li>
+              <li>Você pode desativar o acesso a qualquer momento; a vendedora não consegue mais entrar.</li>
+              <li>Excluir remove o acesso permanentemente; os leads/negócios já feitos por ela continuam no sistema, sem vendedor responsável.</li>
             </ul>
           </CardContent>
         </Card>
@@ -132,9 +132,9 @@ const GestaoFuncionarios = () => {
       <Dialog open={novoOpen} onOpenChange={setNovoOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-serif">Adicionar Funcionário</DialogTitle>
+            <DialogTitle className="font-serif">Adicionar Vendedora</DialogTitle>
             <DialogDescription>
-              Um e-mail de convite será enviado automaticamente. O funcionário define a própria senha.
+              Um e-mail de convite será enviado automaticamente. A vendedora define a própria senha.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 mt-2">
@@ -162,7 +162,7 @@ const GestaoFuncionarios = () => {
       <AlertDialog open={!!excluirAlvo} onOpenChange={(open) => !open && setExcluirAlvo(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir funcionário?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir vendedora?</AlertDialogTitle>
             <AlertDialogDescription>
               Isso remove permanentemente o acesso de <strong>{excluirAlvo?.nome}</strong> ({excluirAlvo?.email}) ao sistema.
               Leads, agendamentos e contratos que já eram dele não são apagados — ficam sem vendedor responsável e

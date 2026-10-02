@@ -24,7 +24,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/marketing/leads": "Leads",
   "/marketing/meta-ads": "Meta Ads",
   "/perfil": "Meu Perfil",
-  "/admin/funcionarios": "Funcionários",
+  "/admin/funcionarios": "Vendedoras",
   "/meu-painel": "Meu Painel",
   "/meus-leads": "Meus Leads",
   "/minha-venda": "Novo Aluguel",

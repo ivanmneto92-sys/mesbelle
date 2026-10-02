@@ -52,7 +52,7 @@ const Login = () => {
 
     if (roleRow?.role === "vendedor") {
       await supabase.auth.signOut();
-      toast.error("Esta é a área de administração. Funcionários devem entrar em crm.mesbelle.com.br/portal.");
+      toast.error("Esta é a área de administração. Vendedoras devem entrar em crm.mesbelle.com.br/portal.");
       setIsLoading(false);
       return;
     }

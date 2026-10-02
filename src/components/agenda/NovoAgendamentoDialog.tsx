@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Agendamento, NovoAgendamento, TipoAgendamento, TIPO_CONFIG } from "@/types/agenda";
 import { useCriarAgendamento, useEditarAgendamento, useExcluirAgendamento } from "@/hooks/useAgenda";
 import { useLeadsBusca } from "@/hooks/useLeadsBusca";
+import { useAcervo } from "@/hooks/useAcervo";
 
 // Horários fechados de 30 em 30 min (00:00, 00:30, ... 23:30) — antes era um
 // <input type="time"> nativo, que deixava escolher qualquer minuto (10:57,
@@ -66,6 +67,7 @@ export function NovoAgendamentoDialog({
   const editar = useEditarAgendamento();
   const excluir = useExcluirAgendamento();
   const { data: leads } = useLeadsBusca();
+  const { vestidos } = useAcervo();
 
   const modoEditar = !!agendamentoEditar;
 
@@ -80,6 +82,8 @@ export function NovoAgendamentoDialog({
   const [leadId, setLeadId] = useState<string | null>(null);
   const [leadPopoverAberto, setLeadPopoverAberto] = useState(false);
   const [dataPopoverAberto, setDataPopoverAberto] = useState(false);
+  const [vestidoId, setVestidoId] = useState<string | null>(null);
+  const [vestidoPopoverAberto, setVestidoPopoverAberto] = useState(false);
 
   useEffect(() => {
     if (agendamentoEditar) {
@@ -92,6 +96,7 @@ export function NovoAgendamentoDialog({
       setFuncionariaId(agendamentoEditar.funcionariaId ?? "");
       setObs(agendamentoEditar.observacoes ?? "");
       setLeadId(agendamentoEditar.leadId ?? null);
+      setVestidoId(agendamentoEditar.vestidoId ?? null);
     } else if (dataHoraInicial) {
       setDataHora(format(arredondarParaMeiaHora(dataHoraInicial), "yyyy-MM-dd'T'HH:mm"));
       setTipo("visita");
@@ -102,6 +107,7 @@ export function NovoAgendamentoDialog({
       setFuncionariaId(funcionariaIdFixo ?? "");
       setObs("");
       setLeadId(null);
+      setVestidoId(null);
     }
   }, [agendamentoEditar, dataHoraInicial, aberto, funcionariaIdFixo]);
 
@@ -136,6 +142,7 @@ export function NovoAgendamentoDialog({
         funcionariaId: funcionariaId || undefined,
         observacoes: obs.trim() || undefined,
         leadId: leadId ?? undefined,
+        vestidoId: vestidoId ?? undefined,
       };
       if (modoEditar) {
         await editar.mutateAsync({ id: agendamentoEditar.id, ...payload });
@@ -299,6 +306,65 @@ export function NovoAgendamentoDialog({
               Selecionar um lead preenche nome, e-mail e telefone abaixo. Também dá pra preencher manualmente para um cliente avulso.
             </p>
           </div>
+
+          {tipo !== "visita" && (
+            <div className="space-y-1">
+              <Label>Vestido</Label>
+              <div className="flex items-center gap-2">
+                <Popover open={vestidoPopoverAberto} onOpenChange={setVestidoPopoverAberto}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={vestidoPopoverAberto}
+                      className="w-full justify-between font-normal"
+                    >
+                      {vestidoId ? vestidos.find((v) => v.id === vestidoId)?.nome ?? "Vestido selecionado" : "Buscar vestido no acervo..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar por nome ou SKU..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum vestido encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {vestidos.map((v) => (
+                            <CommandItem
+                              key={v.id}
+                              value={`${v.nome} ${v.sku ?? ""}`}
+                              onSelect={() => { setVestidoId(v.id); setVestidoPopoverAberto(false); }}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4 shrink-0", vestidoId === v.id ? "opacity-100" : "opacity-0")} />
+                              {v.imagemUrl && (
+                                <img src={v.imagemUrl} alt="" className="h-8 w-8 rounded object-cover mr-2 shrink-0" />
+                              )}
+                              <div className="flex flex-col min-w-0">
+                                <span className="truncate">{v.nome}</span>
+                                {v.sku && <span className="text-xs text-muted-foreground">{v.sku}</span>}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {vestidoId && (
+                  <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setVestidoId(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {vestidoId && vestidos.find((v) => v.id === vestidoId)?.imagemUrl && (
+                <img
+                  src={vestidos.find((v) => v.id === vestidoId)!.imagemUrl}
+                  alt={vestidos.find((v) => v.id === vestidoId)!.nome}
+                  className="mt-2 h-32 w-full rounded-md border object-cover"
+                />
+              )}
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label>Nome da cliente *</Label>

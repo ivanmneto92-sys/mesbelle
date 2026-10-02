@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negocio, StatusNegociacao } from "@/types/comercial";
 import type { DateRange } from "@/hooks/useDateRange";
@@ -146,30 +147,77 @@ export function useLeads(range?: DateRange) {
     return () => { active = false; };
   }, [range]);
 
-  // Realtime — sem isto, um lead/negócio criado por uma funcionária só
-  // aparecia pra quem já tinha a tela de CRM aberta depois de recarregar a
+  // Realtime — sem isto, um lead/negócio/contrato criado por uma funcionária
+  // só aparecia pra quem já tinha a tela de CRM aberta depois de recarregar a
   // página manualmente (o fetch acima só roda uma vez, ao montar ou trocar
-  // o período). Reaplica o mesmo filtro de período do fetch inicial.
+  // o período).
+  //
+  // Os handlers aplicam o payload do próprio evento diretamente no estado
+  // (upsert/remove por id) em vez de re-buscar a tabela inteira a cada
+  // mudança. Antes, criar um contrato disparava 3-4 eventos em cascata
+  // (lead, negócio, contrato) e cada um refazia um SELECT completo e
+  // sobrescrevia o estado inteiro — o retorno mais lento de um desses
+  // SELECTs concorrentes podia chegar depois do insert otimista local e
+  // "apagar" o registro recém-criado da tela até o próximo evento ou um F5.
+  // Aplicar o payload direto elimina essa corrida e também a latência extra
+  // do round-trip de SELECT.
   useEffect(() => {
     const channel = supabase
       .channel(`leads_${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, async () => {
-        let leadsQuery = supabase.from("leads").select("*").order("created_at", { ascending: false });
-        if (range) leadsQuery = leadsQuery.gte("criado_em", range.from).lte("criado_em", range.to);
-        const { data } = await leadsQuery;
-        if (data) setLeads((data as LeadRow[]).map(rowToLead));
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, (payload: RealtimePostgresChangesPayload<LeadRow>) => {
+        if (payload.eventType === "DELETE") {
+          const oldId = (payload.old as { id?: string }).id;
+          if (oldId) setLeads((prev) => prev.filter((l) => l.id !== oldId));
+          return;
+        }
+        const row = payload.new as LeadRow;
+        const foraDoPeriodo = range && (row.criado_em < range.from || row.criado_em > range.to);
+        setLeads((prev) => {
+          if (foraDoPeriodo) return prev.filter((l) => l.id !== row.id);
+          const mapped = rowToLead(row);
+          const idx = prev.findIndex((l) => l.id === mapped.id);
+          if (idx === -1) return [mapped, ...prev];
+          const next = [...prev]; next[idx] = mapped; return next;
+        });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "medidas" }, async () => {
-        const { data } = await supabase.from("medidas").select("*");
-        if (data) setMedidas((data as MedidaRow[]).map(rowToMedida));
+      .on("postgres_changes", { event: "*", schema: "public", table: "medidas" }, (payload: RealtimePostgresChangesPayload<MedidaRow>) => {
+        if (payload.eventType === "DELETE") {
+          const oldLeadId = (payload.old as { lead_id?: string }).lead_id;
+          if (oldLeadId) setMedidas((prev) => prev.filter((m) => m.leadId !== oldLeadId));
+          return;
+        }
+        const mapped = rowToMedida(payload.new as MedidaRow);
+        setMedidas((prev) => {
+          const idx = prev.findIndex((m) => m.leadId === mapped.leadId);
+          if (idx === -1) return [...prev, mapped];
+          const next = [...prev]; next[idx] = mapped; return next;
+        });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "contratos" }, async () => {
-        const { data } = await supabase.from("contratos").select("*").order("created_at", { ascending: false });
-        if (data) setContratos((data as ContratoRow[]).map(rowToContrato));
+      .on("postgres_changes", { event: "*", schema: "public", table: "contratos" }, (payload: RealtimePostgresChangesPayload<ContratoRow>) => {
+        if (payload.eventType === "DELETE") {
+          const oldId = (payload.old as { id?: string }).id;
+          if (oldId) setContratos((prev) => prev.filter((c) => c.id !== oldId));
+          return;
+        }
+        const mapped = rowToContrato(payload.new as ContratoRow);
+        setContratos((prev) => {
+          const idx = prev.findIndex((c) => c.id === mapped.id);
+          if (idx === -1) return [mapped, ...prev];
+          const next = [...prev]; next[idx] = mapped; return next;
+        });
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, async () => {
-        const { data } = await supabase.from("negocios").select("*").order("created_at", { ascending: false });
-        if (data) setNegocios((data as NegocioRow[]).map(rowToNegocio));
+      .on("postgres_changes", { event: "*", schema: "public", table: "negocios" }, (payload: RealtimePostgresChangesPayload<NegocioRow>) => {
+        if (payload.eventType === "DELETE") {
+          const oldId = (payload.old as { id?: string }).id;
+          if (oldId) setNegocios((prev) => prev.filter((n) => n.id !== oldId));
+          return;
+        }
+        const mapped = rowToNegocio(payload.new as NegocioRow);
+        setNegocios((prev) => {
+          const idx = prev.findIndex((n) => n.id === mapped.id);
+          if (idx === -1) return [mapped, ...prev];
+          const next = [...prev]; next[idx] = mapped; return next;
+        });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };

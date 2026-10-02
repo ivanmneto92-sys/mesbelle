@@ -18,6 +18,8 @@ import { GerarContratoDoLeadDialog } from "./GerarContratoDoLeadDialog";
 import { TrilhaAuditoria } from "./TrilhaAuditoria";
 import { toast } from "sonner";
 import { ASSINATURA_MESBELLE_URL, ASSINANTE_MESBELLE_NOME } from "@/lib/assinaturaMesbelle";
+import { DateRangePicker } from "@/components/common/DateRangePicker";
+import { useDateRange, getPreset } from "@/hooks/useDateRange";
 
 interface ContratosTabProps {
   contratos: Contrato[];
@@ -44,6 +46,9 @@ interface ContratosTabProps {
 
 export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, onGerarContratoFromNegocio, onGerarContratoDoLead, onUpdateStatus, onAssinar, onGerarLink, autoOpenContratoId, onAutoOpenHandled }: ContratosTabProps) {
   const [busca, setBusca] = useState("");
+  // "Máximo" por padrão — o filtro de período é opcional, não deve esconder
+  // contratos antigos de quem ainda não mexeu nele.
+  const { range, setRange } = useDateRange(getPreset("maximo"));
   const [novoContratoOpen, setNovoContratoOpen] = useState(false);
   const [novoDoLeadOpen, setNovoDoLeadOpen] = useState(false);
   const [selectedNegocioId, setSelectedNegocioId] = useState("");
@@ -67,11 +72,15 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
     }
   }, [autoOpenContratoId, contratos, onAutoOpenHandled]);
 
-  const filtered = contratos.filter((c) =>
-    c.nomeCliente.toLowerCase().includes(busca.toLowerCase()) ||
-    c.cpfCliente.includes(busca) ||
-    c.numero.includes(busca)
-  );
+  const filtered = contratos.filter((c) => {
+    const buscaOk =
+      c.nomeCliente.toLowerCase().includes(busca.toLowerCase()) ||
+      c.cpfCliente.includes(busca) ||
+      c.numero.includes(busca);
+    const dataCriacao = c.dataCriacao.slice(0, 10);
+    const periodoOk = dataCriacao >= range.from && dataCriacao <= range.to;
+    return buscaOk && periodoOk;
+  });
 
   const statusColors: Record<ContratoStatus, string> = {
     pendente: "bg-warning/20 text-warning border-warning/30",
@@ -164,11 +173,12 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <CardTitle className="font-serif text-lg">Contratos</CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="relative">
                 <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
                 <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF ou nº" className="pl-8 w-[250px]" />
               </div>
+              <DateRangePicker value={range} onChange={setRange} />
               <Button size="sm" onClick={handleAbrirGerar}>
                 {usaFluxoDoLead ? <UserSearch className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />} Gerar Contrato
               </Button>

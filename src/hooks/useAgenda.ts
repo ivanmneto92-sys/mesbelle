@@ -124,6 +124,29 @@ export function useCriarAgendamento() {
   return useMutation({
     mutationFn: async (payload: NovoAgendamento) => {
       const { data: { user } } = await supabase.auth.getUser();
+
+      // Quando o agendamento é criado com um nome digitado na mão (sem
+      // selecionar um lead já cadastrado), gera também o cadastro em `leads`
+      // — sem isso o cliente só existia dentro do agendamento e nunca
+      // aparecia no menu de Leads/CRM, nem alimentava o funil, as métricas
+      // etc. que dependem da tabela leads.
+      let leadId = payload.leadId ?? null;
+      if (!leadId) {
+        const { data: novoLead, error: leadError } = await supabase
+          .from("leads")
+          .insert({
+            nome: payload.clienteNome,
+            telefone: payload.clienteTelefone ?? "",
+            email: payload.clienteEmail ?? "",
+            criado_por: user?.id ?? null,
+            atendido_por: user?.id ?? null,
+          })
+          .select("id")
+          .single();
+        if (leadError) throw leadError;
+        leadId = novoLead.id;
+      }
+
       const { data, error } = await supabase
         .from("agendamentos")
         .insert({
@@ -134,7 +157,7 @@ export function useCriarAgendamento() {
           cliente_email: payload.clienteEmail ?? null,
           cliente_telefone: payload.clienteTelefone ?? null,
           negocio_id: payload.negocioId ?? null,
-          lead_id: payload.leadId ?? null,
+          lead_id: leadId,
           reserva_id: payload.reservaId ?? null,
           vestido_id: payload.vestidoId ?? null,
           funcionaria_id: payload.funcionariaId ?? null,

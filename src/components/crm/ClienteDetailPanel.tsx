@@ -15,8 +15,8 @@ interface ClienteDetailPanelProps {
   medidas?: MedidasCliente;
   open: boolean;
   onClose: () => void;
-  onUpdateLead: (leadId: string, data: Partial<Lead>) => void;
-  onUpdateMedidas: (leadId: string, data: Omit<MedidasCliente, "leadId">) => void;
+  onUpdateLead: (leadId: string, data: Partial<Lead>) => boolean | Promise<boolean | undefined> | undefined;
+  onUpdateMedidas: (leadId: string, data: Omit<MedidasCliente, "leadId">) => boolean | Promise<boolean | undefined> | undefined;
 }
 
 export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead, onUpdateMedidas }: ClienteDetailPanelProps) {
@@ -47,41 +47,46 @@ export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead,
 
   const whatsappLink = `https://wa.me/55${lead.telefone.replace(/\D/g, "")}`;
 
-  const handleSaveDados = () => {
-    onUpdateLead(lead.id, editData);
+  const handleSaveDados = async () => {
+    const ok = await onUpdateLead(lead.id, editData);
+    if (ok === false) return; // erro já avisado pelo hook
     toast.success("Dados atualizados");
   };
 
-  const handleSaveMedidas = () => {
-    onUpdateMedidas(lead.id, editMedidas);
+  const handleSaveMedidas = async () => {
+    const ok = await onUpdateMedidas(lead.id, editMedidas);
+    if (ok === false) return;
     toast.success("Medidas salvas");
   };
 
-  const handleSaveNotas = () => {
-    onUpdateLead(lead.id, { notasInternas: notas });
+  const handleSaveNotas = async () => {
+    const ok = await onUpdateLead(lead.id, { notasInternas: notas });
+    if (ok === false) return;
     toast.success("Notas salvas");
   };
 
-  const handleSaveProva = () => {
+  const handleSaveProva = async () => {
     if (!provaData) {
       toast.error("Informe a data da prova");
       return;
     }
-    onUpdateLead(lead.id, {
+    const ok = await onUpdateLead(lead.id, {
       provaData,
       provaHora: provaHora || undefined,
       statusFunil: "prova_agendada",
     });
+    if (ok === false) return;
     toast.success("Prova agendada");
   };
 
-  const handleRemoverProva = () => {
-    setProvaDataLocal("");
-    setProvaHoraLocal("");
-    onUpdateLead(lead.id, {
+  const handleRemoverProva = async () => {
+    const ok = await onUpdateLead(lead.id, {
       provaData: null as unknown as undefined,
       provaHora: null as unknown as undefined,
     });
+    if (ok === false) return; // mantém os campos locais como estavam — nada foi removido de verdade
+    setProvaDataLocal("");
+    setProvaHoraLocal("");
     toast.success("Prova removida");
   };
 

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AtivoPatrimonio, SocioEmpresa, CategoriaAtivo } from "@/types/socios";
 import type { DateRange } from "@/hooks/useDateRange";
+import { toast } from "sonner";
 
 type AtivoRow = { id: string; nome: string; categoria: string; data_compra: string; valor_original: number; percentual_desagio: number };
 const rowToAtivo = (r: AtivoRow): AtivoPatrimonio => ({
@@ -54,35 +55,56 @@ export function useSocios(range?: DateRange) {
   }, []);
 
   const updateMultiplicador = useCallback(async (val: number) => {
+    const anterior = multiplicador;
     setMultiplicador(val);
-    await supabase.from("config_socios").update({ multiplicador: val }).eq("id", 1);
-  }, []);
+    const { error } = await supabase.from("config_socios").update({ multiplicador: val }).eq("id", 1);
+    if (error) {
+      setMultiplicador(anterior);
+      toast.error("Não foi possível salvar o multiplicador: " + error.message);
+    }
+  }, [multiplicador]);
 
   const addAtivo = useCallback(async (a: Omit<AtivoPatrimonio, "id">) => {
-    const { data } = await supabase.from("ativos_patrimonio").insert({
+    const { data, error } = await supabase.from("ativos_patrimonio").insert({
       nome: a.nome, categoria: a.categoria, data_compra: a.dataCompra,
       valor_original: a.valorOriginal, percentual_desagio: a.percentualDesagio,
     }).select().single();
+    if (error) { toast.error("Não foi possível salvar o ativo: " + error.message); return false; }
     if (data) setAtivos(prev => [...prev, rowToAtivo(data as AtivoRow)]);
+    return true;
   }, []);
 
   const removeAtivo = useCallback(async (id: string) => {
+    const anterior = ativos.find(a => a.id === id);
     setAtivos(prev => prev.filter(a => a.id !== id));
-    await supabase.from("ativos_patrimonio").delete().eq("id", id);
-  }, []);
+    const { error } = await supabase.from("ativos_patrimonio").delete().eq("id", id);
+    if (error) {
+      if (anterior) setAtivos(prev => [...prev, anterior]);
+      toast.error("Não foi possível excluir o ativo: " + error.message);
+    }
+  }, [ativos]);
 
   const toggleSocioAtivo = useCallback(async (id: string) => {
     const cur = socios.find(s => s.id === id);
     if (!cur) return;
     const next = !cur.ativo;
     setSocios(prev => prev.map(s => s.id === id ? { ...s, ativo: next } : s));
-    await supabase.from("socios_empresa").update({ ativo: next }).eq("id", id);
+    const { error } = await supabase.from("socios_empresa").update({ ativo: next }).eq("id", id);
+    if (error) {
+      setSocios(prev => prev.map(s => s.id === id ? { ...s, ativo: cur.ativo } : s));
+      toast.error("Não foi possível atualizar o sócio: " + error.message);
+    }
   }, [socios]);
 
   const updateSocioExpiracao = useCallback(async (id: string, data: string) => {
+    const anterior = socios.find(s => s.id === id);
     setSocios(prev => prev.map(s => s.id === id ? { ...s, dataExpiracao: data } : s));
-    await supabase.from("socios_empresa").update({ data_expiracao: data || null }).eq("id", id);
-  }, []);
+    const { error } = await supabase.from("socios_empresa").update({ data_expiracao: data || null }).eq("id", id);
+    if (error) {
+      if (anterior) setSocios(prev => prev.map(s => s.id === id ? anterior : s));
+      toast.error("Não foi possível salvar a data: " + error.message);
+    }
+  }, [socios]);
 
   const finData = useMemo(() => {
     const now = new Date();

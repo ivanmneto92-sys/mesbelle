@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 interface NegociacoesTabProps {
   negocios: Negocio[];
-  onUpdateNegocio: (negocioId: string, data: Partial<Negocio>) => void;
+  onUpdateNegocio: (negocioId: string, data: Partial<Negocio>) => boolean | Promise<boolean | undefined> | undefined;
   onAprovarFechamento: (negocioId: string) => Promise<{ contrato?: { id: string; numero: string } | null }> | void;
   onSwitchToContratos: (contratoId?: string) => void;
 }
@@ -36,14 +36,15 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
     setEditModal({ open: true, negocio: n });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editModal.negocio) return;
-    onUpdateNegocio(editModal.negocio.id, {
+    const ok = await onUpdateNegocio(editModal.negocio.id, {
       vestidoNome: editForm.vestidoNome,
       valorNegociado: Number(editForm.valorNegociado) || 0,
       desconto: Number(editForm.desconto) || 0,
       metodoPagamento: editForm.metodoPagamento,
     });
+    if (ok === false) return; // erro já avisado pelo hook — mantém o modal aberto com os dados preenchidos
     toast.success("Negociação atualizada");
     setEditModal({ open: false, negocio: null });
   };

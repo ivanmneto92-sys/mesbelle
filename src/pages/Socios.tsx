@@ -49,20 +49,21 @@ const Socios = () => {
     if (!isNaN(num) && num > 0) updateMultiplicador(num);
   };
 
-  const handleAddAtivo = () => {
+  const handleAddAtivo = async () => {
     const valor = parseFloat(novoValor.replace(/[^\d.,]/g, "").replace(",", "."));
     const desagio = parseFloat(novoDesagio.replace(",", "."));
     if (!novoNome || !valor || isNaN(desagio) || !novoData) {
       toast.error("Preencha todos os campos");
       return;
     }
-    addAtivo({
+    const ok = await addAtivo({
       nome: novoNome,
       categoria: novoCat,
       dataCompra: format(novoData, "yyyy-MM-dd"),
       valorOriginal: valor,
       percentualDesagio: desagio,
     });
+    if (!ok) return; // erro já avisado pelo hook — mantém o dialog aberto para tentar de novo
     toast.success("Ativo adicionado");
     setAddOpen(false);
     setNovoNome("");

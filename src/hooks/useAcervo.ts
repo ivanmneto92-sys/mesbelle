@@ -139,8 +139,9 @@ export function useAcervo(range?: DateRange) {
   // --- Vestidos ---
   const addVestido = useCallback(async (v: Omit<Vestido, "id">) => {
     const { data, error } = await supabase.from("vestidos").insert(vestidoToRow(v) as never).select().single();
-    if (error) { toast.error("Não foi possível salvar a peça: " + error.message); return; }
+    if (error) { toast.error("Não foi possível salvar a peça: " + error.message); return false; }
     if (data) setVestidos(prev => [rowToVestido(data as VestidoRow), ...prev]);
+    return true;
   }, []);
 
   const updateVestido = useCallback(async (id: string, patch: Partial<Vestido>) => {

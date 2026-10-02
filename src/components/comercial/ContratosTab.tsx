@@ -98,13 +98,14 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
     (n) => !contratos.some((c) => c.negocioId === n.id && c.statusAssinatura !== "cancelado")
   );
 
-  const handleGerar = () => {
+  const handleGerar = async () => {
     const negocio = negociosSemContrato.find((n) => n.id === selectedNegocioId);
     if (!negocio || !onGerarContratoFromNegocio) {
       toast.error("Selecione uma negociação aprovada.");
       return;
     }
-    onGerarContratoFromNegocio(negocio);
+    const contrato = await onGerarContratoFromNegocio(negocio);
+    if (!contrato) return; // erro já avisado pelo hook — mantém o dialog aberto para tentar de novo
     setNovoContratoOpen(false);
     setSelectedNegocioId("");
     toast.success("Contrato gerado com sucesso!");

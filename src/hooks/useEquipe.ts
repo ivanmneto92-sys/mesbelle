@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Funcionario, AvaliacaoCliente, VendaFuncionario, TipoContrato } from "@/types/equipe";
 import type { DateRange } from "@/hooks/useDateRange";
 import { estimarComissaoMes } from "@/lib/comissao";
+import { toast } from "sonner";
 
 const now = new Date();
 const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -127,6 +128,7 @@ export function useEquipe(range?: DateRange) {
   }, [range]);
 
   const updateFuncionario = useCallback(async (id: string, updates: Partial<Funcionario>) => {
+    const anterior = funcionarios.find(f => f.id === id);
     setFuncionarios(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
     const patch: Record<string, unknown> = {};
     if (updates.nome !== undefined) patch.nome = updates.nome;
@@ -135,8 +137,15 @@ export function useEquipe(range?: DateRange) {
     if (updates.percentualComissao !== undefined) patch.percentualComissao = updates.percentualComissao;
     if (updates.ativo !== undefined) patch.ativo = updates.ativo;
     if (updates.telefone !== undefined) patch.telefone = updates.telefone;
-    await invocarEquipeAdmin({ action: "atualizar", userId: id, patch });
-  }, []);
+    try {
+      await invocarEquipeAdmin({ action: "atualizar", userId: id, patch });
+      return true;
+    } catch (e) {
+      if (anterior) setFuncionarios(prev => prev.map(f => f.id === id ? anterior : f));
+      toast.error("Não foi possível salvar as alterações: " + (e instanceof Error ? e.message : "erro desconhecido"));
+      return false;
+    }
+  }, [funcionarios]);
 
   const getScoreMes = useCallback((funcId: string, mes: string) => {
     const avs = avaliacoes.filter(a => a.funcionarioId === funcId && a.data.startsWith(mes));

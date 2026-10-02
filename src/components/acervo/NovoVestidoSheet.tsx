@@ -16,7 +16,7 @@ const MAX_FOTOS = 10;
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSave: (v: Omit<Vestido, "id">) => void;
+  onSave: (v: Omit<Vestido, "id">) => boolean | Promise<boolean | undefined> | undefined;
 }
 
 export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
@@ -60,7 +60,9 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
 
   const removeImagem = (idx: number) => setImagens((prev) => prev.filter((_, i) => i !== idx));
 
-  const handleSave = () => {
+  const [salvando, setSalvando] = useState(false);
+
+  const handleSave = async () => {
     const candidate = {
       nome, cor, tamanho, comprimento, isConsignado,
       precoAluguel: Number(precoAluguel) || 0,
@@ -72,7 +74,8 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
       toast.error(firstZodError(parsed.error));
       return;
     }
-    onSave({
+    setSalvando(true);
+    const ok = await onSave({
       ...(parsed.data as Omit<Vestido, "id" | "status" | "imagemUrl" | "imagensUrls" | "sku" | "categoriaPeca" | "descricao" | "qtdTotalLocacoes">),
       status: "disponivel",
       imagensUrls: parsed.data.imagensUrls,
@@ -82,6 +85,8 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
       descricao: descricao || null,
       qtdTotalLocacoes: 0,
     });
+    setSalvando(false);
+    if (ok === false) return; // erro já avisado pelo hook — mantém a sheet aberta com os dados preenchidos
     toast.success("Vestido cadastrado");
     // reset
     setNome(""); setCategoriaPeca("vestido"); setCor(""); setTamanho("M"); setComprimento("Longo");
@@ -195,8 +200,8 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
             <Switch checked={isConsignado} onCheckedChange={setIsConsignado} />
           </div>
 
-          <Button onClick={handleSave} className="w-full" disabled={!nome.trim()}>
-            Salvar Vestido
+          <Button onClick={handleSave} className="w-full" disabled={!nome.trim() || salvando}>
+            {salvando ? "Salvando..." : "Salvar Vestido"}
           </Button>
         </div>
       </SheetContent>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -105,7 +105,12 @@ export function NovoAgendamentoDialog({
     }
   }, [agendamentoEditar, dataHoraInicial, aberto, funcionariaIdFixo]);
 
-  const valido = cliente.trim().length > 0 && dataHora.length > 0;
+  const valido = cliente.trim().length > 0 && dataHora.length > 0 && Number.isFinite(duracao) && duracao > 0;
+
+  // Guard síncrono contra duplo-clique/duplo-toque disparando duas
+  // mutations antes do React re-renderizar o botão desabilitado (o
+  // `pending` do react-query só reflete no próximo render).
+  const salvandoRef = useRef(false);
 
   const handleSelecionarLead = (lead: { id: string; nome: string; telefone: string; email: string } | null) => {
     setLeadId(lead?.id ?? null);
@@ -118,24 +123,35 @@ export function NovoAgendamentoDialog({
   };
 
   const handleSalvar = async () => {
-    const payload: NovoAgendamento = {
-      tipo,
-      dataHora: new Date(dataHora).toISOString(),
-      duracaoMinutos: duracao,
-      clienteNome: cliente.trim(),
-      clienteEmail: email.trim() || undefined,
-      clienteTelefone: telefone.trim() || undefined,
-      funcionariaId: funcionariaId || undefined,
-      observacoes: obs.trim() || undefined,
-      leadId: leadId ?? undefined,
-    };
-    if (modoEditar) {
-      await editar.mutateAsync({ id: agendamentoEditar.id, ...payload });
-    } else {
-      await criar.mutateAsync(payload);
+    if (salvandoRef.current) return;
+    salvandoRef.current = true;
+    try {
+      const payload: NovoAgendamento = {
+        tipo,
+        dataHora: new Date(dataHora).toISOString(),
+        duracaoMinutos: duracao,
+        clienteNome: cliente.trim(),
+        clienteEmail: email.trim() || undefined,
+        clienteTelefone: telefone.trim() || undefined,
+        funcionariaId: funcionariaId || undefined,
+        observacoes: obs.trim() || undefined,
+        leadId: leadId ?? undefined,
+      };
+      if (modoEditar) {
+        await editar.mutateAsync({ id: agendamentoEditar.id, ...payload });
+      } else {
+        await criar.mutateAsync(payload);
+      }
+      onSalvo?.(new Date(dataHora));
+      onFechar();
+    } catch {
+      // Erro já foi exibido via toast pelo onError da mutation (useAgenda) —
+      // aqui só garantimos que o modal permaneça aberto com os dados intactos
+      // para o usuário corrigir e tentar de novo, em vez de uma promise
+      // rejeitada sem tratamento subindo até o React.
+    } finally {
+      salvandoRef.current = false;
     }
-    onSalvo?.(new Date(dataHora));
-    onFechar();
   };
 
   const handleExcluir = async () => {
@@ -149,7 +165,11 @@ export function NovoAgendamentoDialog({
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
-      <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="max-w-md"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{modoEditar ? "Editar agendamento" : "Novo agendamento"}</DialogTitle>
         </DialogHeader>

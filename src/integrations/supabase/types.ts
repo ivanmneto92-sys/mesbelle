@@ -1096,6 +1096,41 @@ export type Database = {
       can_read_crm: { Args: { _user_id: string }; Returns: boolean }
       can_read_socios: { Args: { _user_id: string }; Returns: boolean }
       can_write_crm: { Args: { _user_id: string }; Returns: boolean }
+      criar_agendamento_com_lead: {
+        Args: {
+          p_cliente_email: string | null
+          p_cliente_nome: string
+          p_cliente_telefone: string | null
+          p_data_hora: string
+          p_duracao_minutos: number
+          p_funcionaria_id: string | null
+          p_lead_id: string | null
+          p_negocio_id: string | null
+          p_observacoes: string | null
+          p_reserva_id: string | null
+          p_tipo: string
+          p_vestido_id: string | null
+        }
+        Returns: {
+          atualizado_em: string
+          cliente_email: string | null
+          cliente_nome: string
+          cliente_telefone: string | null
+          criado_em: string
+          criado_por: string | null
+          data_hora: string
+          duracao_minutos: number
+          funcionaria_id: string | null
+          id: string
+          lead_id: string | null
+          negocio_id: string | null
+          observacoes: string | null
+          reserva_id: string | null
+          status: string
+          tipo: string
+          vestido_id: string | null
+        }
+      }
       fn_criar_vestido_primeiro_aluguel: {
         Args: {
           p_categoria: string

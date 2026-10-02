@@ -123,50 +123,24 @@ export function useCriarAgendamento() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: NovoAgendamento) => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Quando o agendamento é criado com um nome digitado na mão (sem
-      // selecionar um lead já cadastrado), gera também o cadastro em `leads`
-      // — sem isso o cliente só existia dentro do agendamento e nunca
-      // aparecia no menu de Leads/CRM, nem alimentava o funil, as métricas
-      // etc. que dependem da tabela leads.
-      let leadId = payload.leadId ?? null;
-      if (!leadId) {
-        const { data: novoLead, error: leadError } = await supabase
-          .from("leads")
-          .insert({
-            nome: payload.clienteNome,
-            telefone: payload.clienteTelefone ?? "",
-            email: payload.clienteEmail ?? "",
-            status_funil: "agendado",
-            criado_por: user?.id ?? null,
-            atendido_por: user?.id ?? null,
-          })
-          .select("id")
-          .single();
-        if (leadError) throw leadError;
-        leadId = novoLead.id;
-      }
-
-      const { data, error } = await supabase
-        .from("agendamentos")
-        .insert({
-          tipo: payload.tipo,
-          data_hora: payload.dataHora,
-          duracao_minutos: payload.duracaoMinutos,
-          cliente_nome: payload.clienteNome,
-          cliente_email: payload.clienteEmail ?? null,
-          cliente_telefone: payload.clienteTelefone ?? null,
-          negocio_id: payload.negocioId ?? null,
-          lead_id: leadId,
-          reserva_id: payload.reservaId ?? null,
-          vestido_id: payload.vestidoId ?? null,
-          funcionaria_id: payload.funcionariaId ?? null,
-          observacoes: payload.observacoes ?? null,
-          criado_por: user?.id ?? null,
-        })
-        .select()
-        .single();
+      // Cria o lead (quando o cliente foi digitado na mão, sem selecionar um
+      // já existente) e o agendamento numa única transação no banco — se o
+      // agendamento falhar, o lead criado junto é revertido também, em vez
+      // de ficar órfão. Ver fn criar_agendamento_com_lead.
+      const { data, error } = await supabase.rpc("criar_agendamento_com_lead", {
+        p_tipo: payload.tipo,
+        p_data_hora: payload.dataHora,
+        p_duracao_minutos: payload.duracaoMinutos,
+        p_cliente_nome: payload.clienteNome,
+        p_cliente_email: payload.clienteEmail ?? null,
+        p_cliente_telefone: payload.clienteTelefone ?? null,
+        p_negocio_id: payload.negocioId ?? null,
+        p_lead_id: payload.leadId ?? null,
+        p_reserva_id: payload.reservaId ?? null,
+        p_vestido_id: payload.vestidoId ?? null,
+        p_funcionaria_id: payload.funcionariaId ?? null,
+        p_observacoes: payload.observacoes ?? null,
+      });
       if (error) throw error;
       return data;
     },

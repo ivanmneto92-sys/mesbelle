@@ -30,7 +30,7 @@ import { ItemCarrinho, DadosPagamento, FormaPagamento, BandeiraCartao, ResumoPed
 import {
   Search, Plus, Trash2, Tag, CalendarRange, CreditCard,
   CheckCircle, AlertTriangle, Loader2, ShoppingBag, Receipt,
-  User, Package, Sparkles, Scissors, Check, ChevronsUpDown,
+  User, Package, Sparkles, Scissors, Check, ChevronsUpDown, ArrowRight,
 } from "lucide-react";
 
 const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string; icon: string }[] = [
@@ -69,6 +69,10 @@ const MinhaVenda = () => {
     forma: "pix", parcelas: 1, bandeira: null, descontoGeral: 0, observacoes: "",
   });
   const [vendaConfirmada, setVendaConfirmada] = useState<string | null>(null);
+  // Primeiro Aluguel: só mostra a seção de Pagamento depois que a vendedora
+  // clica em "Ir para pagamento" — antes disso, o carrinho pode receber
+  // quantas peças sob medida forem necessárias.
+  const [avancarPagamentoPrimeiroAluguel, setAvancarPagamentoPrimeiroAluguel] = useState(false);
 
   // Formulário da peça nova (Primeiro Aluguel) — vestido que ainda não
   // existe no Acervo, feito sob medida pra essa cliente.
@@ -81,6 +85,7 @@ const MinhaVenda = () => {
   const handleSelecionarTipo = (tipo: TipoNegocio) => {
     setTipoNegocio(tipo);
     setCarrinho([]);
+    setAvancarPagamentoPrimeiroAluguel(false);
   };
 
   const adicionarPecaNova = async () => {
@@ -125,8 +130,12 @@ const MinhaVenda = () => {
         disponivel: true,
         verificando: false,
       };
-      setCarrinho([item]);
+      setCarrinho((prev) => [...prev, item]);
       toast.success("Peça adicionada — ela vai entrar em Produção ao confirmar o aluguel.");
+      // Limpa o formulário pra próxima peça (mantém só a categoria fixa em
+      // "vestido") — sem isso os campos ficariam com os dados da peça
+      // anterior, fácil de confundir ou reenviar sem querer.
+      setNovaPeca({ categoria: "vestido" as CategoriaPeca, cor: "", tamanho: "", comprimento: "", valor: 0, descricao: "", dataRetirada: "", dataDevolucao: "" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar a peça");
     } finally {
@@ -228,14 +237,20 @@ const MinhaVenda = () => {
     const lead = leads.find((l) => l.id === leadId);
     if (!podeConcluir || !lead || !tipoNegocio) return;
     const result = await criarVenda.mutateAsync({
-      lead, locataria, itens: carrinho, pagamento, resumo,
-      tipoNegocio, descricaoPrimeiroAluguel: novaPeca.descricao,
+      lead, locataria, itens: carrinho, pagamento, resumo, tipoNegocio,
     });
     if (result?.negocioId) setVendaConfirmada(result.negocioId);
   };
 
-  const prazoProducaoEstimado = carrinho[0]?.dataRetirada
-    ? format(subDays(parseISO(carrinho[0].dataRetirada), 3), "dd/MM/yyyy")
+  // Com várias peças sob medida na mesma venda, cada uma tem seu próprio
+  // prazo de produção — mostra o mais próximo (o primeiro que a vendedora
+  // precisa acompanhar).
+  const prazosProducao = carrinho
+    .map((i) => i.dataRetirada)
+    .filter((d): d is string => !!d)
+    .map((d) => subDays(parseISO(d), 3));
+  const prazoProducaoEstimado = prazosProducao.length > 0
+    ? format(prazosProducao.reduce((min, d) => (d < min ? d : min)), "dd/MM/yyyy")
     : null;
 
   if (vendaConfirmada) {
@@ -249,13 +264,13 @@ const MinhaVenda = () => {
           <div>
             <h2 className="text-2xl font-serif font-bold">Aluguel registrado! 🎉</h2>
             <p className="text-muted-foreground mt-1">
-              O pagamento foi registrado e {tipoNegocio === "primeiro_aluguel" ? "a peça foi reservada" : "as peças foram reservadas"}.
+              O pagamento foi registrado e {carrinho.length > 1 ? "as peças foram reservadas" : "a peça foi reservada"}.
             </p>
             {tipoNegocio === "primeiro_aluguel" && (
               <p className="text-sm text-primary mt-2 flex items-center justify-center gap-1.5">
                 <Scissors className="h-3.5 w-3.5" />
-                Peça enviada para Produção
-                {prazoProducaoEstimado && <> — prazo até {prazoProducaoEstimado}</>}
+                {carrinho.length > 1 ? "Peças enviadas para Produção" : "Peça enviada para Produção"}
+                {prazoProducaoEstimado && <> — prazo {carrinho.length > 1 ? "mais próximo " : ""}até {prazoProducaoEstimado}</>}
               </p>
             )}
           </div>
@@ -484,11 +499,12 @@ const MinhaVenda = () => {
               </>
             )}
 
-            {tipoNegocio === "primeiro_aluguel" && carrinho.length === 0 && (
+            {tipoNegocio === "primeiro_aluguel" && !avancarPagamentoPrimeiroAluguel && (
               <div className="space-y-4">
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <Scissors className="h-3.5 w-3.5 shrink-0" />
                   Vestido feito sob medida — essas informações vão para o contrato e para a Produção.
+                  {carrinho.length > 0 && " Dá pra adicionar mais de uma peça antes de ir pro pagamento."}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -593,16 +609,29 @@ const MinhaVenda = () => {
                 }
               />
             ))}
+
+            {tipoNegocio === "primeiro_aluguel" && carrinho.length > 0 && !avancarPagamentoPrimeiroAluguel && (
+              <Button className="w-full" onClick={() => setAvancarPagamentoPrimeiroAluguel(true)}>
+                Ir para pagamento <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </CardContent>
         </Card>
 
         {/* SEÇÃO 3: Pagamento */}
-        {carrinho.length > 0 && (
+        {(tipoNegocio === "primeiro_aluguel" ? avancarPagamentoPrimeiroAluguel : carrinho.length > 0) && (
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="font-serif text-base flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-primary" /> 3. Pagamento
-              </CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="font-serif text-base flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-primary" /> 3. Pagamento
+                </CardTitle>
+                {tipoNegocio === "primeiro_aluguel" && (
+                  <Button variant="ghost" size="sm" onClick={() => setAvancarPagamentoPrimeiroAluguel(false)}>
+                    ← Voltar pras peças
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-5">
 

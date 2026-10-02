@@ -11,6 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format, parseISO, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +29,7 @@ import { ItemCarrinho, DadosPagamento, FormaPagamento, BandeiraCartao, ResumoPed
 import {
   Search, Plus, Trash2, Tag, CalendarRange, CreditCard,
   CheckCircle, AlertTriangle, Loader2, ShoppingBag, Receipt,
-  User, Package, Sparkles, Scissors,
+  User, Package, Sparkles, Scissors, Check, ChevronsUpDown,
 } from "lucide-react";
 
 const FORMAS_PAGAMENTO: { value: FormaPagamento; label: string; icon: string }[] = [
@@ -57,6 +60,7 @@ const MinhaVenda = () => {
 
   const [tipoNegocio, setTipoNegocio] = useState<TipoNegocio | "">("");
   const [leadId, setLeadId] = useState<string>("");
+  const [leadPopoverAberto, setLeadPopoverAberto] = useState(false);
   const [locataria, setLocataria] = useState({ nome: "", cpf: "", telefone: "", email: "" });
   const [buscaPeca, setBuscaPeca] = useState("");
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
@@ -318,21 +322,42 @@ const MinhaVenda = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Select value={leadId} onValueChange={handleSelecionarLead}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Buscar cliente pelo nome..." />
-              </SelectTrigger>
-              <SelectContent>
-                {leads.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
-                    <span className="font-medium">{l.nome}</span>
-                    {l.telefone && (
-                      <span className="text-muted-foreground text-xs ml-2">{l.telefone}</span>
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={leadPopoverAberto} onOpenChange={setLeadPopoverAberto}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={leadPopoverAberto}
+                  className="w-full justify-between font-normal"
+                >
+                  {leadId ? leads.find((l) => l.id === leadId)?.nome ?? "Cliente selecionado" : "Buscar cliente pelo nome..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Buscar por nome..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum lead encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {leads.map((l) => (
+                        <CommandItem
+                          key={l.id}
+                          value={l.nome}
+                          onSelect={() => { handleSelecionarLead(l.id); setLeadPopoverAberto(false); }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", leadId === l.id ? "opacity-100" : "opacity-0")} />
+                          <span className="font-medium">{l.nome}</span>
+                          {l.telefone && (
+                            <span className="text-muted-foreground text-xs ml-2">{l.telefone}</span>
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             {leads.length === 0 && (
               <p className="text-xs text-muted-foreground mt-2">
                 Nenhum lead cadastrado.{" "}

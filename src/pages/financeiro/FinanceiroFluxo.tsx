@@ -150,7 +150,7 @@ const FinanceiroFluxo = () => {
                   <TableRow key={t.id}>
                     <TableCell className="text-xs">{new Date(t.data + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell className="font-medium text-sm">{t.descricao}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{categoriaLabel(t.categoria)}</Badge></TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{categoriaLabel(t.categoria, t.vendedorNome)}</Badge></TableCell>
                     <TableCell>
                       {t.tipo === "saida" && t.tipoCusto && (
                         <Badge variant={t.tipoCusto === "fixo" ? "secondary" : "outline"} className="text-xs">

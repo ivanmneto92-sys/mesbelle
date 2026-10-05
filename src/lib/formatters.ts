@@ -21,7 +21,8 @@ export const CATEGORIA_LABELS: Record<string, string> = {
   outros: "Outros (Despesa)",
 };
 
-export function categoriaLabel(categoria?: string | null): string {
+export function categoriaLabel(categoria?: string | null, vendedorNome?: string | null): string {
   if (!categoria) return "Outros";
+  if (categoria === "comissao" && vendedorNome) return `Comissão (${vendedorNome})`;
   return CATEGORIA_LABELS[categoria] ?? categoria;
 }

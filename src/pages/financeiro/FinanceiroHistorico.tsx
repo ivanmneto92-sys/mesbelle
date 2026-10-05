@@ -193,7 +193,7 @@ const FinanceiroHistorico = () => {
                         <TableRow key={t.id}>
                           <TableCell className="text-sm font-medium">{t.descricao}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{new Date(t.data + "T00:00:00").toLocaleDateString("pt-BR")}</TableCell>
-                          <TableCell><Badge variant="outline" className="text-xs">{categoriaLabel(t.categoria)}</Badge></TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs">{categoriaLabel(t.categoria, t.vendedorNome)}</Badge></TableCell>
                           <TableCell className={`text-right font-semibold tabular-nums ${t.tipo === "entrada" ? "text-success" : "text-destructive"}`}>
                             {t.tipo === "entrada" ? "+" : "-"}{formatBRL(t.valor)}
                           </TableCell>

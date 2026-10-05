@@ -13,6 +13,7 @@ export interface Transacao {
   tipoCusto?: TipoCusto | null;
   leadId?: string | null;
   observacoes?: string | null;
+  vendedorNome?: string | null;
 }
 
 export interface CategoriaOption {

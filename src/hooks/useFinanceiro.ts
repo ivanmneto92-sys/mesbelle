@@ -14,6 +14,7 @@ type TxRow = {
   tipo_custo: string | null;
   lead_id: string | null;
   observacoes: string | null;
+  vendedor_nome: string | null;
 };
 
 export const rowToTransacao = (r: TxRow): Transacao => ({
@@ -27,6 +28,7 @@ export const rowToTransacao = (r: TxRow): Transacao => ({
   tipoCusto: (r.tipo_custo as TipoCusto | null) ?? null,
   leadId: r.lead_id ?? null,
   observacoes: r.observacoes ?? null,
+  vendedorNome: r.vendedor_nome ?? null,
 });
 
 const transacaoToRow = (t: Partial<Omit<Transacao, "id">>) => {

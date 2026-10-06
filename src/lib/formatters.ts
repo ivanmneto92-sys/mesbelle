@@ -1,3 +1,11 @@
+// Facilita o preenchimento pra quem digita sem se preocupar com maiúscula/
+// minúscula (ex: sempre em minúsculo) — corrige em tempo real pra primeira
+// letra maiúscula e o resto minúsculo, sem precisar lembrar de ajustar.
+export function capitalizarPrimeiraLetra(texto: string): string {
+  if (!texto) return texto;
+  return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
+}
+
 export function formatBRL(v: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }

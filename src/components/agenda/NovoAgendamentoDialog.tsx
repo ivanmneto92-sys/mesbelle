@@ -13,6 +13,7 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { Trash2, Check, ChevronsUpDown, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Agendamento, NovoAgendamento, TipoAgendamento, TIPO_CONFIG } from "@/types/agenda";
+import { capitalizarPrimeiraLetra } from "@/lib/formatters";
 import { useCriarAgendamento, useEditarAgendamento, useExcluirAgendamento } from "@/hooks/useAgenda";
 import { useLeadsBusca } from "@/hooks/useLeadsBusca";
 import { useAcervo } from "@/hooks/useAcervo";
@@ -368,7 +369,7 @@ export function NovoAgendamentoDialog({
 
           <div className="space-y-1">
             <Label>Nome da cliente *</Label>
-            <Input placeholder="Ana Carolina Silva" value={cliente} onChange={(e) => setCliente(e.target.value)} />
+            <Input placeholder="Ana Carolina Silva" value={cliente} onChange={(e) => setCliente(capitalizarPrimeiraLetra(e.target.value))} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -401,7 +402,7 @@ export function NovoAgendamentoDialog({
 
           <div className="space-y-1">
             <Label>Observações</Label>
-            <Textarea rows={2} placeholder="Detalhes adicionais..." value={obs} onChange={(e) => setObs(e.target.value)} />
+            <Textarea rows={2} placeholder="Detalhes adicionais..." value={obs} onChange={(e) => setObs(capitalizarPrimeiraLetra(e.target.value))} />
           </div>
         </div>
         <DialogFooter className="gap-2">

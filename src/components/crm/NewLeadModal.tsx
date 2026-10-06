@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { leadSchema, firstZodError } from "@/lib/schemas";
 import { useAuth } from "@/contexts/AuthContext";
+import { capitalizarPrimeiraLetra } from "@/lib/formatters";
 
 interface NewLeadModalProps {
   open: boolean;
@@ -59,7 +60,7 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
         <div className="grid gap-3 mt-2">
           <div>
             <Label>Nome *</Label>
-            <Input value={form.nome} onChange={(e) => update("nome", e.target.value)} placeholder="Nome completo" />
+            <Input value={form.nome} onChange={(e) => update("nome", capitalizarPrimeiraLetra(e.target.value))} placeholder="Nome completo" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

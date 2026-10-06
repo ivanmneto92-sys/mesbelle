@@ -23,7 +23,7 @@ import { useMeusLeads } from "@/hooks/useMeusLeads";
 import { useDisponibilidade } from "@/hooks/useDisponibilidade";
 import { useCriarVenda, TipoNegocio } from "@/hooks/useCriarVenda";
 import { useTaxasCartao } from "@/hooks/useTaxasCartao";
-import { formatBRL } from "@/lib/formatters";
+import { formatBRL, capitalizarPrimeiraLetra } from "@/lib/formatters";
 import type { Vestido, CategoriaPeca } from "@/types/acervo";
 import { CATEGORIA_LABELS } from "@/types/acervo";
 import { ItemCarrinho, DadosPagamento, FormaPagamento, BandeiraCartao, ResumoPedido } from "@/types/venda";
@@ -397,7 +397,7 @@ const MinhaVenda = () => {
                     <Label className="text-xs text-muted-foreground">Nome da locatária *</Label>
                     <Input
                       value={locataria.nome}
-                      onChange={(e) => setLocataria((p) => ({ ...p, nome: e.target.value }))}
+                      onChange={(e) => setLocataria((p) => ({ ...p, nome: capitalizarPrimeiraLetra(e.target.value) }))}
                       className="h-9 text-sm"
                     />
                   </div>
@@ -724,7 +724,7 @@ const MinhaVenda = () => {
                 <Textarea
                   placeholder="Ex: pagamento em duas vezes, sinal pago..."
                   value={pagamento.observacoes}
-                  onChange={(e) => setPagamento((p) => ({ ...p, observacoes: e.target.value }))}
+                  onChange={(e) => setPagamento((p) => ({ ...p, observacoes: capitalizarPrimeiraLetra(e.target.value) }))}
                   rows={2}
                   className="resize-none"
                 />

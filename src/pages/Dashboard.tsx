@@ -8,11 +8,15 @@ import {
   Users, Ticket, Percent, Target, Wallet,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useDateRange } from "@/hooks/useDateRange";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
 
@@ -31,6 +35,7 @@ const Dashboard = () => {
   const { range, setRange } = useDateRange();
   const { kpis, loading } = useDashboard(range);
   const firstName = user?.name?.split(" ")[0] ?? "bem-vinda";
+  const [agendamentosAbertos, setAgendamentosAbertos] = useState(false);
 
   const shortcuts = [
     { label: "Novo Lead", icon: UserPlus, to: "/crm", roles: ["admin"], primary: false },
@@ -41,7 +46,14 @@ const Dashboard = () => {
   const periodMetrics = [
     { eyebrow: "Faturamento do Período", value: fmtBRL(kpis.faturamentoPeriodo), icon: DollarSign, accent: "primary" as const },
     { eyebrow: "Volume de Leads", value: String(kpis.volumeLeads), icon: Users, accent: "info" as const },
-    { eyebrow: "Agendamentos", value: String(kpis.agendamentos), icon: CalendarCheck, accent: "info" as const },
+    {
+      eyebrow: "Agendamentos",
+      value: String(kpis.agendamentos),
+      icon: CalendarCheck,
+      accent: "info" as const,
+      hint: "Visitas de clientes novas — clique para ver quais",
+      onClick: kpis.agendamentosLista.length > 0 ? () => setAgendamentosAbertos(true) : undefined,
+    },
     { eyebrow: "Aluguéis", value: String(kpis.alugueis), icon: Package, accent: "warning" as const },
     { eyebrow: "Ticket Médio", value: fmtBRL(kpis.ticketMedio), icon: Ticket, accent: "primary" as const },
     { eyebrow: "Conversão por Agendamento", value: fmtPct(kpis.conversaoPorAgendamento), icon: Percent, accent: "success" as const },
@@ -88,6 +100,30 @@ const Dashboard = () => {
           ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
           : periodMetrics.map((m) => <KpiCard key={m.eyebrow} {...m} />)}
       </div>
+
+      <Dialog open={agendamentosAbertos} onOpenChange={setAgendamentosAbertos}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Agendamentos de clientes novas</DialogTitle>
+            <DialogDescription>
+              {kpis.agendamentosLista.length} visita(s) de clientes novas no período selecionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 mt-1">
+            {kpis.agendamentosLista.map((a) => (
+              <div key={a.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                <p className="text-sm font-medium truncate">{a.clienteNome}</p>
+                <p className="text-xs text-muted-foreground shrink-0">
+                  {format(parseISO(a.dataHora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </div>
+            ))}
+            {kpis.agendamentosLista.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum agendamento no período</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -2,10 +2,17 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { DateRange } from "@/hooks/useDateRange";
 
+export interface AgendamentoNovoCliente {
+  id: string;
+  clienteNome: string;
+  dataHora: string;
+}
+
 export interface DashboardKpi {
   faturamentoPeriodo: number;
   volumeLeads: number;
   agendamentos: number;
+  agendamentosLista: AgendamentoNovoCliente[];
   alugueis: number;
   ticketMedio: number;
   conversaoPorAgendamento: number; // 0-100 (percentual)
@@ -22,7 +29,7 @@ export interface DashboardKpi {
 }
 
 const emptyKpi: DashboardKpi = {
-  faturamentoPeriodo: 0, volumeLeads: 0, agendamentos: 0, alugueis: 0,
+  faturamentoPeriodo: 0, volumeLeads: 0, agendamentos: 0, agendamentosLista: [], alugueis: 0,
   ticketMedio: 0, conversaoPorAgendamento: 0, custoPorAgendamento: 0, custoDeAquisicao: 0,
   faturamentoHoje: 0, faturamentoOntem: 0, agendamentosHoje: 0, leadsNovosHoje: 0,
   entregasPendentes: 0, entregasAtrasadas: 0, conversaoMes: 0,
@@ -61,7 +68,7 @@ export function useDashboard(range: DateRange) {
       // quantas clientes novas vieram conhecer o ateliê no período; prova,
       // retirada, ajuste e devolução são agendamentos de quem já comprou,
       // não leads em prospecção, então inflavam esse número.
-      supabase.from("agendamentos").select("id").eq("tipo", "visita").gte("data_hora", `${range.from}T00:00:00`).lte("data_hora", `${range.to}T23:59:59`),
+      supabase.from("agendamentos").select("id, cliente_nome, data_hora, lead_id").eq("tipo", "visita").gte("data_hora", `${range.from}T00:00:00`).lte("data_hora", `${range.to}T23:59:59`),
       supabase.from("agendamentos").select("id", { count: "exact", head: true }).gte("data_hora", `${hoje}T00:00:00`).lte("data_hora", `${hoje}T23:59:59`),
       // Aluguéis: negócios aprovados no período — é o clique em "Confirmar
       // aluguel" no Minha Venda que cria o negócio com status "aprovado",
@@ -97,7 +104,33 @@ export function useDashboard(range: DateRange) {
     const volumeLeads = leadsPeriodo.length;
     const convertidosPeriodo = leadsPeriodo.filter(l => ["convertido", "fechado", "aprovado"].includes(l.status_funil)).length;
 
-    const agendamentos = (agendamentosPeriodoRes.data ?? []).length;
+    // Só conta visita de cliente novo: a primeira visita que aquele lead já
+    // fez (ou sem lead vinculado, cliente digitado na hora — também é
+    // novo por definição). Uma 2ª/3ª visita do mesmo lead não é um novo
+    // cliente chegando, é alguém que já estava em conversa voltando.
+    const visitasPeriodo = (agendamentosPeriodoRes.data ?? []) as Array<{ id: string; cliente_nome: string; data_hora: string; lead_id: string | null }>;
+    const leadIdsComVisita = [...new Set(visitasPeriodo.map((v) => v.lead_id).filter((id): id is string => !!id))];
+    let primeiraVisitaPorLead = new Map<string, string>();
+    if (leadIdsComVisita.length > 0) {
+      const { data: historicoVisitas } = await supabase
+        .from("agendamentos")
+        .select("lead_id, data_hora")
+        .eq("tipo", "visita")
+        .in("lead_id", leadIdsComVisita);
+      for (const v of (historicoVisitas ?? []) as Array<{ lead_id: string; data_hora: string }>) {
+        const atual = primeiraVisitaPorLead.get(v.lead_id);
+        if (!atual || v.data_hora < atual) primeiraVisitaPorLead.set(v.lead_id, v.data_hora);
+      }
+    }
+    const visitasNovoCliente = visitasPeriodo.filter((v) => {
+      if (!v.lead_id) return true;
+      return primeiraVisitaPorLead.get(v.lead_id) === v.data_hora;
+    });
+    const agendamentosLista: AgendamentoNovoCliente[] = visitasNovoCliente
+      .map((v) => ({ id: v.id, clienteNome: v.cliente_nome, dataHora: v.data_hora }))
+      .sort((a, b) => b.dataHora.localeCompare(a.dataHora));
+
+    const agendamentos = agendamentosLista.length;
     const negociosAprovados = (negociosPeriodoRes.data ?? []).length;
 
     const ticketMedio = negociosAprovados > 0 ? faturamentoPeriodo / negociosAprovados : 0;
@@ -106,7 +139,7 @@ export function useDashboard(range: DateRange) {
     const custoDeAquisicao = volumeLeads > 0 ? despesasPeriodo / volumeLeads : 0;
 
     setKpis({
-      faturamentoPeriodo, volumeLeads, agendamentos, alugueis: negociosAprovados,
+      faturamentoPeriodo, volumeLeads, agendamentos, agendamentosLista, alugueis: negociosAprovados,
       ticketMedio, conversaoPorAgendamento, custoPorAgendamento, custoDeAquisicao,
       faturamentoHoje, faturamentoOntem, agendamentosHoje: agendamentosHojeRes.count ?? 0,
       leadsNovosHoje, entregasPendentes, entregasAtrasadas, conversaoMes,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
@@ -6,6 +6,8 @@ import type { DateRange as DayPickerRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { DATE_PRESETS, DatePresetKey, DateRange, getPreset } from "@/hooks/useDateRange";
 
@@ -63,6 +65,23 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
     setDraft({ from: format(r.from, "yyyy-MM-dd"), to: format(to, "yyyy-MM-dd") });
   };
 
+  // Digitar a data direto (ex: "11/10/2026") é bem mais rápido do que navegar
+  // pela grade do calendário no teclado — útil principalmente pra marcar um
+  // único dia, que exigia muitos tabs/setas pra alcançar e confirmar.
+  const handleFromInput = (e: ChangeEvent<HTMLInputElement>) => {
+    const novo = e.target.value;
+    if (!novo) return;
+    setActivePreset(null);
+    setDraft((d) => ({ from: novo, to: d.to < novo ? novo : d.to }));
+  };
+
+  const handleToInput = (e: ChangeEvent<HTMLInputElement>) => {
+    const novo = e.target.value;
+    if (!novo) return;
+    setActivePreset(null);
+    setDraft((d) => ({ from: d.from > novo ? novo : d.from, to: novo }));
+  };
+
   const handleAtualizar = () => {
     onChange(draft);
     setOpen(false);
@@ -105,10 +124,20 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
             sticky dentro de overflow-auto quebra a rolagem no Safari/Mac).
             Assim os botões Cancelar/Atualizar nunca ficam escondidos, mesmo
             que o conteúdo do meio não caiba na tela e precise rolar. */}
-        <div className="shrink-0 px-4 py-3 border-b border-border-subtle">
+        <div className="shrink-0 px-4 py-3 border-b border-border-subtle space-y-2">
           <p className="text-sm font-medium">
             {fmtLabel(draftFrom)} a {fmtLabel(draftTo)}
           </p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="data-range-de" className="text-[11px] text-muted-foreground">De</Label>
+              <Input id="data-range-de" type="date" value={draft.from} onChange={handleFromInput} className="h-8 text-sm" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="data-range-ate" className="text-[11px] text-muted-foreground">Até</Label>
+              <Input id="data-range-ate" type="date" value={draft.to} onChange={handleToInput} className="h-8 text-sm" />
+            </div>
+          </div>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
           {/* Grade (não lista vertical alta, não wrap "orgânico"): número de

@@ -68,7 +68,6 @@ const MinhaVenda = () => {
   const [pagamento, setPagamento] = useState<DadosPagamento>({
     forma: "pix", parcelas: 1, bandeira: null, descontoGeral: 0, observacoes: "",
   });
-  const [vendaConfirmada, setVendaConfirmada] = useState<string | null>(null);
   // Primeiro Aluguel: só mostra a seção de Pagamento depois que a vendedora
   // clica em "Ir para pagamento" — antes disso, o carrinho pode receber
   // quantas peças sob medida forem necessárias.
@@ -233,15 +232,6 @@ const MinhaVenda = () => {
     !!pagamento.forma &&
     ((pagamento.forma !== "credito" && pagamento.forma !== "debito") || !!pagamento.bandeira);
 
-  const handleConfirmar = async () => {
-    const lead = leads.find((l) => l.id === leadId);
-    if (!podeConcluir || !lead || !tipoNegocio) return;
-    const result = await criarVenda.mutateAsync({
-      lead, locataria, itens: carrinho, pagamento, resumo, tipoNegocio,
-    });
-    if (result?.negocioId) setVendaConfirmada(result.negocioId);
-  };
-
   // Com várias peças sob medida na mesma venda, cada uma tem seu próprio
   // prazo de produção — mostra o mais próximo (o primeiro que a vendedora
   // precisa acompanhar).
@@ -253,39 +243,25 @@ const MinhaVenda = () => {
     ? format(prazosProducao.reduce((min, d) => (d < min ? d : min)), "dd/MM/yyyy")
     : null;
 
-  if (vendaConfirmada) {
-    return (
-      <>
-        <SEO title="Aluguel registrado — Més Belle" description="Aluguel registrado com sucesso." path="/minha-venda" />
-        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
-          <div className="p-6 bg-green-100 rounded-full">
-            <CheckCircle className="h-16 w-16 text-green-600" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-serif font-bold">Aluguel registrado! 🎉</h2>
-            <p className="text-muted-foreground mt-1">
-              O pagamento foi registrado e {carrinho.length > 1 ? "as peças foram reservadas" : "a peça foi reservada"}.
-            </p>
-            {tipoNegocio === "primeiro_aluguel" && (
-              <p className="text-sm text-primary mt-2 flex items-center justify-center gap-1.5">
-                <Scissors className="h-3.5 w-3.5" />
-                {carrinho.length > 1 ? "Peças enviadas para Produção" : "Peça enviada para Produção"}
-                {prazoProducaoEstimado && <> — prazo {carrinho.length > 1 ? "mais próximo " : ""}até {prazoProducaoEstimado}</>}
-              </p>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate(isAdmin ? "/crm" : "/meus-leads")}>
-              {isAdmin ? "Ver CRM" : "Ver meus leads"}
-            </Button>
-            <Button onClick={() => navigate(isAdmin ? "/comercial/contratos" : `/meu-contrato?leadId=${leadId}`)}>
-              Gerar contrato →
-            </Button>
-          </div>
-        </div>
-      </>
-    );
-  }
+  // Confirmar o aluguel já gera o contrato (useCriarVenda) — por isso a
+  // vendedora vai direto pra tela de assinatura, sem um botão manual
+  // "Gerar contrato" no meio do caminho que ficava fácil de esquecer.
+  const handleConfirmar = async () => {
+    const lead = leads.find((l) => l.id === leadId);
+    if (!podeConcluir || !lead || !tipoNegocio) return;
+    const result = await criarVenda.mutateAsync({
+      lead, locataria, itens: carrinho, pagamento, resumo, tipoNegocio,
+    });
+    if (!result?.negocioId) return;
+    if (tipoNegocio === "primeiro_aluguel") {
+      const multiplo = carrinho.length > 1;
+      toast.info(
+        `${multiplo ? "Peças enviadas" : "Peça enviada"} para Produção`
+        + (prazoProducaoEstimado ? ` — prazo ${multiplo ? "mais próximo " : ""}até ${prazoProducaoEstimado}` : ""),
+      );
+    }
+    navigate(isAdmin ? "/comercial/contratos" : `/meu-contrato?leadId=${leadId}`);
+  };
 
   return (
     <>

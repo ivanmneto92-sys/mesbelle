@@ -3,7 +3,7 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negocio, StatusNegociacao } from "@/types/comercial";
 import type { DateRange } from "@/hooks/useDateRange";
-import { gerarTermosContrato } from "@/lib/contratoTemplate";
+import { gerarTermosContrato, gerarNumeroContrato } from "@/lib/contratoTemplate";
 import { toast } from "sonner";
 
 // ============= Legacy storage cleanup =============
@@ -332,20 +332,6 @@ export function useLeads(range?: DateRange) {
   }, [negocios]);
 
   // === CONTRATOS ===
-  // Generates a human-readable contract number like MB-YYMM-### based on existing rows in the current month.
-  const gerarNumeroContrato = useCallback(async (): Promise<string> => {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const { count } = await supabase
-      .from("contratos")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", start);
-    const seq = String((count ?? 0) + 1).padStart(3, "0");
-    return `MB-${yy}${mm}-${seq}`;
-  }, []);
-
   const addContrato = useCallback(async (lead: Lead, valorTotal: number) => {
     const existing = contratos.find((c) => c.leadId === lead.id && c.statusAssinatura !== "cancelado");
     if (existing) return existing;

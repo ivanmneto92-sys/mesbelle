@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ItemCarrinho, DadosPagamento, ResumoPedido } from "@/types/venda";
 import type { Lead } from "@/types/comercial";
+import { gerarTermosContrato, gerarNumeroContrato } from "@/lib/contratoTemplate";
 
 export interface LocatariaOverride {
   nome: string;
@@ -72,6 +73,50 @@ export function useCriarVenda() {
   return useMutation({
     mutationFn: async ({ lead, locataria, itens, pagamento, resumo, tipoNegocio }: CriarVendaInput) => {
       const ehPrimeiroAluguel = tipoNegocio === "primeiro_aluguel";
+      // Mensagem de erro secundário — contrato é complementar à venda: se
+      // falhar, avisamos mas não desfazemos negócio/reserva/entrega já
+      // gravados (ver comentário de limparNegocioOrfao acima).
+      let avisoSecundario: string | null = null;
+
+      // Gera o contrato já na confirmação do aluguel — antes disso, quem
+      // confirmava a venda precisava lembrar de ir noutra tela clicar em
+      // "Gerar Contrato" depois, e esse passo manual ficava esquecido com
+      // frequência (contrato nunca existia, mesmo com o negócio aprovado).
+      const criarContratoParaNegocio = async (params: {
+        negocioId: string;
+        produtoDescricao: string;
+        valorLocacao: number;
+        desconto: number;
+        dataEvento: string;
+      }) => {
+        const numero = await gerarNumeroContrato();
+        const { error } = await supabase.from("contratos").insert({
+          numero,
+          lead_id: lead.id,
+          negocio_id: params.negocioId,
+          nome_cliente: locataria.nome,
+          cpf_cliente: locataria.cpf,
+          email_cliente: locataria.email || lead.email || "",
+          data_evento: params.dataEvento,
+          valor_total: params.valorLocacao,
+          status_assinatura: "pendente",
+          vendedor_id: user?.id ?? null,
+          termos_texto: gerarTermosContrato({
+            nomeLocataria: locataria.nome,
+            cpf: locataria.cpf,
+            celular: locataria.telefone || lead.telefone,
+            email: locataria.email || lead.email,
+            produtoDescricao: params.produtoDescricao,
+            valorLocacao: params.valorLocacao,
+            formaPagamento: FORMA_LABELS[pagamento.forma],
+            observacoesPagamento: params.desconto > 0
+              ? `Desconto aplicado: ${params.desconto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+              : undefined,
+            dataEvento: params.dataEvento || undefined,
+          }),
+        });
+        return !error;
+      };
 
       const criarEntregaLogistica = async (item: ItemCarrinho) => {
         const { error } = await supabase.from("alugueis_logistica").insert({
@@ -141,6 +186,15 @@ export function useCriarVenda() {
             for (const id of negocioIds) await limparNegocioOrfao(id);
             throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
           }
+
+          const contratoOk = await criarContratoParaNegocio({
+            negocioId: negocio.id,
+            produtoDescricao: item.nome,
+            valorLocacao: item.valorOriginal - item.desconto,
+            desconto: item.desconto,
+            dataEvento: item.dataRetirada || "",
+          });
+          if (!contratoOk) avisoSecundario = "Aluguel registrado, mas não consegui gerar o contrato automaticamente — gere manualmente em Contratos.";
         }
       } else {
         const vestidoNome = itens.map((i) => i.nome).join(", ");
@@ -201,18 +255,26 @@ export function useCriarVenda() {
           await limparNegocioOrfao(negocio.id);
           throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
         }
+
+        const contratoOk = await criarContratoParaNegocio({
+          negocioId: negocio.id,
+          produtoDescricao: vestidoNome,
+          valorLocacao: resumo.total,
+          desconto: resumo.descontoItens + resumo.descontoGeral,
+          dataEvento: lead.dataEvento || itens[0]?.dataRetirada || "",
+        });
+        if (!contratoOk) avisoSecundario = "Aluguel registrado, mas não consegui gerar o contrato automaticamente — gere manualmente em Contratos.";
       }
 
       // A venda em si já está garantida a partir daqui (negócio(s) + reserva +
-      // entrega gravados) — as duas atualizações abaixo são complementares;
-      // se falharem, avisamos mas não desfazemos a venda, só a peça pode
-      // ficar com o status desatualizado até alguém corrigir manualmente.
-      let avisoSecundario: string | null = null;
-
+      // entrega + contrato gravados) — as duas atualizações abaixo são
+      // complementares; se falharem, avisamos mas não desfazemos a venda, só
+      // a peça pode ficar com o status desatualizado até alguém corrigir
+      // manualmente.
       if (!ehPrimeiroAluguel) {
         const vestidoIds = itens.map((i) => i.vestidoId);
         const { error: vestidoErr } = await supabase.from("vestidos").update({ status: "alugado" }).in("id", vestidoIds);
-        if (vestidoErr) avisoSecundario = "Venda registrada, mas não consegui marcar a peça como alugada — confira o status dela no Acervo.";
+        if (vestidoErr && !avisoSecundario) avisoSecundario = "Venda registrada, mas não consegui marcar a peça como alugada — confira o status dela no Acervo.";
       }
 
       const { error: leadErr } = await supabase.from("leads").update({ enviado_comercial: true }).eq("id", lead.id);

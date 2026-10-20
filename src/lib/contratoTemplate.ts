@@ -2,7 +2,26 @@
 // transcrito do modelo oficial em PDF (Contrato_Aluguel_Mes_Belle_Atualizado_Novo)
 // com os campos variáveis interpolados. Fica assim disponível para todo lugar
 // que gera um contrato (addContrato, addContratoFromNegocio, geração direta do
-// lead), em vez do placeholder curto que existia antes.
+// lead, confirmação automática no Minha Venda), em vez do placeholder curto
+// que existia antes.
+
+import { supabase } from "@/integrations/supabase/client";
+
+// Número sequencial do contrato (ex: MB-2610-003) — compartilhado por todo
+// lugar que grava um contrato, pra nunca ter dois pontos do código gerando
+// a mesma sequência numa corrida.
+export async function gerarNumeroContrato(): Promise<string> {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { count } = await supabase
+    .from("contratos")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", start);
+  const seq = String((count ?? 0) + 1).padStart(3, "0");
+  return `MB-${yy}${mm}-${seq}`;
+}
 
 export interface DadosContrato {
   nomeLocataria: string;

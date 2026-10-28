@@ -68,12 +68,12 @@ export function useDashboard(range: DateRange) {
       // quantas clientes novas vieram conhecer o ateliê; prova, retirada,
       // ajuste e devolução são agendamentos de quem já comprou, não leads em
       // prospecção, então inflavam esse número.
-      // Filtra por criado_em (quando o agendamento foi marcado), não por
-      // data_hora (quando a visita vai acontecer) — o objetivo é medir
-      // quantos agendamentos estamos CONSEGUINDO por dia (volume de
-      // captação, custo por agendamento), não quantas visitas estão na
-      // agenda pra acontecer no período.
-      supabase.from("agendamentos").select("id, cliente_nome, data_hora, lead_id").eq("tipo", "visita").gte("criado_em", `${range.from}T00:00:00`).lte("criado_em", `${range.to}T23:59:59`),
+      // Filtra por data_hora (quando a visita realmente acontece), não por
+      // criado_em (quando foi marcada) — contar pela data de criação inflava
+      // o número com visitas marcadas no período mas que só vão acontecer
+      // semanas/meses depois, o que não reflete quantas visitas de fato
+      // ocorreram no período selecionado.
+      supabase.from("agendamentos").select("id, cliente_nome, data_hora, lead_id").eq("tipo", "visita").gte("data_hora", `${range.from}T00:00:00`).lte("data_hora", `${range.to}T23:59:59`),
       supabase.from("agendamentos").select("id", { count: "exact", head: true }).gte("data_hora", `${hoje}T00:00:00`).lte("data_hora", `${hoje}T23:59:59`),
       // Aluguéis: negócios aprovados no período — é o clique em "Confirmar
       // aluguel" no Minha Venda que cria o negócio com status "aprovado",

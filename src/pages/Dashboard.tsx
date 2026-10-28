@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
-import { useDateRange } from "@/hooks/useDateRange";
+import { useDateRange, getPreset } from "@/hooks/useDateRange";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -32,7 +32,9 @@ const fmtPct = (v: number) => `${v.toFixed(0)}%`;
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { range, setRange } = useDateRange();
+  // Sempre abre no "Hoje" — quem entra no Dashboard quer ver o dia, não o
+  // mês inteiro acumulado (que era o padrão herdado do hook).
+  const { range, setRange } = useDateRange(getPreset("hoje"));
   const { kpis, loading } = useDashboard(range);
   const firstName = user?.name?.split(" ")[0] ?? "bem-vinda";
   const [agendamentosAbertos, setAgendamentosAbertos] = useState(false);

@@ -65,10 +65,15 @@ export function useDashboard(range: DateRange) {
       supabase.from("transacoes_financeiras").select("valor, data, tipo").gte("data", range.from).lte("data", range.to),
       supabase.from("leads").select("id, status_funil, criado_em").gte("criado_em", range.from).lte("criado_em", range.to),
       // Agendamentos: só conta tipo "visita" — é o indicador comercial de
-      // quantas clientes novas vieram conhecer o ateliê no período; prova,
-      // retirada, ajuste e devolução são agendamentos de quem já comprou,
-      // não leads em prospecção, então inflavam esse número.
-      supabase.from("agendamentos").select("id, cliente_nome, data_hora, lead_id").eq("tipo", "visita").gte("data_hora", `${range.from}T00:00:00`).lte("data_hora", `${range.to}T23:59:59`),
+      // quantas clientes novas vieram conhecer o ateliê; prova, retirada,
+      // ajuste e devolução são agendamentos de quem já comprou, não leads em
+      // prospecção, então inflavam esse número.
+      // Filtra por criado_em (quando o agendamento foi marcado), não por
+      // data_hora (quando a visita vai acontecer) — o objetivo é medir
+      // quantos agendamentos estamos CONSEGUINDO por dia (volume de
+      // captação, custo por agendamento), não quantas visitas estão na
+      // agenda pra acontecer no período.
+      supabase.from("agendamentos").select("id, cliente_nome, data_hora, lead_id").eq("tipo", "visita").gte("criado_em", `${range.from}T00:00:00`).lte("criado_em", `${range.to}T23:59:59`),
       supabase.from("agendamentos").select("id", { count: "exact", head: true }).gte("data_hora", `${hoje}T00:00:00`).lte("data_hora", `${hoje}T23:59:59`),
       // Aluguéis: negócios aprovados no período — é o clique em "Confirmar
       // aluguel" no Minha Venda que cria o negócio com status "aprovado",

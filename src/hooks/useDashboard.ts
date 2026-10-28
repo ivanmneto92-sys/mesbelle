@@ -8,9 +8,17 @@ export interface AgendamentoNovoCliente {
   dataHora: string;
 }
 
+export interface LeadResumo {
+  id: string;
+  nome: string;
+  statusFunil: string;
+  criadoEm: string;
+}
+
 export interface DashboardKpi {
   faturamentoPeriodo: number;
   volumeLeads: number;
+  leadsLista: LeadResumo[];
   agendamentos: number;
   agendamentosLista: AgendamentoNovoCliente[];
   alugueis: number;
@@ -29,7 +37,7 @@ export interface DashboardKpi {
 }
 
 const emptyKpi: DashboardKpi = {
-  faturamentoPeriodo: 0, volumeLeads: 0, agendamentos: 0, agendamentosLista: [], alugueis: 0,
+  faturamentoPeriodo: 0, volumeLeads: 0, leadsLista: [], agendamentos: 0, agendamentosLista: [], alugueis: 0,
   ticketMedio: 0, conversaoPorAgendamento: 0, custoPorAgendamento: 0, custoDeAquisicao: 0,
   faturamentoHoje: 0, faturamentoOntem: 0, agendamentosHoje: 0, leadsNovosHoje: 0,
   entregasPendentes: 0, entregasAtrasadas: 0, conversaoMes: 0,
@@ -63,7 +71,7 @@ export function useDashboard(range: DateRange) {
       supabase.from("alugueis_logistica").select("id, status_logistica"),
       // KPIs do período selecionado
       supabase.from("transacoes_financeiras").select("valor, data, tipo").gte("data", range.from).lte("data", range.to),
-      supabase.from("leads").select("id, status_funil, criado_em").gte("criado_em", range.from).lte("criado_em", range.to),
+      supabase.from("leads").select("id, nome, status_funil, criado_em").gte("criado_em", range.from).lte("criado_em", range.to),
       // Agendamentos: só conta tipo "visita" — é o indicador comercial de
       // quantas clientes novas vieram conhecer o ateliê; prova, retirada,
       // ajuste e devolução são agendamentos de quem já comprou, não leads em
@@ -105,9 +113,12 @@ export function useDashboard(range: DateRange) {
     const faturamentoPeriodo = txPeriodo.filter(t => t.tipo === "entrada").reduce((s, t) => s + Number(t.valor), 0);
     const despesasPeriodo = txPeriodo.filter(t => t.tipo === "saida").reduce((s, t) => s + Number(t.valor), 0);
 
-    const leadsPeriodo = (leadsPeriodoRes.data ?? []) as Array<{ id: string; status_funil: string; criado_em: string }>;
+    const leadsPeriodo = (leadsPeriodoRes.data ?? []) as Array<{ id: string; nome: string; status_funil: string; criado_em: string }>;
     const volumeLeads = leadsPeriodo.length;
     const convertidosPeriodo = leadsPeriodo.filter(l => ["convertido", "fechado", "aprovado"].includes(l.status_funil)).length;
+    const leadsLista: LeadResumo[] = leadsPeriodo
+      .map((l) => ({ id: l.id, nome: l.nome, statusFunil: l.status_funil, criadoEm: l.criado_em }))
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
 
     // Só conta visita de cliente novo: a primeira visita que aquele lead já
     // fez (ou sem lead vinculado, cliente digitado na hora — também é
@@ -144,7 +155,7 @@ export function useDashboard(range: DateRange) {
     const custoDeAquisicao = volumeLeads > 0 ? despesasPeriodo / volumeLeads : 0;
 
     setKpis({
-      faturamentoPeriodo, volumeLeads, agendamentos, agendamentosLista, alugueis: negociosAprovados,
+      faturamentoPeriodo, volumeLeads, leadsLista, agendamentos, agendamentosLista, alugueis: negociosAprovados,
       ticketMedio, conversaoPorAgendamento, custoPorAgendamento, custoDeAquisicao,
       faturamentoHoje, faturamentoOntem, agendamentosHoje: agendamentosHojeRes.count ?? 0,
       leadsNovosHoje, entregasPendentes, entregasAtrasadas, conversaoMes,

@@ -17,6 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CRM_KANBAN_COLUMNS } from "@/types/comercial";
+
+const statusFunilLabel = (status: string) =>
+  CRM_KANBAN_COLUMNS.find((c) => c.id === status)?.title ?? status;
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
 
@@ -38,6 +42,7 @@ const Dashboard = () => {
   const { kpis, loading } = useDashboard(range);
   const firstName = user?.name?.split(" ")[0] ?? "bem-vinda";
   const [agendamentosAbertos, setAgendamentosAbertos] = useState(false);
+  const [leadsAbertos, setLeadsAbertos] = useState(false);
 
   const shortcuts = [
     { label: "Novo Lead", icon: UserPlus, to: "/crm", roles: ["admin"], primary: false },
@@ -47,7 +52,14 @@ const Dashboard = () => {
 
   const periodMetrics = [
     { eyebrow: "Faturamento do Período", value: fmtBRL(kpis.faturamentoPeriodo), icon: DollarSign, accent: "primary" as const },
-    { eyebrow: "Volume de Leads", value: String(kpis.volumeLeads), icon: Users, accent: "info" as const },
+    {
+      eyebrow: "Volume de Leads",
+      value: String(kpis.volumeLeads),
+      icon: Users,
+      accent: "info" as const,
+      hint: kpis.leadsLista.length > 0 ? "Clique para ver quais" : undefined,
+      onClick: kpis.leadsLista.length > 0 ? () => setLeadsAbertos(true) : undefined,
+    },
     {
       eyebrow: "Agendamentos",
       value: String(kpis.agendamentos),
@@ -122,6 +134,33 @@ const Dashboard = () => {
             ))}
             {kpis.agendamentosLista.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-6">Nenhum agendamento no período</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={leadsAbertos} onOpenChange={setLeadsAbertos}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Leads do período</DialogTitle>
+            <DialogDescription>
+              {kpis.leadsLista.length} lead(s) no período selecionado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 mt-1">
+            {kpis.leadsLista.map((l) => (
+              <div key={l.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                <p className="text-sm font-medium truncate">{l.nome}</p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">{statusFunilLabel(l.statusFunil)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {format(parseISO(l.criadoEm), "dd/MM/yyyy", { locale: ptBR })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {kpis.leadsLista.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum lead no período</p>
             )}
           </div>
         </DialogContent>

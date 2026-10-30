@@ -1,0 +1,25 @@
+{
+  "name": "mesbelle-whatsapp-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@supabase/supabase-js": "^2.118.0",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "dotenv": "^18.0.9",
+    "node-cache": "^5.1.2",
+    "pino": "^10.4.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/qrcode-terminal": "^0.12.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

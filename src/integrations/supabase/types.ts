@@ -1056,6 +1056,30 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_conexao: {
+        Row: {
+          atualizado_em: string
+          id: number
+          numero_conectado: string | null
+          qr: string | null
+          status: string
+        }
+        Insert: {
+          atualizado_em?: string
+          id?: number
+          numero_conectado?: string | null
+          qr?: string | null
+          status?: string
+        }
+        Update: {
+          atualizado_em?: string
+          id?: number
+          numero_conectado?: string | null
+          qr?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       whatsapp_webhook_eventos: {
         Row: {
           recebido_em: string

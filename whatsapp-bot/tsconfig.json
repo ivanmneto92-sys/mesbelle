@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    // Projeto Node separado, dentro da pasta do app principal — sem isto o
+    // tsc sobe os diretórios e também enxerga (e pode quebrar com) os
+    // @types do node_modules do repo pai.
+    "typeRoots": ["./node_modules/@types"]
+  },
+  "include": ["src"]
+}

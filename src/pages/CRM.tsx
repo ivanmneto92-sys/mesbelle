@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, Users, Filter, CalendarCheck, ContactRound } from "lucide-react";
+import { UserPlus, Users, Filter, CalendarCheck, ContactRound, QrCode } from "lucide-react";
 import { useLeads } from "@/hooks/useLeads";
 import { useDateRange } from "@/hooks/useDateRange";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
@@ -13,6 +13,7 @@ import { BaseClientesTab } from "@/components/crm/BaseClientesTab";
 import { AgendaProvasTab } from "@/components/crm/AgendaProvasTab";
 import { ClienteDetailPanel } from "@/components/crm/ClienteDetailPanel";
 import { NewLeadModal } from "@/components/crm/NewLeadModal";
+import { WhatsappConexaoTab } from "@/components/crm/WhatsappConexaoTab";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 const CRM = () => {
@@ -92,6 +93,7 @@ const CRM = () => {
           <TabsTrigger value="funil"><Filter className="h-4 w-4 mr-1.5" />Funil de Captação</TabsTrigger>
           <TabsTrigger value="clientes"><ContactRound className="h-4 w-4 mr-1.5" />Base de Clientes</TabsTrigger>
           <TabsTrigger value="agenda"><CalendarCheck className="h-4 w-4 mr-1.5" />Agenda de Provas</TabsTrigger>
+          <TabsTrigger value="whatsapp"><QrCode className="h-4 w-4 mr-1.5" />WhatsApp</TabsTrigger>
         </TabsList>
 
         <TabsContent value="funil" className="mt-4">
@@ -113,6 +115,10 @@ const CRM = () => {
 
         <TabsContent value="agenda" className="mt-4">
           <AgendaProvasTab leads={leadsComProvaNoPeriodo} onLeadClick={handleLeadClick} />
+        </TabsContent>
+
+        <TabsContent value="whatsapp" className="mt-4">
+          <WhatsappConexaoTab />
         </TabsContent>
       </Tabs>
 

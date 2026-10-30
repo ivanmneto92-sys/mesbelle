@@ -1,0 +1,7 @@
+# Credenciais da sessão do WhatsApp — equivale a ter acesso total à conta.
+# Nunca commitar, nunca compartilhar.
+auth_info_baileys/
+
+node_modules
+dist
+*.log

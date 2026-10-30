@@ -5,7 +5,9 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  // whatsapp-bot/ é um projeto Node separado, com seu próprio tsconfig —
+  // não faz parte do app Vite/React que este eslint.config.js cobre.
+  { ignores: ["dist", "whatsapp-bot"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

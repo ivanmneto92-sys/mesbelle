@@ -4,10 +4,14 @@ Serviço separado do app principal (não entra no build do Vite/Vercel) que
 mantém uma conexão com o WhatsApp via [Baileys](https://github.com/WhiskeySockets/Baileys),
 com reconexão automática.
 
-**Estado atual: só a infraestrutura de conexão.** Ele conecta, fica online e
-loga as mensagens recebidas no terminal — ainda não cria nem atualiza leads
-no Supabase. Isso é o próximo passo, depois de fechar a regra de quando um
-contato vira lead.
+O status da conexão e o QR code pra parear aparecem automaticamente na
+**aba "WhatsApp" dentro do CRM** do site — não precisa olhar o terminal
+pra escanear.
+
+**Estado atual: só a infraestrutura de conexão.** Ele conecta, mantém a aba
+WhatsApp do CRM atualizada e loga as mensagens recebidas no terminal — ainda
+não cria nem atualiza leads no Supabase a partir das mensagens. Isso é o
+próximo passo, depois de fechar a regra de quando um contato vira lead.
 
 ## Risco — leia antes de usar com o número real da loja
 
@@ -17,16 +21,29 @@ custo por conversa), mas existe risco real de o número ser banido, mesmo
 respondendo só quem já procurou vocês. Por isso a ideia é testar primeiro
 com um número descartável antes de conectar o número principal.
 
-## Rodando localmente
+## Configuração
 
 ```bash
 cd whatsapp-bot
+cp .env.example .env
+```
+
+Abra o `.env` e preencha `SUPABASE_SERVICE_ROLE_KEY` (pega em Supabase →
+Project Settings → API → service_role secret — **não** é a mesma chave
+pública que o site usa). Sem isso o bot não consegue atualizar a aba
+WhatsApp do CRM e não inicia.
+
+## Rodando localmente
+
+```bash
 npm install
 npm start
 ```
 
-Na primeira vez, aparece um QR code no terminal. No celular: WhatsApp →
-Aparelhos conectados → Conectar aparelho → escaneie.
+Na primeira vez, o QR code aparece tanto no terminal quanto na aba
+**WhatsApp** do CRM no site (atualiza sozinho, sem precisar recarregar a
+página). No celular: WhatsApp → Aparelhos conectados → Conectar aparelho →
+escaneie.
 
 A sessão fica salva em `whatsapp-bot/auth_info_baileys/` — assim não precisa
 escanear de novo toda vez que reiniciar. **Essa pasta nunca deve ser

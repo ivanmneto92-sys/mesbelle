@@ -1,14 +1,41 @@
+import "dotenv/config";
 import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
   useMultiFileAuthState,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
+import { createClient } from "@supabase/supabase-js";
 import NodeCache from "node-cache";
 import pino from "pino";
 import qrcode from "qrcode-terminal";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  logger.fatal(
+    "Faltam SUPABASE_URL e/ou SUPABASE_SERVICE_ROLE_KEY. Copie whatsapp-bot/.env.example para .env e preencha.",
+  );
+  process.exit(1);
+}
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// Mantém a tela de WhatsApp do CRM (aba "WhatsApp") atualizada com o status
+// da conexão e o QR code pra parear — é a única linha da tabela
+// whatsapp_conexao (id fixo = 1).
+async function atualizarStatus(dados: {
+  status: "desconectado" | "aguardando_qr" | "conectado";
+  qr?: string | null;
+  numero_conectado?: string | null;
+}) {
+  const { error } = await supabase
+    .from("whatsapp_conexao")
+    .update({ ...dados, atualizado_em: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) logger.error({ err: error }, "Falha ao atualizar status no Supabase");
+}
 
 // Fica fora de conectar() de propósito: se morasse dentro, cada reconexão
 // zerava o cache e reinícios próximos voltavam a reenviar pro WhatsApp
@@ -47,11 +74,14 @@ async function conectar() {
     if (qr) {
       logger.info("Escaneie o QR code no WhatsApp do celular (Aparelhos conectados → Conectar aparelho):");
       qrcode.generate(qr, { small: true });
+      atualizarStatus({ status: "aguardando_qr", qr, numero_conectado: null });
     }
 
     if (connection === "open") {
       logger.info("Conectado ao WhatsApp.");
       atrasoReconexao = RECONEXAO_MIN_MS; // da próxima queda, tenta rápido de novo
+      const numero = sock.user?.id?.split(":")[0]?.split("@")[0] ?? null;
+      atualizarStatus({ status: "conectado", qr: null, numero_conectado: numero });
     }
 
     if (connection === "close") {
@@ -62,9 +92,11 @@ async function conectar() {
         logger.fatal(
           "Sessão encerrada pelo celular (logout). Apague a pasta auth_info_baileys e rode de novo para escanear um QR code novo.",
         );
+        atualizarStatus({ status: "desconectado", qr: null, numero_conectado: null });
         return;
       }
 
+      atualizarStatus({ status: "desconectado" });
       logger.warn({ motivo }, `Conexão caiu — tentando reconectar em ${atrasoReconexao / 1000}s...`);
       setTimeout(conectar, atrasoReconexao);
       atrasoReconexao = Math.min(atrasoReconexao * 2, RECONEXAO_MAX_MS);

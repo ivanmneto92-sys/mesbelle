@@ -7,6 +7,7 @@ import {
   Package2, LayoutGrid, FileSignature, FileText,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { usePendenciasAssinatura } from "@/hooks/usePendenciasAssinatura";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -174,6 +175,19 @@ export function AppSidebar() {
   const { temPermissao } = usePermissoes();
 
   const navGroups = user?.role === "vendedor" ? navGroupsFuncionario : navGroupsAdmin;
+  // Contador de vendas aguardando assinatura no item "Contratos".
+  const { total: pendenciasAssinatura } = usePendenciasAssinatura();
+  const badgeDe = (url: string) =>
+    (url === "/comercial/contratos" || url === "/meu-contrato") && pendenciasAssinatura > 0 ? pendenciasAssinatura : 0;
+  const Contador = ({ n }: { n: number }) =>
+    n > 0 ? (
+      <span
+        className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-amber-400 text-[11px] font-semibold text-amber-950 flex items-center justify-center"
+        title={`${n} venda(s) aguardando assinatura do contrato`}
+      >
+        {n}
+      </span>
+    ) : null;
 
   const canSeeLeaf = (item: LeafItem) => {
     if (!user) return false;
@@ -270,6 +284,7 @@ export function AppSidebar() {
                                 {!collapsed && (
                                   <>
                                     <span className="text-sm flex-1 text-left">{item.title}</span>
+                                    {!open && <Contador n={item.children.reduce((t, c) => t + badgeDe(c.url), 0)} />}
                                     <ChevronRight className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
                                   </>
                                 )}
@@ -290,6 +305,7 @@ export function AppSidebar() {
                                       >
                                         <child.icon className="h-4 w-4 shrink-0" />
                                         <span className="truncate">{child.title}</span>
+                                        <Contador n={badgeDe(child.url)} />
                                       </NavLink>
                                     );
                                   })}
@@ -316,6 +332,7 @@ export function AppSidebar() {
                           >
                             <item.icon className={`h-[18px] w-[18px] shrink-0 transition-transform ${isActive ? "scale-110" : ""}`} />
                             {!collapsed && <span className="text-sm">{item.title}</span>}
+                            {!collapsed && <Contador n={badgeDe(item.url)} />}
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

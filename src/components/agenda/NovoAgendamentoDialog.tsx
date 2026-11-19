@@ -14,6 +14,7 @@ import { Trash2, Check, ChevronsUpDown, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Agendamento, NovoAgendamento, TipoAgendamento, TIPO_CONFIG } from "@/types/agenda";
 import { capitalizarPrimeiraLetra } from "@/lib/formatters";
+import { mesmoTelefone } from "@/lib/telefone";
 import { useCriarAgendamento, useEditarAgendamento, useExcluirAgendamento } from "@/hooks/useAgenda";
 import { useLeadsBusca } from "@/hooks/useLeadsBusca";
 import { useAcervo } from "@/hooks/useAcervo";
@@ -111,6 +112,13 @@ export function NovoAgendamentoDialog({
       setVestidoId(null);
     }
   }, [agendamentoEditar, dataHoraInicial, aberto, funcionariaIdFixo]);
+
+  // Um telefone = um cadastro. Se o telefone digitado já pertence a uma
+  // cliente, o agendamento vai para o cadastro dela (o banco garante isso em
+  // criar_agendamento_com_lead) — aqui só avisamos e oferecemos preencher.
+  const leadMesmoTelefone = !leadId && telefone.trim()
+    ? (leads ?? []).find((l) => mesmoTelefone(l.telefone, telefone)) ?? null
+    : null;
 
   const valido = cliente.trim().length > 0 && dataHora.length > 0 && Number.isFinite(duracao) && duracao > 0;
 
@@ -382,6 +390,17 @@ export function NovoAgendamentoDialog({
               <Input placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
             </div>
           </div>
+
+          {leadMesmoTelefone && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-2">
+              <span>
+                Esse telefone já é de <strong>{leadMesmoTelefone.nome}</strong>. O agendamento vai ficar no cadastro dela — não será criado outro.
+              </span>
+              <Button type="button" size="sm" variant="outline" onClick={() => handleSelecionarLead(leadMesmoTelefone)}>
+                Usar cadastro
+              </Button>
+            </div>
+          )}
 
           {funcionarias && funcionarias.length > 0 && (
             <div className="space-y-1">

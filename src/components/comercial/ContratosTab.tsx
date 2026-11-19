@@ -8,7 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Search, FileSignature, Eye, Printer, Link2, UserSearch } from "lucide-react";
+import { Plus, Search, FileSignature, Eye, Printer, Link2, UserSearch, Clock, AlertTriangle, XCircle, ShieldAlert } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { statusVendaDoContrato, tempoRestante } from "@/lib/assinaturaVenda";
 import { Contrato, ContratoStatus, Lead, Negocio } from "@/types/comercial";
 import { Vestido } from "@/types/acervo";
 import { SignaturePad } from "./SignaturePad";
@@ -36,14 +38,30 @@ interface ContratosTabProps {
     leadId: string; produtoDescricao: string; valor: number; metodoPagamento: string;
     dadosComplementares?: { nome?: string; cpf?: string; telefone?: string; email?: string };
   }) => Promise<Contrato | null>;
-  onUpdateStatus: (contratoId: string, status: ContratoStatus) => void;
+  onUpdateStatus?: (contratoId: string, status: ContratoStatus) => void;
   onAssinar: (contratoId: string, assinaturaBase64: string) => boolean | Promise<boolean | undefined> | undefined;
   onGerarLink: (contratoId: string, validadeHoras: number) => Promise<string | null>;
   autoOpenContratoId?: string | null;
   onAutoOpenHandled?: () => void;
+  // Venda ligada a cada contrato — mostra se ela ainda aguarda assinatura
+  // (peça pré-reservada, com prazo) e permite cancelar.
+  negocios?: Negocio[];
+  isAdmin?: boolean;
+  onCancelarPreVenda?: (negocioId: string, motivo: string) => Promise<boolean>;
+  onAprovarSemAssinatura?: (negocioId: string, motivo: string) => Promise<boolean>;
 }
 
-export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, onGerarContratoFromNegocio, onGerarContratoDoLead, onUpdateStatus, onAssinar, onGerarLink, autoOpenContratoId, onAutoOpenHandled }: ContratosTabProps) {
+export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, onGerarContratoFromNegocio, onGerarContratoDoLead, onAssinar, onGerarLink, autoOpenContratoId, onAutoOpenHandled, negocios, isAdmin, onCancelarPreVenda, onAprovarSemAssinatura }: ContratosTabProps) {
+  const [soPendentes, setSoPendentes] = useState(false);
+  const [acaoVenda, setAcaoVenda] = useState<{ tipo: "cancelar" | "sem_assinatura"; negocioId: string } | null>(null);
+  const [motivo, setMotivo] = useState("");
+  const [executandoAcao, setExecutandoAcao] = useState(false);
+  const negocioPorId = useMemo(() => new Map((negocios ?? []).map((n) => [n.id, n])), [negocios]);
+  const statusVenda = (c: Contrato) => statusVendaDoContrato(c, c.negocioId ? negocioPorId.get(c.negocioId) : undefined);
+  const pendentes = contratos.filter((c) => {
+    const st = statusVenda(c);
+    return st === "aguardando" || st === "legado";
+  });
   const [busca, setBusca] = useState("");
   // "Máximo" por padrão — o filtro de período é opcional, não deve esconder
   // contratos antigos de quem ainda não mexeu nele.
@@ -78,8 +96,18 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
       c.numero.includes(busca);
     const dataCriacao = c.dataCriacao.slice(0, 10);
     const periodoOk = dataCriacao >= range.from && dataCriacao <= range.to;
+    if (soPendentes) return buscaOk && pendentes.includes(c);
     return buscaOk && periodoOk;
   });
+
+  const executarAcaoVenda = async () => {
+    if (!acaoVenda) return;
+    setExecutandoAcao(true);
+    const fn = acaoVenda.tipo === "cancelar" ? onCancelarPreVenda : onAprovarSemAssinatura;
+    const ok = fn ? await fn(acaoVenda.negocioId, motivo) : false;
+    setExecutandoAcao(false);
+    if (ok) { setAcaoVenda(null); setMotivo(""); setPreviewContrato(null); }
+  };
 
   const statusColors: Record<ContratoStatus, string> = {
     pendente: "bg-warning/20 text-warning border-warning/30",
@@ -179,6 +207,14 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
                 <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF ou nº" className="pl-8 w-[250px]" />
               </div>
               <DateRangePicker value={range} onChange={setRange} />
+              <Button
+                size="sm"
+                variant={soPendentes ? "default" : "outline"}
+                className={soPendentes ? "" : pendentes.length > 0 ? "border-amber-400 text-amber-800" : ""}
+                onClick={() => setSoPendentes((v) => !v)}
+              >
+                <Clock className="h-4 w-4 mr-1" /> Aguardando assinatura ({pendentes.length})
+              </Button>
               <Button size="sm" onClick={handleAbrirGerar}>
                 {usaFluxoDoLead ? <UserSearch className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />} Gerar Contrato
               </Button>
@@ -211,6 +247,19 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
                       <Badge className={`${statusColors[c.statusAssinatura]} border text-xs`}>
                         {statusLabels[c.statusAssinatura]}
                       </Badge>
+                      {statusVenda(c) === "aguardando" && (() => {
+                        const n = negocioPorId.get(c.negocioId!);
+                        return (
+                          <p className="text-[11px] text-amber-700 mt-1 flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> Venda aguardando · {tempoRestante(n?.reservaExpiraEm)}
+                          </p>
+                        );
+                      })()}
+                      {statusVenda(c) === "legado" && (
+                        <p className="text-[11px] text-red-700 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" /> Venda fechada sem assinatura
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
@@ -278,6 +327,52 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
                 <DialogTitle className="font-serif">Contrato #{previewContrato.numero}</DialogTitle>
               </DialogHeader>
               <div className="mt-4 space-y-4">
+                {(() => {
+                  const st = statusVenda(previewContrato);
+                  const n = previewContrato.negocioId ? negocioPorId.get(previewContrato.negocioId) : undefined;
+                  if (st === "aguardando" && n) {
+                    return (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
+                        <p className="font-medium flex items-center gap-1.5"><Clock className="h-4 w-4" /> Venda aguardando a assinatura da cliente</p>
+                        <p>
+                          A peça fica reservada até <strong>{n.reservaExpiraEm ? new Date(n.reservaExpiraEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}</strong> ({tempoRestante(n.reservaExpiraEm)}).
+                          Sem assinatura até lá, a venda expira e a peça é liberada. Receba o pagamento só depois da assinatura.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setLinkContrato(previewContrato)}>
+                            <Link2 className="h-4 w-4 mr-1" /> Enviar link para a cliente
+                          </Button>
+                          {onCancelarPreVenda && (
+                            <Button size="sm" variant="ghost" className="text-red-700" onClick={() => setAcaoVenda({ tipo: "cancelar", negocioId: n.id })}>
+                              <XCircle className="h-4 w-4 mr-1" /> Cancelar venda
+                            </Button>
+                          )}
+                          {isAdmin && onAprovarSemAssinatura && (
+                            <Button size="sm" variant="ghost" onClick={() => setAcaoVenda({ tipo: "sem_assinatura", negocioId: n.id })}>
+                              <ShieldAlert className="h-4 w-4 mr-1" /> Fechar sem assinatura (admin)
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  if (st === "legado") {
+                    return (
+                      <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+                        <p className="font-medium flex items-center gap-1.5"><AlertTriangle className="h-4 w-4" /> Venda fechada antes da regra de assinatura</p>
+                        <p>Essa venda já está no financeiro, mas o contrato nunca foi assinado. Colete a assinatura abaixo ou envie o link.</p>
+                      </div>
+                    );
+                  }
+                  if (st === "encerrada") {
+                    return (
+                      <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                        Esta venda foi {n?.statusNegociacao === "expirado" ? "expirada (48h sem assinatura)" : "cancelada"} — a peça foi liberada. Para alugar, registre a venda de novo.
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Cliente</p>
@@ -314,7 +409,7 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
 
                 {previewContrato.statusAssinatura === "pendente" && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Assinatura da Cliente</p>
+                    <p className="text-sm font-medium">Assinatura da Cliente (no iPad) — ao assinar, a venda é fechada</p>
                     <SignaturePad onConfirm={handleAssinar} />
                   </div>
                 )}
@@ -343,6 +438,33 @@ export function ContratosTab({ contratos, negociosAprovados, leads, vestidos, on
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!acaoVenda} onOpenChange={(o) => { if (!o) { setAcaoVenda(null); setMotivo(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif">
+              {acaoVenda?.tipo === "cancelar" ? "Cancelar venda" : "Fechar venda sem assinatura"}
+            </DialogTitle>
+            <DialogDescription>
+              {acaoVenda?.tipo === "cancelar"
+                ? "O contrato é cancelado e a peça volta a ficar disponível nessas datas."
+                : "Exceção: a venda entra no financeiro e na comissão sem o contrato assinado. O motivo fica registrado na venda."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Motivo{acaoVenda?.tipo === "sem_assinatura" ? " (obrigatório)" : ""}</Label>
+            <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Explique o que aconteceu" />
+          </div>
+          <Button
+            className="w-full"
+            variant={acaoVenda?.tipo === "cancelar" ? "destructive" : "default"}
+            disabled={executandoAcao || (acaoVenda?.tipo === "sem_assinatura" && motivo.trim().length < 10)}
+            onClick={executarAcaoVenda}
+          >
+            {acaoVenda?.tipo === "cancelar" ? "Cancelar venda e liberar a peça" : "Fechar venda sem assinatura"}
+          </Button>
         </DialogContent>
       </Dialog>
 

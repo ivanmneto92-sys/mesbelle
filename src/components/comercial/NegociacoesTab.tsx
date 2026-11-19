@@ -54,11 +54,11 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
     const res = await onAprovarFechamento(negocioId);
     const contrato = res && typeof res === "object" ? res.contrato : null;
     if (contrato) {
-      toast.success(`Fechamento aprovado — Contrato #${contrato.numero} gerado`, {
+      toast.success(`Contrato #${contrato.numero} gerado — a venda fecha quando a cliente assinar`, {
         action: { label: "Abrir contrato", onClick: () => onSwitchToContratos(contrato.id) },
       });
     } else {
-      toast.success("Fechamento aprovado. Verifique os dados para gerar o contrato.");
+      toast.error("Não consegui gerar o contrato — confira CPF, data do evento e valor da negociação.");
     }
     onSwitchToContratos(contrato?.id);
   };
@@ -97,7 +97,7 @@ export function NegociacoesTab({ negocios, onUpdateNegocio, onAprovarFechamento,
               </Button>
               {n.statusNegociacao === "aberto" && (
                 <Button size="sm" className="text-xs h-7" onClick={() => handleAprovar(n.id)}>
-                  <CheckCircle className="h-3 w-3 mr-1" /> Aprovar
+                  <CheckCircle className="h-3 w-3 mr-1" /> Gerar contrato
                 </Button>
               )}
             </div>

@@ -41,7 +41,10 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
       return;
     }
     try {
-      await onSave(parsed.data as Omit<Lead, "id" | "criadoEm" | "statusFunil">);
+      const salvo = await onSave(parsed.data as Omit<Lead, "id" | "criadoEm" | "statusFunil">);
+      // addLead já mostrou o motivo (ex.: telefone já cadastrado) — mantém o
+      // formulário aberto para corrigir em vez de anunciar sucesso.
+      if (!salvo) return;
       toast.success("Lead cadastrado com sucesso!");
       setForm(formInicial(user?.name ?? ""));
       onClose();

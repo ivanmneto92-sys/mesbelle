@@ -10,6 +10,7 @@ import { useDateRange, DateRange } from "@/hooks/useDateRange";
 import { useLeads } from "@/hooks/useLeads";
 import { Transacao } from "@/types/financeiro";
 import { formatBRL, categoriaLabel } from "@/lib/formatters";
+import { dataVenda } from "@/lib/assinaturaVenda";
 
 const PIE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--destructive))", "hsl(var(--info))", "hsl(var(--success))", "hsl(var(--accent-foreground))"];
 
@@ -47,7 +48,7 @@ const FinanceiroRelatorios = () => {
 
   const leadsNoPeriodo = leads.filter((l) => l.criadoEm && l.criadoEm >= range.from && l.criadoEm <= range.to);
   const agendamentosNoPeriodo = leads.filter((l) => l.provaData && l.provaData >= range.from && l.provaData <= range.to);
-  const negociosAprovados = negocios.filter((n) => n.statusNegociacao === "aprovado" && n.criadoEm >= range.from && n.criadoEm <= range.to);
+  const negociosAprovados = negocios.filter((n) => n.statusNegociacao === "aprovado" && dataVenda(n) >= range.from && dataVenda(n) <= range.to);
 
   const receitaTotal = transacoes.filter((t) => t.tipo === "entrada").reduce((s, t) => s + t.valor, 0);
   const gastoMarketing = transacoes.filter((t) => t.tipo === "saida" && t.categoria === "marketing").reduce((s, t) => s + t.valor, 0);

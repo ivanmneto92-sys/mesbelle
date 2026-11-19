@@ -1,10 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import type { Json } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { ItemCarrinho, DadosPagamento, ResumoPedido } from "@/types/venda";
 import type { Lead } from "@/types/comercial";
-import { gerarTermosContrato, gerarNumeroContrato } from "@/lib/contratoTemplate";
+import { gerarTermosContrato } from "@/lib/contratoTemplate";
 
 export interface LocatariaOverride {
   nome: string;
@@ -22,6 +22,7 @@ interface CriarVendaInput {
   pagamento: DadosPagamento;
   resumo: ResumoPedido;
   tipoNegocio: TipoNegocio;
+  confirmarDuplicidade?: boolean;
 }
 
 const FORMA_LABELS: Record<DadosPagamento["forma"], string> = {
@@ -34,261 +35,125 @@ const FORMA_LABELS: Record<DadosPagamento["forma"], string> = {
 };
 
 /**
- * negocios não tem colunas por item (sem tabela alugueis no schema) — no
- * Aluguel normal a venda inteira vira um único negócio, com vestido_nome
- * resumindo as peças e valor_negociado/desconto somando o carrinho. Cada
- * peça vira uma reserva em reservas_agenda (mesma tabela usada pela agenda
- * do Acervo) para bloquear a disponibilidade no período alugado.
+ * "Confirmar aluguel" NÃO fecha mais a venda: cria uma pré-venda
+ * (criar_pre_venda no banco, numa única transação) — negócio
+ * "aguardando_assinatura", pré-reserva da(s) peça(s) por 48h e o contrato
+ * com link de assinatura. Financeiro, comissão, Produção, Logística e o
+ * status da peça só acontecem quando a cliente assina (fechar_venda()).
  *
- * No Primeiro Aluguel é diferente: cada peça feita sob medida vira o seu
- * próprio negócio (1 peça = 1 negócio, 1 contrato de produção) — é assim
- * que o trigger fn_negocio_primeiro_aluguel_gera_producao consegue gerar
- * uma Produção por peça (ele lê negocios.vestido_id_novo, que é uma coluna
- * singular). Isso permite vender 2+ vestidos sob medida na mesma visita à
- * cliente sem perder o acompanhamento de confecção de nenhum deles — antes,
- * só a primeira peça do carrinho virava Produção.
+ * Aluguel normal: a venda inteira vira um negócio (vestido_nome resume as
+ * peças) com uma pré-reserva por peça. Primeiro Aluguel: cada peça sob
+ * medida vira o seu próprio negócio/contrato, para cada uma ganhar a sua
+ * Produção quando fechar.
  */
-// Se uma etapa depois do negócio falhar, desfaz o que já foi gravado — sem
-// isto um negócio "aprovado" (que já dispara comissão/imposto no financeiro)
-// podia sobrar no banco sem peça reservada nem entrega agendada.
-async function limparNegocioOrfao(negocioId: string) {
-  await supabase.from("transacoes_financeiras").delete().eq("negocio_id", negocioId);
-  await supabase.from("reservas_agenda").delete().eq("negocio_id", negocioId);
-  // Primeiro Aluguel: o trigger de Produção pode já ter disparado pra esse
-  // negócio antes de uma etapa seguinte falhar — sem apagar
-  // etapas_producao/producoes primeiro, o delete de negocios abaixo falharia
-  // (violação de chave estrangeira) e o rollback ficaria pela metade.
-  const { data: producoesDoNegocio } = await supabase.from("producoes").select("id").eq("negocio_id", negocioId);
-  const producaoIds = (producoesDoNegocio ?? []).map((p) => p.id as string);
-  if (producaoIds.length > 0) {
-    await supabase.from("etapas_producao").delete().in("producao_id", producaoIds);
-    await supabase.from("producoes").delete().in("id", producaoIds);
-  }
-  await supabase.from("negocios").delete().eq("id", negocioId);
+export class DuplicidadeVendaError extends Error {}
+
+export interface ResultadoPreVenda {
+  negocioId: string;
+  contratoIds: string[];
+  expiraEm: string;
 }
 
 export function useCriarVenda() {
-  const { user } = useAuth();
-
   return useMutation({
-    mutationFn: async ({ lead, locataria, itens, pagamento, resumo, tipoNegocio }: CriarVendaInput) => {
+    mutationFn: async ({ lead, locataria, itens, pagamento, resumo, tipoNegocio, confirmarDuplicidade }: CriarVendaInput): Promise<ResultadoPreVenda> => {
       const ehPrimeiroAluguel = tipoNegocio === "primeiro_aluguel";
-      // Mensagem de erro secundário — contrato é complementar à venda: se
-      // falhar, avisamos mas não desfazemos negócio/reserva/entrega já
-      // gravados (ver comentário de limparNegocioOrfao acima).
-      let avisoSecundario: string | null = null;
+      const formaLabel = FORMA_LABELS[pagamento.forma];
 
-      // Gera o contrato já na confirmação do aluguel — antes disso, quem
-      // confirmava a venda precisava lembrar de ir noutra tela clicar em
-      // "Gerar Contrato" depois, e esse passo manual ficava esquecido com
-      // frequência (contrato nunca existia, mesmo com o negócio aprovado).
-      const criarContratoParaNegocio = async (params: {
-        negocioId: string;
-        produtoDescricao: string;
-        valorLocacao: number;
-        desconto: number;
-        dataEvento: string;
-      }) => {
-        const numero = await gerarNumeroContrato();
-        const { error } = await supabase.from("contratos").insert({
-          numero,
-          lead_id: lead.id,
-          negocio_id: params.negocioId,
-          nome_cliente: locataria.nome,
-          cpf_cliente: locataria.cpf,
-          email_cliente: locataria.email || lead.email || "",
-          data_evento: params.dataEvento,
-          valor_total: params.valorLocacao,
-          status_assinatura: "pendente",
-          vendedor_id: user?.id ?? null,
-          termos_texto: gerarTermosContrato({
-            nomeLocataria: locataria.nome,
-            cpf: locataria.cpf,
-            celular: locataria.telefone || lead.telefone,
-            email: locataria.email || lead.email,
-            produtoDescricao: params.produtoDescricao,
-            valorLocacao: params.valorLocacao,
-            formaPagamento: FORMA_LABELS[pagamento.forma],
-            observacoesPagamento: params.desconto > 0
-              ? `Desconto aplicado: ${params.desconto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
-              : undefined,
-            dataEvento: params.dataEvento || undefined,
-          }),
+      const termos = (produtoDescricao: string, valorLocacao: number, desconto: number, dataEvento: string) =>
+        gerarTermosContrato({
+          nomeLocataria: locataria.nome,
+          cpf: locataria.cpf,
+          celular: locataria.telefone || lead.telefone,
+          email: locataria.email || lead.email,
+          produtoDescricao,
+          valorLocacao,
+          formaPagamento: formaLabel,
+          observacoesPagamento: desconto > 0
+            ? `Desconto aplicado: ${desconto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
+            : undefined,
+          dataEvento: dataEvento || undefined,
         });
-        return !error;
-      };
 
-      const criarEntregaLogistica = async (item: ItemCarrinho) => {
-        const { error } = await supabase.from("alugueis_logistica").insert({
-          vestido_nome: item.nome,
-          cliente_nome: locataria.nome,
-          cliente_telefone: locataria.telefone || lead.telefone,
-          endereco_entrega: lead.endereco,
-          data_saida: item.dataRetirada,
-          data_retorno: item.dataDevolucao,
-        });
-        return error;
-      };
+      const reserva = (item: ItemCarrinho) => ({
+        vestido_id: item.vestidoId,
+        vestido_nome: item.nome,
+        data_inicio: item.dataRetirada,
+        data_fim: item.dataDevolucao,
+      });
 
-      let negocioIds: string[] = [];
-
-      if (ehPrimeiroAluguel) {
-        // Uma peça = um negócio, pra cada uma gerar sua própria Produção.
-        for (const item of itens) {
-          const { data: negocio, error: negErr } = await supabase
-            .from("negocios")
-            .insert({
-              cliente_id: lead.id,
-              cliente_nome: locataria.nome,
-              cliente_cpf: locataria.cpf,
-              cliente_telefone: locataria.telefone || null,
-              cliente_email: locataria.email || null,
+      const negocios = ehPrimeiroAluguel
+        ? itens.map((item) => {
+            const valor = item.valorOriginal - item.desconto;
+            // data_evento = retirada da peça: é dela que sai o prazo da Produção.
+            const dataEvento = item.dataRetirada || "";
+            return {
               vestido_nome: item.nome,
               valor_negociado: item.valorOriginal,
               desconto: item.desconto,
-              metodo_pagamento: FORMA_LABELS[pagamento.forma],
-              parcelas: pagamento.forma === "credito" ? pagamento.parcelas : 1,
-              bandeira_cartao: pagamento.forma === "credito" || pagamento.forma === "debito" ? pagamento.bandeira : null,
-              observacoes: pagamento.observacoes || null,
-              status_negociacao: "aprovado",
-              // Usa a data de retirada da peça (não o evento do lead) — é
-              // essa coluna que o trigger de Produção lê pra calcular o
-              // prazo (retirada - 72h).
-              data_evento: item.dataRetirada || "",
-              vendedor_id: user?.id ?? null,
-              tipo_negocio: tipoNegocio,
+              data_evento: dataEvento,
+              data_evento_contrato: lead.dataEvento || dataEvento,
               vestido_id_novo: item.vestidoId,
-              descricao_primeiro_aluguel: null,
-            })
-            .select("id")
-            .single();
-
-          if (negErr) {
-            for (const id of negocioIds) await limparNegocioOrfao(id);
-            throw new Error("Erro ao criar negócio: " + negErr.message);
-          }
-          negocioIds.push(negocio.id);
-
-          const { error: resErr } = await supabase.from("reservas_agenda").insert({
-            vestido_id: item.vestidoId,
-            data_inicio: item.dataRetirada,
-            data_fim: item.dataDevolucao,
-            status_reserva: "aluguel",
-            negocio_id: negocio.id,
-          });
-          if (resErr) {
-            for (const id of negocioIds) await limparNegocioOrfao(id);
-            throw new Error("Erro ao reservar a peça: " + resErr.message);
-          }
-
-          const logErr = await criarEntregaLogistica(item);
-          if (logErr) {
-            for (const id of negocioIds) await limparNegocioOrfao(id);
-            throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
-          }
-
-          const contratoOk = await criarContratoParaNegocio({
-            negocioId: negocio.id,
-            produtoDescricao: item.nome,
-            valorLocacao: item.valorOriginal - item.desconto,
-            desconto: item.desconto,
-            dataEvento: item.dataRetirada || "",
-          });
-          if (!contratoOk) avisoSecundario = "Aluguel registrado, mas não consegui gerar o contrato automaticamente — gere manualmente em Contratos.";
-        }
-      } else {
-        const vestidoNome = itens.map((i) => i.nome).join(", ");
-        const { data: negocio, error: negErr } = await supabase
-          .from("negocios")
-          .insert({
-            cliente_id: lead.id,
-            cliente_nome: locataria.nome,
-            cliente_cpf: locataria.cpf,
-            cliente_telefone: locataria.telefone || null,
-            cliente_email: locataria.email || null,
-            vestido_nome: vestidoNome,
-            valor_negociado: resumo.subtotal,
-            desconto: resumo.descontoItens + resumo.descontoGeral,
-            metodo_pagamento: FORMA_LABELS[pagamento.forma],
-            parcelas: pagamento.forma === "credito" ? pagamento.parcelas : 1,
-            bandeira_cartao: pagamento.forma === "credito" || pagamento.forma === "debito" ? pagamento.bandeira : null,
-            observacoes: pagamento.observacoes || null,
-            status_negociacao: "aprovado",
-            data_evento: lead.dataEvento || itens[0]?.dataRetirada || "",
-            vendedor_id: user?.id ?? null,
-            tipo_negocio: tipoNegocio,
-            vestido_id_novo: null,
-            descricao_primeiro_aluguel: null,
+              valor_contrato: valor,
+              termos_texto: termos(item.nome, valor, item.desconto, lead.dataEvento || dataEvento),
+              reservas: [reserva(item)],
+            };
           })
-          .select("id")
-          .single();
+        : (() => {
+            const vestidoNome = itens.map((i) => i.nome).join(", ");
+            const desconto = resumo.descontoItens + resumo.descontoGeral;
+            const dataEvento = lead.dataEvento || itens[0]?.dataRetirada || "";
+            return [{
+              vestido_nome: vestidoNome,
+              valor_negociado: resumo.subtotal,
+              desconto,
+              data_evento: dataEvento,
+              data_evento_contrato: dataEvento,
+              vestido_id_novo: null,
+              valor_contrato: resumo.total,
+              termos_texto: termos(vestidoNome, resumo.total, desconto, dataEvento),
+              reservas: itens.map(reserva),
+            }];
+          })();
 
-        if (negErr) throw new Error("Erro ao criar negócio: " + negErr.message);
-        negocioIds = [negocio.id];
+      const { data, error } = await supabase.rpc("criar_pre_venda", {
+        p_dados: {
+          lead_id: lead.id,
+          tipo_negocio: tipoNegocio,
+          confirmar_duplicidade: !!confirmarDuplicidade,
+          locataria: { ...locataria },
+          pagamento: {
+            metodo: formaLabel,
+            parcelas: pagamento.forma === "credito" ? pagamento.parcelas : 1,
+            bandeira: pagamento.forma === "credito" || pagamento.forma === "debito" ? pagamento.bandeira : null,
+            observacoes: pagamento.observacoes || null,
+          },
+          negocios,
+        } as unknown as Json,
+      });
 
-        const reservas = itens.map((item) => ({
-          vestido_id: item.vestidoId,
-          data_inicio: item.dataRetirada,
-          data_fim: item.dataDevolucao,
-          status_reserva: "aluguel",
-          negocio_id: negocio.id,
-        }));
-        const { error: resErr } = await supabase.from("reservas_agenda").insert(reservas);
-        if (resErr) {
-          await limparNegocioOrfao(negocio.id);
-          throw new Error("Erro ao reservar as peças: " + resErr.message);
+      if (error) {
+        if (error.message.startsWith("DUPLICIDADE:")) {
+          throw new DuplicidadeVendaError(error.message.replace(/^DUPLICIDADE:\s*/, ""));
         }
-
-        // Alimenta a tela de Logística (Operacional → Logística) — sem isto
-        // a tabela alugueis_logistica nunca recebia uma linha sequer, e a
-        // tela ficava sempre vazia mesmo com vendas reais acontecendo.
-        const entregas = itens.map((item) => ({
-          vestido_nome: item.nome,
-          cliente_nome: locataria.nome,
-          cliente_telefone: locataria.telefone || lead.telefone,
-          endereco_entrega: lead.endereco,
-          data_saida: item.dataRetirada,
-          data_retorno: item.dataDevolucao,
-        }));
-        const { error: logErr } = await supabase.from("alugueis_logistica").insert(entregas);
-        if (logErr) {
-          await limparNegocioOrfao(negocio.id);
-          throw new Error("Erro ao criar a entrega na Logística: " + logErr.message);
-        }
-
-        const contratoOk = await criarContratoParaNegocio({
-          negocioId: negocio.id,
-          produtoDescricao: vestidoNome,
-          valorLocacao: resumo.total,
-          desconto: resumo.descontoItens + resumo.descontoGeral,
-          dataEvento: lead.dataEvento || itens[0]?.dataRetirada || "",
-        });
-        if (!contratoOk) avisoSecundario = "Aluguel registrado, mas não consegui gerar o contrato automaticamente — gere manualmente em Contratos.";
+        throw new Error(error.message);
       }
 
-      // A venda em si já está garantida a partir daqui (negócio(s) + reserva +
-      // entrega + contrato gravados) — as duas atualizações abaixo são
-      // complementares; se falharem, avisamos mas não desfazemos a venda, só
-      // a peça pode ficar com o status desatualizado até alguém corrigir
-      // manualmente.
-      if (!ehPrimeiroAluguel) {
-        const vestidoIds = itens.map((i) => i.vestidoId);
-        const { error: vestidoErr } = await supabase.from("vestidos").update({ status: "alugado" }).in("id", vestidoIds);
-        if (vestidoErr && !avisoSecundario) avisoSecundario = "Venda registrada, mas não consegui marcar a peça como alugada — confira o status dela no Acervo.";
-      }
-
-      const { error: leadErr } = await supabase.from("leads").update({ enviado_comercial: true }).eq("id", lead.id);
-      if (leadErr && !avisoSecundario) avisoSecundario = "Venda registrada, mas não consegui atualizar o status do lead — confira em Leads.";
-
-      return { negocioId: negocioIds[0] as string, avisoSecundario };
+      const resultado = data as { expira_em: string; vendas: Array<{ negocio_id: string; contrato_id: string }> };
+      return {
+        negocioId: resultado.vendas[0]?.negocio_id,
+        contratoIds: resultado.vendas.map((v) => v.contrato_id),
+        expiraEm: resultado.expira_em,
+      };
     },
 
     onSuccess: (data) => {
-      toast.success("Aluguel registrado com sucesso! 🎉");
-      if (data.avisoSecundario) toast.warning(data.avisoSecundario);
+      const ate = new Date(data.expiraEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      toast.success(`Aluguel registrado — falta a assinatura da cliente. A peça fica reservada até ${ate}.`);
     },
 
     onError: (e: Error) => {
+      if (e instanceof DuplicidadeVendaError) return; // a tela pergunta se é para seguir mesmo assim
       toast.error(e.message || "Erro ao registrar aluguel");
     },
   });

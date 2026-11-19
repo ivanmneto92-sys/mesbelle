@@ -199,7 +199,7 @@ d("RLS — Contratos e fluxo público de assinatura por token", () => {
     ]);
 
     const { data: lead, error: leadErr } = await admin.from("leads").insert({
-      nome: "Cliente Teste RLS", telefone: "11999990000",
+      nome: "Cliente Teste RLS", telefone: `119${String(Date.now()).slice(-8)}`,
     }).select().single();
     if (leadErr) throw leadErr;
     leadId = lead.id;

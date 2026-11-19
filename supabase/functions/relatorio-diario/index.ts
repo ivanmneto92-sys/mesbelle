@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { enviarEmail, templateBase, botaoCTA } from "../_shared/resend.ts";
+import { enviarEmail, templateBase, botaoCTA, escapeHtml, formatBRL, formatDataHoraBR } from "../_shared/resend.ts";
 
 // Relatório diário dos agendamentos — chamado por um pg_cron job (Parte 2 do
 // prompt), nunca pelo navegador, por isso não valida um JWT de usuário: em
@@ -61,16 +61,16 @@ function blocoEvento(ag: EventoRow): string {
           ">${label}</div>
           <div>
             <p style="margin: 0; font-size: 15px; font-weight: 600; color: #1a1a1a;">
-              ${formatarHora(ag.data_hora)} — ${ag.cliente_nome}
+              ${formatarHora(ag.data_hora)} — ${escapeHtml(ag.cliente_nome)}
             </p>
             ${ag.vestidos?.nome
-              ? `<p style="margin: 2px 0 0; font-size: 13px; color: #6B7280;">🎀 ${ag.vestidos.nome}</p>`
+              ? `<p style="margin: 2px 0 0; font-size: 13px; color: #6B7280;">🎀 ${escapeHtml(ag.vestidos.nome)}</p>`
               : ""}
             ${ag.funcionaria_nome
-              ? `<p style="margin: 2px 0 0; font-size: 13px; color: #6B7280;">👤 Responsável: ${ag.funcionaria_nome}</p>`
+              ? `<p style="margin: 2px 0 0; font-size: 13px; color: #6B7280;">👤 Responsável: ${escapeHtml(ag.funcionaria_nome)}</p>`
               : ""}
             ${ag.observacoes
-              ? `<p style="margin: 4px 0 0; font-size: 12px; color: #9CA3AF; font-style: italic;">${ag.observacoes}</p>`
+              ? `<p style="margin: 4px 0 0; font-size: 12px; color: #9CA3AF; font-style: italic;">${escapeHtml(ag.observacoes)}</p>`
               : ""}
           </div>
         </div>
@@ -79,11 +79,45 @@ function blocoEvento(ag: EventoRow): string {
   `;
 }
 
+interface Pendencia {
+  cliente_nome: string;
+  vestido_nome: string | null;
+  valor: number;
+  reserva_expira_em: string | null;
+  vendedor_id: string | null;
+  legado: boolean;
+}
+
+// Vendas que ainda dependem da assinatura do contrato — a venda só fecha
+// (e só entra no financeiro/comissão) quando a cliente assina.
+function blocoPendencias(pendencias: Pendencia[], urlContratos: string): string {
+  if (pendencias.length === 0) return "";
+  const fimHoje = Date.now() + 24 * 3600 * 1000;
+  const linhas = pendencias.map((p) => {
+    const venceHoje = !p.legado && p.reserva_expira_em && new Date(p.reserva_expira_em).getTime() < fimHoje;
+    const situacao = p.legado
+      ? `<span style="color:#b91c1c;">venda antiga sem contrato assinado</span>`
+      : `<span style="color:${venceHoje ? "#b91c1c" : "#b45309"};">reserva até ${escapeHtml(formatDataHoraBR(p.reserva_expira_em))}${venceHoje ? " — vence hoje" : ""}</span>`;
+    return `<tr><td style="padding:8px 0;border-bottom:1px solid #f0e6f0;font-size:14px;">
+      <strong>${escapeHtml(p.cliente_nome)}</strong>${p.vestido_nome ? ` · ${escapeHtml(p.vestido_nome)}` : ""}
+      <span style="color:#6b7280;"> · ${escapeHtml(formatBRL(p.valor))}</span><br/>
+      <span style="font-size:12px;">${situacao}</span></td></tr>`;
+  }).join("");
+  return `
+    <div style="margin-top:28px;padding:16px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;">
+      <h3 style="margin:0 0 6px;color:#9a3412;font-size:16px;">✍️ ${pendencias.length} venda(s) aguardando assinatura do contrato</h3>
+      <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Sem assinatura em 48h a venda expira e a peça é liberada.</p>
+      <table width="100%" cellpadding="0" cellspacing="0">${linhas}</table>
+      ${botaoCTA("Coletar assinaturas", urlContratos)}
+    </div>`;
+}
+
 function montarCorpoRelatorio(
   eventos: EventoRow[],
   tituloRelatorio: string,
   dataFormatada: string,
   urlAgenda: string,
+  extraHtml = "",
 ): string {
   const totalEventos = eventos.length;
   const eventosHtml = eventos.length > 0
@@ -99,6 +133,7 @@ function montarCorpoRelatorio(
     <div style="margin-top: 28px; text-align: center;">
       ${botaoCTA("Abrir agenda completa", urlAgenda)}
     </div>
+    ${extraHtml}
   `;
   return templateBase(conteudo);
 }
@@ -153,6 +188,27 @@ Deno.serve(async (req) => {
       funcionaria_nome: e.funcionaria_id ? nomesMap[e.funcionaria_id] ?? null : null,
     }));
 
+    // Vendas aguardando assinatura (pré-vendas) e vendas antigas fechadas sem
+    // contrato assinado.
+    const [{ data: negPend }, { data: ctrAssinados }] = await Promise.all([
+      supabaseAdmin
+        .from("negocios")
+        .select("id, cliente_nome, vestido_nome, valor_negociado, desconto, reserva_expira_em, vendedor_id, status_negociacao, aprovado_sem_assinatura_motivo")
+        .in("status_negociacao", ["aguardando_assinatura", "aprovado"]),
+      supabaseAdmin.from("contratos").select("negocio_id").eq("status_assinatura", "assinado").not("negocio_id", "is", null),
+    ]);
+    const assinados = new Set((ctrAssinados ?? []).map((c) => c.negocio_id));
+    const pendencias: Pendencia[] = (negPend ?? [])
+      .filter((n) => n.status_negociacao === "aguardando_assinatura" || (!assinados.has(n.id) && !n.aprovado_sem_assinatura_motivo))
+      .map((n) => ({
+        cliente_nome: n.cliente_nome,
+        vestido_nome: n.vestido_nome,
+        valor: Math.max(Number(n.valor_negociado) - Number(n.desconto ?? 0), 0),
+        reserva_expira_em: n.reserva_expira_em,
+        vendedor_id: n.vendedor_id,
+        legado: n.status_negociacao === "aprovado",
+      }));
+
     // Cada destinatário é enviado de forma independente — a falha de um
     // e-mail (endereço rejeitado pelo Resend, etc.) não deve impedir o
     // relatório de chegar aos demais.
@@ -177,7 +233,8 @@ Deno.serve(async (req) => {
         "relatório do admin",
         adminUser.user.email,
         `📅 Agenda do dia — ${dataFormatadaCapitalizada}`,
-        montarCorpoRelatorio(eventos, "Relatório completo do dia", dataFormatadaCapitalizada, `${siteUrl}/comercial/calendario`),
+        montarCorpoRelatorio(eventos, "Relatório completo do dia", dataFormatadaCapitalizada, `${siteUrl}/comercial/calendario`,
+          blocoPendencias(pendencias, `${siteUrl}/comercial/contratos`)),
       );
     }
 
@@ -185,7 +242,8 @@ Deno.serve(async (req) => {
     const { data: vendedorRoles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "vendedor");
     for (const vr of vendedorRoles ?? []) {
       const eventosDaFuncionaria = eventos.filter((e) => e.funcionaria_id === vr.user_id);
-      if (eventosDaFuncionaria.length === 0) continue;
+      const pendenciasDaFuncionaria = pendencias.filter((p) => p.vendedor_id === vr.user_id);
+      if (eventosDaFuncionaria.length === 0 && pendenciasDaFuncionaria.length === 0) continue;
 
       const { data: funcUser } = await supabaseAdmin.auth.admin.getUserById(vr.user_id);
       if (!funcUser?.user?.email) continue;
@@ -200,6 +258,7 @@ Deno.serve(async (req) => {
           `Olá, ${nomeFunc}! Estes são seus agendamentos de hoje`,
           dataFormatadaCapitalizada,
           `${siteUrl}/minha-agenda`,
+          blocoPendencias(pendenciasDaFuncionaria, `${siteUrl}/meu-contrato`),
         ),
       );
     }

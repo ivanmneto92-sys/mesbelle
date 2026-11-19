@@ -97,3 +97,41 @@ export function botaoCTA(texto: string, url: string): string {
     </p>
   `;
 }
+
+/** Escapa texto vindo do banco (nome da cliente, observações) antes de ir para o HTML. */
+export function escapeHtml(valor: unknown): string {
+  return String(valor ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
+  );
+}
+
+export const formatBRL = (v: number) =>
+  Number(v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+export const formatDataHoraBR = (iso: string | null | undefined) =>
+  iso
+    ? new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+      }).format(new Date(iso))
+    : "—";
+
+// deno-lint-ignore no-explicit-any
+type SupabaseAdmin = any;
+
+/** E-mails de todos os usuários com papel admin. */
+export async function emailsDosAdmins(supabaseAdmin: SupabaseAdmin): Promise<string[]> {
+  const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin");
+  const emails: string[] = [];
+  for (const r of roles ?? []) {
+    const { data } = await supabaseAdmin.auth.admin.getUserById(r.user_id);
+    if (data?.user?.email) emails.push(data.user.email);
+  }
+  return emails;
+}
+
+/** E-mail de um usuário (ex.: a vendedora da venda). */
+export async function emailDoUsuario(supabaseAdmin: SupabaseAdmin, userId: string | null | undefined): Promise<string | null> {
+  if (!userId) return null;
+  const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+  return data?.user?.email ?? null;
+}

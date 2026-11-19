@@ -91,7 +91,7 @@ export function NovoVestidoSheet({ open, onClose, onSave }: Props) {
     toast.success("Vestido cadastrado");
     // reset
     setNome(""); setCategoriaPeca("vestido"); setCor(""); setTamanho("M"); setComprimento("Longo");
-    setPrecoAluguel(""); setPrecoVenda(""); setDescricao(""); setIsConsignado(false); setImagens([]);
+    setPrecoAluguel(0); setPrecoVenda(0); setDescricao(""); setIsConsignado(false); setImagens([]);
     onClose();
   };
 

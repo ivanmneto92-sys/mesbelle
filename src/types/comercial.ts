@@ -22,6 +22,9 @@ export interface CrmKanbanColumn {
 export const CRM_KANBAN_COLUMNS: CrmKanbanColumn[] = [
   { id: "novo_lead", title: "Novo Lead", colorClass: "bg-info/20 text-info border-info/30" },
   { id: "em_atendimento", title: "Em Atendimento", colorClass: "bg-accent/20 text-accent-foreground border-accent-foreground/30" },
+  // Status que o agendamento grava no lead (criar_agendamento_com_lead) —
+  // sem esta coluna esses leads (a maioria da base) sumiam do Kanban.
+  { id: "agendado", title: "Visita Agendada", colorClass: "bg-warning/20 text-warning border-warning/30" },
   { id: "prova_agendada", title: "Prova Agendada", colorClass: "bg-primary/20 text-primary border-primary/30" },
   { id: "no_show", title: "No-Show", colorClass: "bg-destructive/20 text-destructive border-destructive/30" },
 ];
@@ -58,7 +61,11 @@ export interface MedidasCliente {
 }
 
 // === Negócio (Comercial) ===
-export type StatusNegociacao = "aberto" | "aprovado" | "cancelado";
+// aguardando_assinatura: vendedora confirmou o aluguel, a peça está
+// pré-reservada (48h) e o contrato espera a assinatura da cliente. A venda só
+// vira "aprovado" (fechada) quando o contrato é assinado — ver
+// fechar_venda() no banco. "expirado": 48h sem assinatura, peça liberada.
+export type StatusNegociacao = "aberto" | "aguardando_assinatura" | "aprovado" | "cancelado" | "expirado";
 
 export interface Negocio {
   id: string;
@@ -75,6 +82,10 @@ export interface Negocio {
   dataEvento: string;
   criadoEm: string;
   vendedorId?: string | null;
+  tipoNegocio?: string;
+  aprovadoEm?: string | null;
+  reservaExpiraEm?: string | null;
+  aprovadoSemAssinaturaMotivo?: string | null;
 }
 
 // === Contrato ===

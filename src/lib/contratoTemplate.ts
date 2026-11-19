@@ -10,17 +10,13 @@ import { supabase } from "@/integrations/supabase/client";
 // Número sequencial do contrato (ex: MB-2610-003) — compartilhado por todo
 // lugar que grava um contrato, pra nunca ter dois pontos do código gerando
 // a mesma sequência numa corrida.
+// Número sequencial do mês (MB-AAMM-NNN), gerado no banco: lá a contagem
+// enxerga todos os contratos (no navegador a RLS escondia os de outras
+// vendedoras e o número podia se repetir) e é feita com trava.
 export async function gerarNumeroContrato(): Promise<string> {
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(-2);
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-  const { count } = await supabase
-    .from("contratos")
-    .select("id", { count: "exact", head: true })
-    .gte("created_at", start);
-  const seq = String((count ?? 0) + 1).padStart(3, "0");
-  return `MB-${yy}${mm}-${seq}`;
+  const { data, error } = await supabase.rpc("gerar_numero_contrato");
+  if (error || !data) throw new Error("Não foi possível gerar o número do contrato: " + (error?.message ?? ""));
+  return data as string;
 }
 
 export interface DadosContrato {

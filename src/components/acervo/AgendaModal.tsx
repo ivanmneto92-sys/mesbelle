@@ -23,7 +23,10 @@ const RESERVA_LABELS: Record<ReservaStatus, string> = {
   aluguel: "Aluguel",
   lavanderia: "Lavanderia",
   ajuste: "Ajuste",
+  pre_reserva: "Pré-reserva (aguardando assinatura)",
 };
+// Pré-reserva só nasce de uma venda (criar_pre_venda) — não é lançada à mão.
+const TIPOS_MANUAIS: ReservaStatus[] = ["aluguel", "lavanderia", "ajuste"];
 
 export function AgendaModal({ vestido, open, onClose, reservas, onAddReserva }: Props) {
   const [adding, setAdding] = useState(false);
@@ -104,7 +107,7 @@ export function AgendaModal({ vestido, open, onClose, reservas, onAddReserva }: 
               <Select value={tipo} onValueChange={(v) => setTipo(v as ReservaStatus)}>
                 <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(RESERVA_LABELS) as ReservaStatus[]).map(s => (
+                  {TIPOS_MANUAIS.map(s => (
                     <SelectItem key={s} value={s}>{RESERVA_LABELS[s]}</SelectItem>
                   ))}
                 </SelectContent>

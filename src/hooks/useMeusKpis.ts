@@ -3,6 +3,7 @@ import { useAgenda } from "./useAgenda";
 import { useAuth } from "@/contexts/AuthContext";
 import type { DateRange } from "./useDateRange";
 import { estimarComissaoMes } from "@/lib/comissao";
+import { dataVenda } from "@/lib/assinaturaVenda";
 
 const now = new Date();
 const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -66,7 +67,7 @@ export function useMeusKpis(range: DateRange): MeusKpis {
   // "Negócios Fechados"/"Faturamento Gerado" respeitam o período escolhido
   // no DateRangePicker da tela, igual a "Leads no Período".
   const negociosFechados = meusNegociosAprovados.filter(
-    (n) => n.criadoEm && n.criadoEm >= range.from && n.criadoEm <= range.to + "T23:59:59"
+    (n) => dataVenda(n) >= range.from && dataVenda(n) <= range.to
   );
   const faturamentoGerado = negociosFechados.reduce(
     (s, n) => s + (n.valorNegociado - n.desconto),
@@ -77,7 +78,7 @@ export function useMeusKpis(range: DateRange): MeusKpis {
   // período do filtro) — mesma janela usada pelo trigger no banco
   // (fn_negocio_aprovado_gera_transacao), que reseta todo mês.
   const faturamentoMesAtual = meusNegociosAprovados
-    .filter((n) => n.criadoEm?.slice(0, 7) === mesAtual)
+    .filter((n) => dataVenda(n).slice(0, 7) === mesAtual)
     .reduce((s, n) => s + (n.valorNegociado - n.desconto), 0);
   const projecaoGanho = estimarComissaoMes(faturamentoMesAtual);
 

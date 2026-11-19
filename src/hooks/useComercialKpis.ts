@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Lead, Contrato, Negocio } from "@/types/comercial";
 import { Agendamento } from "@/types/agenda";
 import { DateRange } from "@/hooks/useDateRange";
+import { dataVenda } from "@/lib/assinaturaVenda";
 
 export interface ComercialKpis {
   // Funil
@@ -76,7 +77,7 @@ export function useComercialKpis(
 
     // Ticket médio e negócios aprovados
     const negociosAprovados = negocios.filter(
-      (n) => n.statusNegociacao === "aprovado" && inRange(n.criadoEm)
+      (n) => n.statusNegociacao === "aprovado" && inRange(dataVenda(n))
     ).length;
     const ticketMedio = contratosPeriodo.length > 0
       ? faturamentoPeriodo / contratosPeriodo.length

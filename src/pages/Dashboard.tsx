@@ -18,9 +18,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CRM_KANBAN_COLUMNS } from "@/types/comercial";
+import { PendenciasAssinaturaCard } from "@/components/comercial/PendenciasAssinaturaCard";
 
 const statusFunilLabel = (status: string) =>
-  CRM_KANBAN_COLUMNS.find((c) => c.id === status)?.title ?? status;
+  status === "compareceu_alugou" ? "Alugou" : CRM_KANBAN_COLUMNS.find((c) => c.id === status)?.title ?? status;
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
 
@@ -46,7 +47,7 @@ const Dashboard = () => {
 
   const shortcuts = [
     { label: "Novo Lead", icon: UserPlus, to: "/crm", roles: ["admin"], primary: false },
-    { label: "Nova Venda", icon: Handshake, to: "/comercial", roles: ["admin"], primary: true },
+    { label: "Nova Venda", icon: Handshake, to: "/minha-venda", roles: ["admin"], primary: true },
     { label: "Logística", icon: Truck, to: "/operacional/logistica", roles: ["admin"], primary: false },
   ].filter((s) => user && s.roles.includes(user.role));
 
@@ -107,6 +108,10 @@ const Dashboard = () => {
           </div>
         }
       />
+
+      {(user?.role === "admin" || user?.role === "vendedor") && (
+        <PendenciasAssinaturaCard contratosUrl={user?.role === "vendedor" ? "/meu-contrato" : "/comercial/contratos"} />
+      )}
 
       {/* KPIs do período selecionado */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

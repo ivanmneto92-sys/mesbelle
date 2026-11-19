@@ -5,6 +5,7 @@ import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negoci
 import type { DateRange } from "@/hooks/useDateRange";
 import { gerarTermosContrato, gerarNumeroContrato } from "@/lib/contratoTemplate";
 import { toast } from "sonner";
+import { campoDuplicado, mensagemDuplicado } from "@/lib/telefone";
 
 // ============= Legacy storage cleanup =============
 // Kept for compatibility — clears any residual data from the old localStorage-based system.
@@ -105,6 +106,8 @@ type NegocioRow = {
   cliente_telefone: string | null; cliente_email: string | null;
   valor_negociado: number; desconto: number; metodo_pagamento: string; status_negociacao: string;
   data_evento: string; criado_em: string; vendedor_id: string | null;
+  tipo_negocio?: string | null; aprovado_em?: string | null; reserva_expira_em?: string | null;
+  aprovado_sem_assinatura_motivo?: string | null;
 };
 const rowToNegocio = (r: NegocioRow): Negocio => ({
   id: r.id, clienteId: r.cliente_id, clienteNome: r.cliente_nome, clienteCpf: r.cliente_cpf,
@@ -113,6 +116,9 @@ const rowToNegocio = (r: NegocioRow): Negocio => ({
   desconto: Number(r.desconto), metodoPagamento: r.metodo_pagamento,
   statusNegociacao: r.status_negociacao as StatusNegociacao,
   dataEvento: r.data_evento, criadoEm: r.criado_em, vendedorId: r.vendedor_id ?? null,
+  tipoNegocio: r.tipo_negocio ?? undefined, aprovadoEm: r.aprovado_em ?? null,
+  reservaExpiraEm: r.reserva_expira_em ?? null,
+  aprovadoSemAssinaturaMotivo: r.aprovado_sem_assinatura_motivo ?? null,
 });
 
 export function useLeads(range?: DateRange) {
@@ -234,7 +240,15 @@ export function useLeads(range?: DateRange) {
       atendido_por: lead.atendidoPor ?? userId,
     } as { nome: string } & Record<string, unknown>;
     const { data, error } = await supabase.from("leads").insert(insertRow as never).select().single();
-    if (error || !data) { toast.error("Não foi possível salvar a cliente: " + (error?.message ?? "erro desconhecido")); return null; }
+    if (error || !data) {
+      const campo = campoDuplicado(error);
+      if (campo) {
+        toast.error(mensagemDuplicado(campo));
+      } else {
+        toast.error("Não foi possível salvar a cliente: " + (error?.message ?? "erro desconhecido"));
+      }
+      return null;
+    }
     const newLead = rowToLead(data as LeadRow);
     setLeads((prev) => [newLead, ...prev]);
     return newLead;
@@ -257,7 +271,8 @@ export function useLeads(range?: DateRange) {
     const { error } = await supabase.from("leads").update(leadPatchToRow(data) as never).eq("id", leadId);
     if (error) {
       if (anterior) setLeads((prev) => prev.map((l) => l.id === leadId ? anterior : l));
-      toast.error("Não foi possível salvar as alterações: " + error.message);
+      const campo = campoDuplicado(error);
+      toast.error(campo ? mensagemDuplicado(campo) : "Não foi possível salvar as alterações: " + error.message);
       return false;
     }
     return true;
@@ -353,7 +368,7 @@ export function useLeads(range?: DateRange) {
     const newContrato = rowToContrato(data as ContratoRow);
     setContratos((prev) => [newContrato, ...prev]);
     return newContrato;
-  }, [contratos, gerarNumeroContrato]);
+  }, [contratos]);
 
   const addContratoFromNegocio = useCallback(async (negocio: Negocio) => {
     const lead = leads.find((l) => l.id === negocio.clienteId);
@@ -361,7 +376,9 @@ export function useLeads(range?: DateRange) {
       toast.error("Não foi possível gerar o contrato: cliente não encontrado.");
       return null;
     }
-    const existing = contratos.find((c) => c.leadId === negocio.clienteId && c.statusAssinatura !== "cancelado");
+    // Um contrato por venda (antes era um por cliente: quem voltava para um
+    // segundo aluguel recebia o contrato antigo).
+    const existing = contratos.find((c) => c.negocioId === negocio.id && c.statusAssinatura !== "cancelado");
     if (existing) return existing;
     // Validação mínima — evita contratos incompletos
     if (!negocio.clienteCpf?.trim() || !negocio.dataEvento || negocio.valorNegociado <= 0) {
@@ -385,6 +402,8 @@ export function useLeads(range?: DateRange) {
         dataEvento: negocio.dataEvento,
       }),
       vendedor_id: vendedorId,
+      signing_token: crypto.randomUUID(),
+      token_expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
     };
     const { data, error } = await supabase.from("contratos").insert(insertRow).select().single();
     if (error || !data) {
@@ -394,12 +413,13 @@ export function useLeads(range?: DateRange) {
     const newContrato = rowToContrato(data as ContratoRow);
     setContratos((prev) => [newContrato, ...prev]);
     return newContrato;
-  }, [leads, contratos, gerarNumeroContrato]);
+  }, [leads, contratos]);
 
   // Gera o contrato direto de um lead: escolhe o produto do Acervo e o valor
-  // na hora, completa CPF/celular/e-mail se estiverem faltando no lead, cria
-  // (ou reaproveita) o negócio já aprovado — o que já dispara o financeiro
-  // automático (comissão/taxa/imposto) — e por fim o contrato.
+  // na hora e completa CPF/celular/e-mail se estiverem faltando no lead. Passa
+  // pela mesma pré-venda do "Confirmar aluguel" (criar_pre_venda): a venda
+  // fica aguardando assinatura e só fecha — e só aí entra no financeiro —
+  // quando a cliente assina.
   const gerarContratoDireto = useCallback(async (params: {
     leadId: string;
     produtoDescricao: string;
@@ -425,61 +445,78 @@ export function useLeads(range?: DateRange) {
     if (extra.email && extra.email.trim() !== lead.email) leadPatch.email = email;
     if (Object.keys(leadPatch).length > 0) await updateLead(lead.id, leadPatch);
 
-    const vendedorId = await currentUserId();
-    let negocio = negocios.find((n) => n.clienteId === lead.id && n.statusNegociacao !== "cancelado");
-    if (negocio) {
-      await supabase.from("negocios").update({
-        cliente_nome: nome, cliente_cpf: cpf, vestido_nome: params.produtoDescricao,
-        valor_negociado: params.valor, metodo_pagamento: params.metodoPagamento,
-        status_negociacao: "aprovado",
-      }).eq("id", negocio.id);
-      negocio = { ...negocio, clienteNome: nome, clienteCpf: cpf, vestidoNome: params.produtoDescricao, valorNegociado: params.valor, metodoPagamento: params.metodoPagamento, statusNegociacao: "aprovado" };
-      setNegocios((prev) => prev.map((n) => n.id === negocio!.id ? negocio! : n));
-    } else {
-      const insertRow = {
-        cliente_id: lead.id, cliente_nome: nome, cliente_cpf: cpf,
-        vestido_nome: params.produtoDescricao, valor_negociado: params.valor, desconto: 0,
-        metodo_pagamento: params.metodoPagamento, status_negociacao: "aprovado", data_evento: lead.dataEvento,
-        vendedor_id: vendedorId,
-      };
-      const { data, error } = await supabase.from("negocios").insert(insertRow).select().single();
-      if (error || !data) return null;
-      negocio = rowToNegocio(data as NegocioRow);
-      setNegocios((prev) => [negocio!, ...prev]);
+    const { data, error } = await supabase.rpc("criar_pre_venda", {
+      p_dados: {
+        lead_id: lead.id,
+        tipo_negocio: "aluguel",
+        confirmar_duplicidade: true,
+        locataria: { nome, cpf, telefone, email },
+        pagamento: { metodo: params.metodoPagamento, parcelas: 1 },
+        negocios: [{
+          vestido_nome: params.produtoDescricao,
+          valor_negociado: params.valor,
+          desconto: 0,
+          data_evento: lead.dataEvento,
+          valor_contrato: params.valor,
+          termos_texto: gerarTermosContrato({
+            nomeLocataria: nome, cpf, celular: telefone, email,
+            produtoDescricao: params.produtoDescricao, valorLocacao: params.valor,
+            formaPagamento: params.metodoPagamento, dataEvento: lead.dataEvento,
+          }),
+          reservas: [],
+        }],
+      },
+    });
+    if (error || !data) {
+      toast.error("Não foi possível gerar o contrato: " + (error?.message ?? "erro desconhecido"));
+      return null;
     }
-
-    if (!lead.enviadoComercial) {
-      setLeads((prev) => prev.map((l) => l.id === lead.id ? { ...l, enviadoComercial: true } : l));
-      await supabase.from("leads").update({ enviado_comercial: true }).eq("id", lead.id);
-    }
-
-    const numero = await gerarNumeroContrato();
-    const insertContrato = {
-      numero, lead_id: lead.id, negocio_id: negocio.id,
-      nome_cliente: nome, cpf_cliente: cpf, email_cliente: email,
-      data_evento: lead.dataEvento, valor_total: params.valor, status_assinatura: "pendente",
-      termos_texto: gerarTermosContrato({
-        nomeLocataria: nome, cpf, celular: telefone, email,
-        produtoDescricao: params.produtoDescricao, valorLocacao: params.valor,
-        formaPagamento: params.metodoPagamento, dataEvento: lead.dataEvento,
-      }),
-      vendedor_id: vendedorId,
-    };
-    const { data, error } = await supabase.from("contratos").insert(insertContrato).select().single();
-    if (error || !data) return null;
-    const newContrato = rowToContrato(data as ContratoRow);
-    setContratos((prev) => [newContrato, ...prev]);
+    const contratoId = (data as { vendas: Array<{ contrato_id: string }> }).vendas[0]?.contrato_id;
+    const { data: row } = await supabase.from("contratos").select("*").eq("id", contratoId).single();
+    if (!row) return null;
+    const newContrato = rowToContrato(row as ContratoRow);
+    setContratos((prev) => (prev.some((c) => c.id === newContrato.id) ? prev : [newContrato, ...prev]));
     return newContrato;
-  }, [leads, negocios, updateLead, gerarNumeroContrato]);
+  }, [leads, updateLead]);
 
+  // "Aprovar" uma negociação não fecha mais a venda: gera o contrato e deixa
+  // a venda aguardando a assinatura da cliente (48h). Ela só vira "aprovado"
+  // quando o contrato é assinado.
   const aprovarFechamento = useCallback(async (negocioId: string): Promise<{ contrato?: Contrato | null }> => {
-    setNegocios((prev) => prev.map((n) => n.id === negocioId ? { ...n, statusNegociacao: "aprovado" as StatusNegociacao } : n));
-    await supabase.from("negocios").update({ status_negociacao: "aprovado" }).eq("id", negocioId);
     const negocio = negocios.find((n) => n.id === negocioId);
     if (!negocio) return { contrato: null };
-    const contrato = await addContratoFromNegocio({ ...negocio, statusNegociacao: "aprovado" });
+    const contrato = await addContratoFromNegocio(negocio);
+    if (!contrato) return { contrato: null };
+    const reservaExpiraEm = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+    const { error } = await supabase.from("negocios")
+      .update({ status_negociacao: "aguardando_assinatura", reserva_expira_em: reservaExpiraEm })
+      .eq("id", negocioId);
+    if (error) {
+      toast.error("Contrato gerado, mas não consegui marcar a venda como aguardando assinatura: " + error.message);
+    } else {
+      setNegocios((prev) => prev.map((n) => n.id === negocioId
+        ? { ...n, statusNegociacao: "aguardando_assinatura" as StatusNegociacao, reservaExpiraEm }
+        : n));
+    }
     return { contrato };
   }, [negocios, addContratoFromNegocio]);
+
+  // Vendedora (a própria venda) ou admin desiste da venda antes da
+  // assinatura: libera a peça e cancela o contrato.
+  const cancelarPreVenda = useCallback(async (negocioId: string, motivo: string) => {
+    const { error } = await supabase.rpc("cancelar_pre_venda", { p_negocio_id: negocioId, p_motivo: motivo });
+    if (error) { toast.error(error.message); return false; }
+    toast.success("Venda cancelada — a peça foi liberada.");
+    return true;
+  }, []);
+
+  // Exceção: só admin, com motivo registrado (fica no negócio e na auditoria).
+  const aprovarSemAssinatura = useCallback(async (negocioId: string, motivo: string) => {
+    const { error } = await supabase.rpc("aprovar_venda_sem_assinatura", { p_negocio_id: negocioId, p_motivo: motivo });
+    if (error) { toast.error(error.message); return false; }
+    toast.success("Venda fechada sem assinatura (motivo registrado).");
+    return true;
+  }, []);
 
   const updateContratoStatus = useCallback(async (contratoId: string, status: ContratoStatus) => {
     const anterior = contratos.find((c) => c.id === contratoId);
@@ -491,48 +528,42 @@ export function useLeads(range?: DateRange) {
     }
   }, [contratos]);
 
+  // Assinatura presencial (iPad na loja). Vai pelo banco
+  // (assinar_contrato_presencial): é a assinatura que fecha a venda —
+  // financeiro, comissão, Produção, Logística — numa única transação.
   const assinarContrato = useCallback(async (contratoId: string, assinaturaBase64: string) => {
-    const dataAssinatura = new Date().toISOString();
-    const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null;
-    // Captura IP de forma best-effort. Se falhar (rede/bloqueio), grava null e segue.
-    let ip: string | null = null;
-    try {
-      const r = await fetch("https://api.ipify.org?format=json");
-      if (r.ok) {
-        const j = await r.json();
-        if (typeof j?.ip === "string") ip = j.ip;
-      }
-    } catch { /* ignore */ }
-
-    const anterior = contratos.find((c) => c.id === contratoId);
-    setContratos((prev) => prev.map((c) =>
-      c.id === contratoId
-        ? {
-            ...c,
-            statusAssinatura: "assinado" as ContratoStatus,
-            assinaturaBase64,
-            dataAssinatura,
-            ipAssinatura: ip ?? undefined,
-            userAgentAssinatura: userAgent ?? undefined,
-          }
-        : c
-    ));
-    const { error } = await supabase.from("contratos").update({
-      status_assinatura: "assinado",
-      assinatura_base64: assinaturaBase64,
-      data_assinatura: dataAssinatura,
-      ip_assinatura: ip,
-      user_agent_assinatura: userAgent,
-    }).eq("id", contratoId);
-    if (error) {
-      if (anterior) setContratos((prev) => prev.map((c) => c.id === contratoId ? anterior : c));
-      toast.error("Não foi possível registrar a assinatura: " + error.message);
+    const userAgent = typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : "";
+    const { data, error } = await supabase.rpc("assinar_contrato_presencial", {
+      p_contrato_id: contratoId, p_assinatura: assinaturaBase64, p_user_agent: userAgent,
+    });
+    const res = (data ?? {}) as { ok?: boolean; error?: string };
+    if (error || !res.ok) {
+      const msg: Record<string, string> = {
+        ja_assinado: "Este contrato já foi assinado.",
+        cancelado: "Este contrato foi cancelado (a venda expirou ou foi cancelada). Registre a venda de novo.",
+        assinatura_invalida: "Assinatura inválida — peça para a cliente assinar de novo.",
+        sem_permissao: "Você não tem permissão para coletar assinaturas.",
+        nao_encontrado: "Contrato não encontrado.",
+      };
+      toast.error(error?.message ?? msg[res.error ?? ""] ?? "Não foi possível registrar a assinatura.");
       return false;
     }
+    const dataAssinatura = new Date().toISOString();
+    setContratos((prev) => prev.map((c) =>
+      c.id === contratoId ? { ...c, statusAssinatura: "assinado" as ContratoStatus, assinaturaBase64, dataAssinatura } : c
+    ));
+    // Confirmação por e-mail para a cliente e para os admins (best-effort).
+    supabase.functions.invoke("enviar-contrato-cliente", { body: { contrato_id: contratoId } }).catch(console.error);
     return true;
-  }, [contratos]);
+  }, []);
 
   const gerarLinkAssinatura = useCallback(async (contratoId: string, validadeHoras: number): Promise<string | null> => {
+    // Contrato de pré-venda já nasce com link (válido enquanto a peça está
+    // reservada) — reaproveita em vez de gerar outro.
+    const atual = contratos.find((c) => c.id === contratoId);
+    if (atual?.signingToken && atual.tokenExpiresAt && new Date(atual.tokenExpiresAt) > new Date()) {
+      return `${window.location.origin}/assinar/${atual.signingToken}`;
+    }
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + validadeHoras * 60 * 60 * 1000).toISOString();
     const { error } = await supabase
@@ -540,15 +571,15 @@ export function useLeads(range?: DateRange) {
       .update({ signing_token: token, token_expires_at: expiresAt })
       .eq("id", contratoId);
     if (error) return null;
-    setContratos((prev) => prev.map((c) => c.id === contratoId ? { ...c } : c));
+    setContratos((prev) => prev.map((c) => c.id === contratoId ? { ...c, signingToken: token, tokenExpiresAt: expiresAt } : c));
     return `${window.location.origin}/assinar/${token}`;
-  }, []);
+  }, [contratos]);
 
   return {
     leads, addLead, updateLeadStatus, updateLead,
     medidas, updateMedidas, getMedidas,
     contratos, addContrato, addContratoFromNegocio, gerarContratoDireto, updateContratoStatus, assinarContrato, gerarLinkAssinatura,
-    negocios, enviarParaComercial, updateNegocio, aprovarFechamento,
+    negocios, enviarParaComercial, updateNegocio, aprovarFechamento, cancelarPreVenda, aprovarSemAssinatura,
     getLeadsByStatus,
   };
 }

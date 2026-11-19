@@ -2,6 +2,16 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { DateRange } from "@/hooks/useDateRange";
 
+// Status que o lead recebe quando a venda fecha (fechar_venda() no banco).
+// Antes a conversão procurava "convertido/fechado/aprovado", que nunca
+// existiram no funil — o KPI ficava sempre em 0%.
+const STATUS_CONVERTIDO = ["compareceu_alugou"];
+
+// Limites do dia no fuso de Brasília. Sem o fuso, o Postgres lia
+// "2026-11-19T00:00:00" como UTC e tudo depois das 21h caía no dia seguinte.
+const inicioDiaBR = (dia: string) => `${dia}T00:00:00-03:00`;
+const fimDiaBR = (dia: string) => `${dia}T23:59:59.999-03:00`;
+
 export interface AgendamentoNovoCliente {
   id: string;
   clienteNome: string;
@@ -81,14 +91,16 @@ export function useDashboard(range: DateRange) {
       // agendamentos conseguimos hoje", não "quantas visitas tem na agenda
       // hoje" — por isso um agendamento marcado hoje conta hoje mesmo que a
       // visita em si só vá acontecer daqui a semanas.
-      supabase.from("agendamentos").select("id, cliente_nome, data_hora, lead_id").eq("tipo", "visita").gte("criado_em", `${range.from}T00:00:00`).lte("criado_em", `${range.to}T23:59:59`),
-      supabase.from("agendamentos").select("id", { count: "exact", head: true }).gte("data_hora", `${hoje}T00:00:00`).lte("data_hora", `${hoje}T23:59:59`),
+      supabase.from("agendamentos").select("id, cliente_nome, data_hora, lead_id").eq("tipo", "visita").gte("criado_em", inicioDiaBR(range.from)).lte("criado_em", fimDiaBR(range.to)),
+      supabase.from("agendamentos").select("id", { count: "exact", head: true }).gte("data_hora", inicioDiaBR(hoje)).lte("data_hora", fimDiaBR(hoje)),
       // Aluguéis: negócios aprovados no período — é o clique em "Confirmar
       // aluguel" no Minha Venda que cria o negócio com status "aprovado",
       // então esse é o momento real de contar um aluguel (não a data de
       // retirada da peça, que pode cair num período diferente ou nem ter
       // sido preenchida ainda).
-      supabase.from("negocios").select("id, status_negociacao, criado_em").eq("status_negociacao", "aprovado").gte("criado_em", range.from).lte("criado_em", range.to),
+      // Conta no momento em que a venda FECHOU (assinatura do contrato →
+      // aprovado_em), não quando a vendedora começou a montá-la.
+      supabase.from("negocios").select("id, status_negociacao, aprovado_em").eq("status_negociacao", "aprovado").gte("aprovado_em", inicioDiaBR(range.from)).lte("aprovado_em", fimDiaBR(range.to)),
     ]);
 
     // KPI: Faturamento (hoje/ontem — widgets fixos)
@@ -105,7 +117,7 @@ export function useDashboard(range: DateRange) {
 
     // KPI: Conversão do mês
     const leadsMes = (leadsMesRes.data ?? []) as Array<{ status_funil: string }>;
-    const convertidosMes = leadsMes.filter(l => ["convertido", "fechado", "aprovado"].includes(l.status_funil)).length;
+    const convertidosMes = leadsMes.filter(l => STATUS_CONVERTIDO.includes(l.status_funil)).length;
     const conversaoMes = leadsMes.length > 0 ? (convertidosMes / leadsMes.length) * 100 : 0;
 
     // === KPIs do período selecionado ===
@@ -115,7 +127,7 @@ export function useDashboard(range: DateRange) {
 
     const leadsPeriodo = (leadsPeriodoRes.data ?? []) as Array<{ id: string; nome: string; status_funil: string; criado_em: string }>;
     const volumeLeads = leadsPeriodo.length;
-    const convertidosPeriodo = leadsPeriodo.filter(l => ["convertido", "fechado", "aprovado"].includes(l.status_funil)).length;
+    const convertidosPeriodo = leadsPeriodo.filter(l => STATUS_CONVERTIDO.includes(l.status_funil)).length;
     const leadsLista: LeadResumo[] = leadsPeriodo
       .map((l) => ({ id: l.id, nome: l.nome, statusFunil: l.status_funil, criadoEm: l.criado_em }))
       .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
@@ -126,7 +138,7 @@ export function useDashboard(range: DateRange) {
     // cliente chegando, é alguém que já estava em conversa voltando.
     const visitasPeriodo = (agendamentosPeriodoRes.data ?? []) as Array<{ id: string; cliente_nome: string; data_hora: string; lead_id: string | null }>;
     const leadIdsComVisita = [...new Set(visitasPeriodo.map((v) => v.lead_id).filter((id): id is string => !!id))];
-    let primeiraVisitaPorLead = new Map<string, string>();
+    const primeiraVisitaPorLead = new Map<string, string>();
     if (leadIdsComVisita.length > 0) {
       const { data: historicoVisitas } = await supabase
         .from("agendamentos")

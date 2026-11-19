@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { Agendamento, NovoAgendamento, TipoAgendamento, StatusAgendamento } from "@/types/agenda";
 import { toast } from "sonner";
 
@@ -157,7 +158,7 @@ export function useEditarAgendamento() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: Partial<NovoAgendamento> & { id: string }) => {
-      const update: Record<string, unknown> = {};
+      const update: TablesUpdate<"agendamentos"> = {};
       if (payload.tipo) update.tipo = payload.tipo;
       if (payload.dataHora) update.data_hora = payload.dataHora;
       if (payload.duracaoMinutos) update.duracao_minutos = payload.duracaoMinutos;

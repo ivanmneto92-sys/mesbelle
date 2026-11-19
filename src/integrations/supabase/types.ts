@@ -272,6 +272,7 @@ export type Database = {
           data_evento: string
           email_cliente: string
           email_enviado_em: string | null
+          lembrete_enviado_em: string | null
           id: string
           ip_assinatura: string | null
           lead_id: string
@@ -296,6 +297,7 @@ export type Database = {
           data_evento?: string
           email_cliente?: string
           email_enviado_em?: string | null
+          lembrete_enviado_em?: string | null
           id?: string
           ip_assinatura?: string | null
           lead_id: string
@@ -320,6 +322,7 @@ export type Database = {
           data_evento?: string
           email_cliente?: string
           email_enviado_em?: string | null
+          lembrete_enviado_em?: string | null
           id?: string
           ip_assinatura?: string | null
           lead_id?: string
@@ -470,6 +473,9 @@ export type Database = {
           prova_hora: string | null
           status_funil: string
           telefone: string
+          telefone_normalizado: string | null
+          email_normalizado: string | null
+          cpf_normalizado: string | null
           tipo_evento: string
           updated_at: string
           vendedor_responsavel: string
@@ -491,6 +497,9 @@ export type Database = {
           prova_hora?: string | null
           status_funil?: string
           telefone?: string
+          telefone_normalizado?: string | null
+          email_normalizado?: string | null
+          cpf_normalizado?: string | null
           tipo_evento?: string
           updated_at?: string
           vendedor_responsavel?: string
@@ -512,10 +521,19 @@ export type Database = {
           prova_hora?: string | null
           status_funil?: string
           telefone?: string
+          telefone_normalizado?: string | null
+          email_normalizado?: string | null
+          cpf_normalizado?: string | null
           tipo_evento?: string
           updated_at?: string
           vendedor_responsavel?: string
         }
+        Relationships: []
+      }
+      leads_nao_duplicados: {
+        Row: { lead_a: string; lead_b: string; marcado_em: string; marcado_por: string | null }
+        Insert: { lead_a: string; lead_b: string; marcado_em?: string; marcado_por?: string | null }
+        Update: { lead_a?: string; lead_b?: string; marcado_em?: string; marcado_por?: string | null }
         Relationships: []
       }
       medidas: {
@@ -617,6 +635,10 @@ export type Database = {
           updated_at: string
           valor_negociado: number
           vendedor_id: string | null
+          reserva_expira_em: string | null
+          aprovado_sem_assinatura_por: string | null
+          aprovado_sem_assinatura_motivo: string | null
+          aprovado_em: string | null
           vestido_id_novo: string | null
           vestido_nome: string | null
         }
@@ -641,6 +663,10 @@ export type Database = {
           updated_at?: string
           valor_negociado?: number
           vendedor_id?: string | null
+          reserva_expira_em?: string | null
+          aprovado_sem_assinatura_por?: string | null
+          aprovado_sem_assinatura_motivo?: string | null
+          aprovado_em?: string | null
           vestido_id_novo?: string | null
           vestido_nome?: string | null
         }
@@ -665,6 +691,10 @@ export type Database = {
           updated_at?: string
           valor_negociado?: number
           vendedor_id?: string | null
+          reserva_expira_em?: string | null
+          aprovado_sem_assinatura_por?: string | null
+          aprovado_sem_assinatura_motivo?: string | null
+          aprovado_em?: string | null
           vestido_id_novo?: string | null
           vestido_nome?: string | null
         }
@@ -931,6 +961,7 @@ export type Database = {
           status: string
           tipo: string
           tipo_custo: string | null
+          vendedor_nome: string | null
           valor: number
         }
         Insert: {
@@ -945,6 +976,7 @@ export type Database = {
           status?: string
           tipo: string
           tipo_custo?: string | null
+          vendedor_nome?: string | null
           valor?: number
         }
         Update: {
@@ -959,6 +991,7 @@ export type Database = {
           status?: string
           tipo?: string
           tipo_custo?: string | null
+          vendedor_nome?: string | null
           valor?: number
         }
         Relationships: [
@@ -1076,6 +1109,47 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      listar_possiveis_duplicados: {
+        Args: never
+        Returns: { lead_a: string; lead_b: string; motivo: string }[]
+      }
+      mesclar_leads: {
+        Args: { p_dados?: Json; p_manter: string; p_remover: string }
+        Returns: string
+      }
+      normalizar_cpf: { Args: { p_cpf: string }; Returns: string }
+      normalizar_email: { Args: { p_email: string }; Returns: string }
+      normalizar_nome: { Args: { p_nome: string }; Returns: string }
+      verificar_cliente_existente: {
+        Args: { p_cpf: string; p_email: string; p_ignorar_id?: string; p_telefone: string }
+        Returns: { campo: string; lead_id: string; nome: string; valor: string; visivel: boolean }[]
+      }
+      _encerrar_pre_venda: {
+        Args: { p_motivo: string; p_negocio_id: string; p_status: string }
+        Returns: undefined
+      }
+      aprovar_venda_sem_assinatura: {
+        Args: { p_motivo: string; p_negocio_id: string }
+        Returns: undefined
+      }
+      assinar_contrato_presencial: {
+        Args: { p_assinatura: string; p_contrato_id: string; p_user_agent: string }
+        Returns: Json
+      }
+      buscar_lead_por_telefone: { Args: { p_telefone: string }; Returns: string }
+      cancelar_pre_venda: {
+        Args: { p_motivo: string; p_negocio_id: string }
+        Returns: undefined
+      }
+      criar_pre_venda: { Args: { p_dados: Json }; Returns: Json }
+      data_venda_negocio: {
+        Args: { p_aprovado_em: string; p_criado_em: string }
+        Returns: string
+      }
+      expirar_pre_vendas: { Args: never; Returns: Json }
+      fechar_venda: { Args: { p_negocio_id: string }; Returns: undefined }
+      gerar_numero_contrato: { Args: never; Returns: string }
+      normalizar_telefone: { Args: { p_telefone: string }; Returns: string }
       _client_ip_from_request: { Args: never; Returns: string }
       _get_meta_credentials: {
         Args: never

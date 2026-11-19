@@ -4,6 +4,7 @@ import { Funcionario, AvaliacaoCliente, VendaFuncionario, TipoContrato } from "@
 import type { DateRange } from "@/hooks/useDateRange";
 import { estimarComissaoMes } from "@/lib/comissao";
 import { toast } from "sonner";
+import { dataVenda } from "@/lib/assinaturaVenda";
 
 const now = new Date();
 const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -13,7 +14,7 @@ const mesesRecentes = Array.from({ length: 4 }, (_, i) => {
 });
 
 type AvalRow = { id: string; funcionario_id: string; data: string; nota: number; comentario: string | null };
-type NegocioRow = { vendedor_id: string | null; valor_negociado: number; desconto: number; criado_em: string };
+type NegocioRow = { vendedor_id: string | null; valor_negociado: number; desconto: number; criado_em: string; aprovado_em: string | null };
 
 interface EquipeApiRow {
   id: string; nome: string; cargo: string; tipoContrato: TipoContrato;
@@ -52,7 +53,7 @@ export function useEquipe(range?: DateRange) {
         invocarEquipeAdmin<EquipeApiRow[]>({ action: "listar" }).catch(() => [] as EquipeApiRow[]),
         // negocios.status_negociacao = "aprovado" é a venda de fato fechada —
         // reservas_agenda/vestidos não carregam vendedor_id, só negocios.
-        supabase.from("negocios").select("vendedor_id, valor_negociado, desconto, criado_em").eq("status_negociacao", "aprovado"),
+        supabase.from("negocios").select("vendedor_id, valor_negociado, desconto, criado_em, aprovado_em").eq("status_negociacao", "aprovado"),
         avaliacoesQuery,
       ]);
       if (!active) return;
@@ -70,7 +71,7 @@ export function useEquipe(range?: DateRange) {
       const vendasMap = new Map<string, { quantidade: number; valorTotal: number }>();
       negocios.forEach((n) => {
         if (!n.vendedor_id || !n.criado_em) return;
-        const mes = n.criado_em.slice(0, 7);
+        const mes = dataVenda({ aprovadoEm: n.aprovado_em, criadoEm: n.criado_em }).slice(0, 7);
         const key = `${n.vendedor_id}|${mes}`;
         const atual = vendasMap.get(key) ?? { quantidade: 0, valorTotal: 0 };
         atual.quantidade += 1;
@@ -94,12 +95,12 @@ export function useEquipe(range?: DateRange) {
   // manual (mesma causa raiz já corrigida em useLeads.ts).
   useEffect(() => {
     const recarregarVendas = async () => {
-      const { data } = await supabase.from("negocios").select("vendedor_id, valor_negociado, desconto, criado_em").eq("status_negociacao", "aprovado");
+      const { data } = await supabase.from("negocios").select("vendedor_id, valor_negociado, desconto, criado_em, aprovado_em").eq("status_negociacao", "aprovado");
       const negocios = (data ?? []) as NegocioRow[];
       const vendasMap = new Map<string, { quantidade: number; valorTotal: number }>();
       negocios.forEach((n) => {
         if (!n.vendedor_id || !n.criado_em) return;
-        const mes = n.criado_em.slice(0, 7);
+        const mes = dataVenda({ aprovadoEm: n.aprovado_em, criadoEm: n.criado_em }).slice(0, 7);
         const key = `${n.vendedor_id}|${mes}`;
         const atual = vendasMap.get(key) ?? { quantidade: 0, valorTotal: 0 };
         atual.quantidade += 1;

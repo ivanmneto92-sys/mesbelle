@@ -1,5 +1,7 @@
 export type VestidoStatus = "disponivel" | "alugado" | "ajuste" | "manutencao" | "producao" | "inativo";
-export type ReservaStatus = "aluguel" | "lavanderia" | "ajuste";
+// pre_reserva: peça segura por 48h enquanto a venda aguarda a assinatura do
+// contrato (vira "aluguel" quando a cliente assina, ou some se expirar).
+export type ReservaStatus = "aluguel" | "lavanderia" | "ajuste" | "pre_reserva";
 export type ProducaoStatus = "em_producao" | "pausado" | "concluido";
 export type CategoriaPeca = "vestido" | "bolsa" | "acessorio" | "sapato" | "conjunto" | "outros";
 

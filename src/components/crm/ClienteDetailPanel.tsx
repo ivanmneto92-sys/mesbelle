@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Save, User, Ruler, FileText, History, CalendarClock, X } from "lucide-react";
 import { toast } from "sonner";
+import { useVerificarCliente } from "@/hooks/useVerificarCliente";
+import { AvisoClienteExistente } from "./AvisoClienteExistente";
 
 interface ClienteDetailPanelProps {
   lead: Lead | null;
@@ -17,9 +19,11 @@ interface ClienteDetailPanelProps {
   onClose: () => void;
   onUpdateLead: (leadId: string, data: Partial<Lead>) => boolean | Promise<boolean | undefined> | undefined;
   onUpdateMedidas: (leadId: string, data: Omit<MedidasCliente, "leadId">) => boolean | Promise<boolean | undefined> | undefined;
+  /** Abre outro cadastro (quando o telefone/e-mail/CPF editado já é de outra cliente). */
+  onAbrirLead?: (leadId: string) => void;
 }
 
-export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead, onUpdateMedidas }: ClienteDetailPanelProps) {
+export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead, onUpdateMedidas, onAbrirLead }: ClienteDetailPanelProps) {
   const [activeSection, setActiveSection] = useState<"dados" | "medidas" | "notas" | "historico">("dados");
   const [editData, setEditData] = useState<Partial<Lead>>({});
   const [editMedidas, setEditMedidas] = useState<Omit<MedidasCliente, "leadId">>({
@@ -31,7 +35,7 @@ export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead,
 
   useEffect(() => {
     if (lead) {
-      setEditData({ nome: lead.nome, telefone: lead.telefone, email: lead.email, endereco: lead.endereco });
+      setEditData({ nome: lead.nome, telefone: lead.telefone, email: lead.email, cpf: lead.cpf, endereco: lead.endereco });
       setNotas(lead.notasInternas || "");
       setProvaDataLocal(lead.provaData || "");
       setProvaHoraLocal(lead.provaHora || "");
@@ -43,11 +47,21 @@ export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead,
     }
   }, [lead, medidas]);
 
+  // Hooks antes do "return null": avisa se o telefone/e-mail/CPF editado já
+  // pertence a outra cliente (ignorando o próprio cadastro).
+  const { existentes, bloqueantes } = useVerificarCliente({
+    telefone: editData.telefone, email: editData.email, cpf: editData.cpf, ignorarId: lead?.id ?? null,
+  });
+
   if (!lead) return null;
 
   const whatsappLink = `https://wa.me/55${lead.telefone.replace(/\D/g, "")}`;
 
   const handleSaveDados = async () => {
+    if (bloqueantes.length > 0) {
+      toast.error(`Esse dado já pertence a ${bloqueantes[0].nome}. Se for a mesma pessoa, peça a um admin para mesclar os cadastros (CRM → Duplicados).`);
+      return;
+    }
     const ok = await onUpdateLead(lead.id, editData);
     if (ok === false) return; // erro já avisado pelo hook
     toast.success("Dados atualizados");
@@ -153,14 +167,15 @@ export function ClienteDetailPanel({ lead, medidas, open, onClose, onUpdateLead,
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">CPF</Label>
-                <Input value={lead.cpf} disabled className="bg-muted" />
+                <Input value={editData.cpf || ""} onChange={(e) => setEditData({ ...editData, cpf: e.target.value })} placeholder="000.000.000-00" />
               </div>
               <div>
                 <Label className="text-xs">Data do Evento</Label>
                 <Input value={lead.dataEvento} disabled className="bg-muted" />
               </div>
             </div>
-            <Button onClick={handleSaveDados} className="w-full">
+            <AvisoClienteExistente existentes={existentes} onAbrir={onAbrirLead} />
+            <Button onClick={handleSaveDados} className="w-full" disabled={bloqueantes.length > 0}>
               <Save className="h-4 w-4 mr-2" /> Salvar Dados
             </Button>
 

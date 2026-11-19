@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
 import { formatBRL } from "@/lib/formatters";
 import { calcularPercentualComissao, BONUS_COMISSAO_LIMIAR, BONUS_COMISSAO_VALOR } from "@/lib/comissao";
+import { PendenciasAssinaturaCard } from "@/components/comercial/PendenciasAssinaturaCard";
 
 type CardColor = "default" | "green" | "blue" | "yellow" | "red";
 
@@ -61,6 +62,8 @@ const MeuPainel = () => {
           </div>
           <DateRangePicker value={range} onChange={setRange} />
         </div>
+
+        <PendenciasAssinaturaCard contratosUrl="/meu-contrato" />
 
         <div className="flex flex-wrap gap-3">
           <Button size="lg" className="flex-1 sm:flex-none" onClick={() => navigate("/minha-venda")}>

@@ -21,7 +21,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAcervo } from "@/hooks/useAcervo";
 import { useMeusLeads } from "@/hooks/useMeusLeads";
 import { useDisponibilidade } from "@/hooks/useDisponibilidade";
-import { useCriarVenda, TipoNegocio } from "@/hooks/useCriarVenda";
+import { useCriarVenda, TipoNegocio, DuplicidadeVendaError } from "@/hooks/useCriarVenda";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useTaxasCartao } from "@/hooks/useTaxasCartao";
 import { formatBRL, capitalizarPrimeiraLetra } from "@/lib/formatters";
 import type { Vestido, CategoriaPeca } from "@/types/acervo";
@@ -243,24 +247,32 @@ const MinhaVenda = () => {
     ? format(prazosProducao.reduce((min, d) => (d < min ? d : min)), "dd/MM/yyyy")
     : null;
 
-  // Confirmar o aluguel já gera o contrato (useCriarVenda) — por isso a
-  // vendedora vai direto pra tela de assinatura, sem um botão manual
-  // "Gerar contrato" no meio do caminho que ficava fácil de esquecer.
-  const handleConfirmar = async () => {
+  // Confirmar o aluguel cria a pré-venda (peça reservada por 48h + contrato
+  // com link) e leva direto para a assinatura. A venda só fecha — e só aí
+  // entra no financeiro, na comissão e na Produção — quando a cliente assina.
+  const [duplicidadeAviso, setDuplicidadeAviso] = useState<string | null>(null);
+
+  const handleConfirmar = async (confirmarDuplicidade = false) => {
     const lead = leads.find((l) => l.id === leadId);
     if (!podeConcluir || !lead || !tipoNegocio) return;
-    const result = await criarVenda.mutateAsync({
-      lead, locataria, itens: carrinho, pagamento, resumo, tipoNegocio,
-    });
-    if (!result?.negocioId) return;
-    if (tipoNegocio === "primeiro_aluguel") {
-      const multiplo = carrinho.length > 1;
-      toast.info(
-        `${multiplo ? "Peças enviadas" : "Peça enviada"} para Produção`
-        + (prazoProducaoEstimado ? ` — prazo ${multiplo ? "mais próximo " : ""}até ${prazoProducaoEstimado}` : ""),
-      );
+    let result;
+    try {
+      result = await criarVenda.mutateAsync({
+        lead, locataria, itens: carrinho, pagamento, resumo, tipoNegocio, confirmarDuplicidade,
+      });
+    } catch (e) {
+      if (e instanceof DuplicidadeVendaError) setDuplicidadeAviso(e.message);
+      return;
     }
-    navigate(isAdmin ? "/comercial/contratos" : `/meu-contrato?leadId=${leadId}`);
+    if (!result?.contratoIds?.length) return;
+    if (tipoNegocio === "primeiro_aluguel" && prazoProducaoEstimado) {
+      toast.info(`A Produção começa assim que o contrato for assinado — prazo estimado até ${prazoProducaoEstimado}.`);
+    }
+    const contratoId = result.contratoIds[0];
+    navigate(
+      isAdmin ? "/comercial/contratos" : `/meu-contrato?leadId=${leadId}&contratoId=${contratoId}`,
+      { state: { autoOpenContratoId: contratoId } },
+    );
   };
 
   return (
@@ -756,16 +768,20 @@ const MinhaVenda = () => {
                 </p>
               )}
 
+              <p className="text-xs text-muted-foreground rounded-md bg-muted/50 p-2">
+                A venda só é fechada com o <strong>contrato assinado</strong> pela cliente. Ao confirmar, a peça fica
+                reservada por 48h e você segue para a assinatura (no iPad ou por link). Receba o pagamento depois da assinatura.
+              </p>
               <Button
                 className="w-full"
                 size="lg"
                 disabled={!podeConcluir || criarVenda.isPending}
-                onClick={handleConfirmar}
+                onClick={() => handleConfirmar()}
               >
                 {criarVenda.isPending ? (
                   <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Registrando...</>
                 ) : (
-                  <><CheckCircle className="h-4 w-4 mr-2" /> Confirmar aluguel</>
+                  <><CheckCircle className="h-4 w-4 mr-2" /> Confirmar e seguir para assinatura</>
                 )}
               </Button>
             </CardContent>
@@ -776,6 +792,24 @@ const MinhaVenda = () => {
         )}
 
       </div>
+
+      <AlertDialog open={!!duplicidadeAviso} onOpenChange={(o) => !o && setDuplicidadeAviso(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Essa cliente já tem uma venda recente</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicidadeAviso} Confira em Contratos antes de continuar — registrar a mesma venda duas vezes duplica
+              o financeiro e a comissão. Se for mesmo uma venda nova, pode seguir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar e conferir</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setDuplicidadeAviso(null); void handleConfirmar(true); }}>
+              É uma venda nova, continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

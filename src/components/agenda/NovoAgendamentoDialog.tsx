@@ -14,6 +14,8 @@ import { Trash2, Check, ChevronsUpDown, X, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Agendamento, NovoAgendamento, TipoAgendamento, TIPO_CONFIG } from "@/types/agenda";
 import { capitalizarPrimeiraLetra } from "@/lib/formatters";
+import { useVerificarCliente } from "@/hooks/useVerificarCliente";
+import { AvisoClienteExistente } from "@/components/crm/AvisoClienteExistente";
 import { useCriarAgendamento, useEditarAgendamento, useExcluirAgendamento } from "@/hooks/useAgenda";
 import { useLeadsBusca } from "@/hooks/useLeadsBusca";
 import { useAcervo } from "@/hooks/useAcervo";
@@ -111,6 +113,15 @@ export function NovoAgendamentoDialog({
       setVestidoId(null);
     }
   }, [agendamentoEditar, dataHoraInicial, aberto, funcionariaIdFixo]);
+
+  // Um telefone = um cadastro. Se o telefone (ou e-mail) digitado já
+  // pertence a uma cliente, o agendamento vai para o cadastro dela — o banco
+  // garante isso em criar_agendamento_com_lead; aqui só avisamos e
+  // oferecemos preencher com os dados dela.
+  const { existentes: clientesExistentes } = useVerificarCliente({
+    telefone: leadId ? "" : telefone,
+    email: leadId ? "" : email,
+  });
 
   const valido = cliente.trim().length > 0 && dataHora.length > 0 && Number.isFinite(duracao) && duracao > 0;
 
@@ -382,6 +393,15 @@ export function NovoAgendamentoDialog({
               <Input placeholder="(11) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
             </div>
           </div>
+
+          <AvisoClienteExistente
+            existentes={clientesExistentes}
+            rotuloAcao="Usar este cadastro"
+            onAbrir={(id) => {
+              const lead = (leads ?? []).find((l) => l.id === id);
+              if (lead) handleSelecionarLead(lead);
+            }}
+          />
 
           {funcionarias && funcionarias.length > 0 && (
             <div className="space-y-1">

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Check, MessageCircle, Link2, Loader2 } from "lucide-react";
+import { Copy, Check, MessageCircle, Link2, Loader2, Mail } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Contrato } from "@/types/comercial";
 
@@ -21,7 +22,23 @@ export function LinkAssinaturaDialog({ open, onOpenChange, contrato, onGerar }: 
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
   const reset = () => { setLink(null); setCopied(false); setValidade("168"); };
+  // Contrato de pré-venda já nasce com link válido até o fim da reserva da
+  // peça — não faz sentido escolher outra validade.
+  const temLinkValido = !!contrato?.signingToken && !!contrato.tokenExpiresAt && new Date(contrato.tokenExpiresAt) > new Date();
+
+  const handleEnviarEmail = async () => {
+    if (!contrato) return;
+    setEnviandoEmail(true);
+    const { data, error } = await supabase.functions.invoke("enviar-link-assinatura", { body: { contrato_id: contrato.id } });
+    setEnviandoEmail(false);
+    if (error || (data as { error?: string })?.error) {
+      toast.error("Não foi possível enviar o e-mail: " + ((data as { error?: string })?.error ?? error?.message ?? ""));
+      return;
+    }
+    toast.success(`Link enviado para ${contrato.emailCliente}`);
+  };
 
   const handleGerar = async () => {
     if (!contrato) return;
@@ -64,6 +81,11 @@ export function LinkAssinaturaDialog({ open, onOpenChange, contrato, onGerar }: 
 
         {!link ? (
           <div className="space-y-4 mt-2">
+            {temLinkValido ? (
+              <p className="text-sm text-muted-foreground">
+                Link válido até {new Date(contrato!.tokenExpiresAt!).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} (fim da reserva da peça).
+              </p>
+            ) : (
             <div className="space-y-1.5">
               <Label>Validade do link</Label>
               <Select value={validade} onValueChange={setValidade}>
@@ -77,8 +99,9 @@ export function LinkAssinaturaDialog({ open, onOpenChange, contrato, onGerar }: 
               </Select>
               <p className="text-xs text-muted-foreground">Após esse prazo o link expira e a cliente precisará de um novo.</p>
             </div>
+            )}
             <Button onClick={handleGerar} disabled={loading} className="w-full">
-              {loading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Gerando...</> : <><Link2 className="h-4 w-4 mr-1.5" />Gerar link único</>}
+              {loading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Gerando...</> : <><Link2 className="h-4 w-4 mr-1.5" />{temLinkValido ? "Mostrar link" : "Gerar link único"}</>}
             </Button>
           </div>
         ) : (
@@ -105,8 +128,17 @@ export function LinkAssinaturaDialog({ open, onOpenChange, contrato, onGerar }: 
               </Button>
             </div>
 
+            {contrato?.emailCliente ? (
+              <Button variant="outline" className="w-full" onClick={handleEnviarEmail} disabled={enviandoEmail}>
+                {enviandoEmail ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Mail className="h-4 w-4 mr-1.5" />}
+                Enviar por e-mail para {contrato.emailCliente}
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground">Cliente sem e-mail cadastrado — envie pelo WhatsApp.</p>
+            )}
+
             <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
-              <p>📱 A cliente abre o link no celular ou iPad, lê o contrato e assina com o dedo ou Apple Pencil.</p>
+              <p>📱 A cliente abre o link no celular ou iPad, lê o contrato e assina com o dedo ou Apple Pencil. A venda fecha automaticamente quando ela assina.</p>
               <p>🔒 O sistema registra automaticamente data, hora, IP e dispositivo da assinatura — válido juridicamente.</p>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, Users, Filter, CalendarCheck, ContactRound } from "lucide-react";
+import { UserPlus, Users, Filter, CalendarCheck, ContactRound, CopyCheck } from "lucide-react";
 import { useLeads } from "@/hooks/useLeads";
 import { useDateRange } from "@/hooks/useDateRange";
 import { DateRangePicker } from "@/components/common/DateRangePicker";
@@ -13,6 +13,7 @@ import { BaseClientesTab } from "@/components/crm/BaseClientesTab";
 import { AgendaProvasTab } from "@/components/crm/AgendaProvasTab";
 import { ClienteDetailPanel } from "@/components/crm/ClienteDetailPanel";
 import { NewLeadModal } from "@/components/crm/NewLeadModal";
+import { DuplicadosTab } from "@/components/crm/DuplicadosTab";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 const CRM = () => {
@@ -92,6 +93,7 @@ const CRM = () => {
           <TabsTrigger value="funil"><Filter className="h-4 w-4 mr-1.5" />Funil de Captação</TabsTrigger>
           <TabsTrigger value="clientes"><ContactRound className="h-4 w-4 mr-1.5" />Base de Clientes</TabsTrigger>
           <TabsTrigger value="agenda"><CalendarCheck className="h-4 w-4 mr-1.5" />Agenda de Provas</TabsTrigger>
+          <TabsTrigger value="duplicados"><CopyCheck className="h-4 w-4 mr-1.5" />Duplicados</TabsTrigger>
         </TabsList>
 
         <TabsContent value="funil" className="mt-4">
@@ -114,9 +116,13 @@ const CRM = () => {
         <TabsContent value="agenda" className="mt-4">
           <AgendaProvasTab leads={leadsComProvaNoPeriodo} onLeadClick={handleLeadClick} />
         </TabsContent>
+
+        <TabsContent value="duplicados" className="mt-4">
+          {activeTab === "duplicados" && <DuplicadosTab leads={leads} onLeadClick={handleLeadClick} />}
+        </TabsContent>
       </Tabs>
 
-      <NewLeadModal open={newLeadOpen} onClose={() => setNewLeadOpen(false)} onSave={addLead} />
+      <NewLeadModal open={newLeadOpen} onClose={() => setNewLeadOpen(false)} onSave={addLead} onAbrirExistente={(id) => { setSelectedLeadId(id); setDetailOpen(true); }} />
       <ClienteDetailPanel
         lead={selectedLead}
         medidas={selectedLead ? getMedidas(selectedLead.id) : undefined}
@@ -124,6 +130,7 @@ const CRM = () => {
         onClose={() => setDetailOpen(false)}
         onUpdateLead={updateLead}
         onUpdateMedidas={updateMedidas}
+        onAbrirLead={(id) => setSelectedLeadId(id)}
       />
     </div>
     </>

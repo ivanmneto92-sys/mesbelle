@@ -9,11 +9,16 @@ import { toast } from "sonner";
 import { leadSchema, firstZodError } from "@/lib/schemas";
 import { useAuth } from "@/contexts/AuthContext";
 import { capitalizarPrimeiraLetra } from "@/lib/formatters";
+import { useVerificarCliente } from "@/hooks/useVerificarCliente";
+import { AvisoClienteExistente } from "./AvisoClienteExistente";
+import { ROTULO_CAMPO, type CampoUnico } from "@/lib/telefone";
 
 interface NewLeadModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (lead: Omit<Lead, "id" | "criadoEm" | "statusFunil">) => Lead | Promise<Lead | null>;
+  /** Abre o cadastro que já tem o telefone/e-mail/CPF digitado. */
+  onAbrirExistente?: (leadId: string) => void;
 }
 
 const tiposEvento = ["Casamento", "Formatura", "Gala", "Debutante", "Festa", "Outro"];
@@ -23,7 +28,7 @@ const formInicial = (vendedorResponsavel: string) => ({
   tipoEvento: "", dataEvento: "", notasInternas: "", vendedorResponsavel,
 });
 
-export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
+export function NewLeadModal({ open, onClose, onSave, onAbrirExistente }: NewLeadModalProps) {
   const { user } = useAuth();
   // "Vendedor responsável" é preenchido com quem está logado no momento do
   // cadastro — antes vinha fixo como "Juliana Costa" (nome de exemplo dos
@@ -34,14 +39,26 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
 
   const update = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
 
+  // Telefone, e-mail e CPF são únicos na loja: avisa enquanto digita e não
+  // deixa criar um segundo cadastro da mesma cliente.
+  const { existentes, bloqueantes } = useVerificarCliente({ telefone: form.telefone, email: form.email, cpf: form.cpf });
+
   const handleSave = async () => {
+    if (bloqueantes.length > 0) {
+      const campos = [...new Set(bloqueantes.map((b) => ROTULO_CAMPO[b.campo as CampoUnico]))].join(" e ");
+      toast.error(`Esse ${campos} já pertence a ${bloqueantes[0].nome}. Use o cadastro dela em vez de criar outro.`);
+      return;
+    }
     const parsed = leadSchema.safeParse(form);
     if (!parsed.success) {
       toast.error(firstZodError(parsed.error));
       return;
     }
     try {
-      await onSave(parsed.data as Omit<Lead, "id" | "criadoEm" | "statusFunil">);
+      const salvo = await onSave(parsed.data as Omit<Lead, "id" | "criadoEm" | "statusFunil">);
+      // addLead já mostrou o motivo (ex.: telefone já cadastrado) — mantém o
+      // formulário aberto para corrigir em vez de anunciar sucesso.
+      if (!salvo) return;
       toast.success("Lead cadastrado com sucesso!");
       setForm(formInicial(user?.name ?? ""));
       onClose();
@@ -76,6 +93,10 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
             <Label>Email</Label>
             <Input value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="email@exemplo.com" />
           </div>
+          <AvisoClienteExistente
+            existentes={existentes}
+            onAbrir={onAbrirExistente ? (id) => { onClose(); onAbrirExistente(id); } : undefined}
+          />
           <div>
             <Label>Endereço</Label>
             <Input value={form.endereco} onChange={(e) => update("endereco", e.target.value)} />
@@ -95,7 +116,7 @@ export function NewLeadModal({ open, onClose, onSave }: NewLeadModalProps) {
               <Input type="date" value={form.dataEvento} onChange={(e) => update("dataEvento", e.target.value)} />
             </div>
           </div>
-          <Button onClick={handleSave}>Cadastrar Lead</Button>
+          <Button onClick={handleSave} disabled={bloqueantes.length > 0}>Cadastrar Lead</Button>
         </div>
       </DialogContent>
     </Dialog>

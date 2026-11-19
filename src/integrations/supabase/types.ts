@@ -474,6 +474,8 @@ export type Database = {
           status_funil: string
           telefone: string
           telefone_normalizado: string | null
+          email_normalizado: string | null
+          cpf_normalizado: string | null
           tipo_evento: string
           updated_at: string
           vendedor_responsavel: string
@@ -496,6 +498,8 @@ export type Database = {
           status_funil?: string
           telefone?: string
           telefone_normalizado?: string | null
+          email_normalizado?: string | null
+          cpf_normalizado?: string | null
           tipo_evento?: string
           updated_at?: string
           vendedor_responsavel?: string
@@ -518,10 +522,18 @@ export type Database = {
           status_funil?: string
           telefone?: string
           telefone_normalizado?: string | null
+          email_normalizado?: string | null
+          cpf_normalizado?: string | null
           tipo_evento?: string
           updated_at?: string
           vendedor_responsavel?: string
         }
+        Relationships: []
+      }
+      leads_nao_duplicados: {
+        Row: { lead_a: string; lead_b: string; marcado_em: string; marcado_por: string | null }
+        Insert: { lead_a: string; lead_b: string; marcado_em?: string; marcado_por?: string | null }
+        Update: { lead_a?: string; lead_b?: string; marcado_em?: string; marcado_por?: string | null }
         Relationships: []
       }
       medidas: {
@@ -1097,6 +1109,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      listar_possiveis_duplicados: {
+        Args: never
+        Returns: { lead_a: string; lead_b: string; motivo: string }[]
+      }
+      mesclar_leads: {
+        Args: { p_dados?: Json; p_manter: string; p_remover: string }
+        Returns: string
+      }
+      normalizar_cpf: { Args: { p_cpf: string }; Returns: string }
+      normalizar_email: { Args: { p_email: string }; Returns: string }
+      normalizar_nome: { Args: { p_nome: string }; Returns: string }
+      verificar_cliente_existente: {
+        Args: { p_cpf: string; p_email: string; p_ignorar_id?: string; p_telefone: string }
+        Returns: { campo: string; lead_id: string; nome: string; valor: string; visivel: boolean }[]
+      }
       _encerrar_pre_venda: {
         Args: { p_motivo: string; p_negocio_id: string; p_status: string }
         Returns: undefined

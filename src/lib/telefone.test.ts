@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizarTelefone, mesmoTelefone, erroTelefoneDuplicado } from "./telefone";
+import { normalizarTelefone, mesmoTelefone, erroTelefoneDuplicado, campoDuplicado } from "./telefone";
 
 describe("normalizarTelefone", () => {
   it("remove máscara, espaços e o 55 do Brasil", () => {
@@ -32,5 +32,14 @@ describe("erroTelefoneDuplicado", () => {
     expect(erroTelefoneDuplicado({ code: "23505" })).toBe(true);
     expect(erroTelefoneDuplicado({ code: "42501" })).toBe(false);
     expect(erroTelefoneDuplicado(null)).toBe(false);
+  });
+});
+
+describe("campoDuplicado", () => {
+  it("identifica o campo pelo índice que barrou", () => {
+    expect(campoDuplicado({ code: "23505", message: 'duplicate key value violates unique constraint "leads_email_normalizado_unico"' })).toBe("email");
+    expect(campoDuplicado({ code: "23505", message: 'duplicate key value violates unique constraint "leads_cpf_normalizado_unico"' })).toBe("cpf");
+    expect(campoDuplicado({ code: "23505", message: 'duplicate key value violates unique constraint "leads_telefone_normalizado_unico"' })).toBe("telefone");
+    expect(campoDuplicado({ code: "42501", message: "permission denied" })).toBeNull();
   });
 });

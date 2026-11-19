@@ -5,7 +5,7 @@ import { Lead, MedidasCliente, Contrato, CrmFunnelStatus, ContratoStatus, Negoci
 import type { DateRange } from "@/hooks/useDateRange";
 import { gerarTermosContrato, gerarNumeroContrato } from "@/lib/contratoTemplate";
 import { toast } from "sonner";
-import { erroTelefoneDuplicado } from "@/lib/telefone";
+import { campoDuplicado, mensagemDuplicado } from "@/lib/telefone";
 
 // ============= Legacy storage cleanup =============
 // Kept for compatibility — clears any residual data from the old localStorage-based system.
@@ -241,8 +241,9 @@ export function useLeads(range?: DateRange) {
     } as { nome: string } & Record<string, unknown>;
     const { data, error } = await supabase.from("leads").insert(insertRow as never).select().single();
     if (error || !data) {
-      if (erroTelefoneDuplicado(error)) {
-        toast.error("Já existe uma cliente cadastrada com esse telefone. Procure pelo nome ou telefone na Base de Clientes em vez de criar outro cadastro.");
+      const campo = campoDuplicado(error);
+      if (campo) {
+        toast.error(mensagemDuplicado(campo));
       } else {
         toast.error("Não foi possível salvar a cliente: " + (error?.message ?? "erro desconhecido"));
       }
@@ -270,9 +271,8 @@ export function useLeads(range?: DateRange) {
     const { error } = await supabase.from("leads").update(leadPatchToRow(data) as never).eq("id", leadId);
     if (error) {
       if (anterior) setLeads((prev) => prev.map((l) => l.id === leadId ? anterior : l));
-      toast.error(erroTelefoneDuplicado(error)
-        ? "Esse telefone já pertence a outra cliente cadastrada — um telefone só pode ter um cadastro."
-        : "Não foi possível salvar as alterações: " + error.message);
+      const campo = campoDuplicado(error);
+      toast.error(campo ? mensagemDuplicado(campo) : "Não foi possível salvar as alterações: " + error.message);
       return false;
     }
     return true;
